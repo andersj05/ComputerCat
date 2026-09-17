@@ -115,3 +115,7 @@ Wait for native dialogs to close before composing, too. Options saves and Histor
 asynchronous; Playwright's fill action does not check whether a modal obscures the input.
 The same helper waits for no open dialog before filling and counts replies only after a
 history switch completes. See [Playwright actionability](https://playwright.dev/docs/actionability).
+
+A disabled Apply button and a cleared error can also mean a save is in flight, not finished.
+After retrying a failed preference write, poll the persisted preference before asserting the
+new state. The packaged Windows run exposed this in the Options retry smoke test.
