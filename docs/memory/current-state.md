@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-17, including the Codex subscription integration.
+Reviewed: 2026-09-17, including desktop cat interaction and presence.
 Check Git and relevant code when resuming; this map does not establish checkout or test results.
 
 ## What exists
@@ -9,8 +9,9 @@ Computer Cat is a Windows-first Electron/React/TypeScript desktop companion usin
 SDK behind an application-owned runtime interface. Use the Node version in
 [.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
 
-- The transparent pixel cat opens a compact XP messenger. Tray actions and global shortcuts
-  show chat and stop replies. Closing chat hides it; quitting ends the application.
+- The transparent cat supports click-to-chat, body/grip dragging, Chat/Options/Stop controls,
+  blinking, and separate idle/thinking motion. Tray actions and shortcuts show chat and stop replies.
+- Always on top recovers z-order without focus; Find cat brings it to the pointer’s display.
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Options → Models supports application-owned Codex subscription login, saved model/reasoning
   defaults, and a separate explicitly configured environment API-key connection.

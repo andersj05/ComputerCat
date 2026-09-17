@@ -8,6 +8,8 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  powerMonitor,
+  type Rectangle,
   safeStorage,
   screen,
   session,
@@ -18,10 +20,16 @@ import { CodexAuth } from "../agent/codex-auth";
 import { readRuntimeConfig } from "../agent/config";
 import { type AppInfo, IPC } from "../shared/contracts";
 import { activeModelInfo, DEFAULT_MODEL_SETTINGS } from "../shared/models";
-import { loginAttemptSchema, loginCodeSchema, loginRequestSchema } from "../shared/validation";
+import {
+  loginAttemptSchema,
+  loginCodeSchema,
+  loginRequestSchema,
+  petDragSchema,
+} from "../shared/validation";
 import { ChatController } from "./chat-controller";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
+import { keepInWorkArea, PetDrag } from "./pet-window";
 import { PreferencesStore } from "./preferences";
 import { EncryptedSecretStore } from "./secret-store";
 import { WorkerRuntime } from "./worker-runtime";
@@ -42,6 +50,8 @@ let codex: CodexAuth;
 let disconnecting = false;
 let shortcutRegistered = false;
 let stopShortcutRegistered = false;
+const petDrag = new PetDrag();
+let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
 const modelSettings = new ModelSettingsStore(join(app.getPath("userData"), "models.json"), {
   ...DEFAULT_MODEL_SETTINGS,
@@ -61,24 +71,57 @@ const petSizes = {
   large: { width: 228, height: 352 },
 };
 
+function placePet(bounds: Rectangle, area: Rectangle): void {
+  const target = keepInWorkArea(bounds, area);
+  // Move first so Windows resolves the destination DPI before applying the DIP size.
+  pet.setPosition(target.x, target.y);
+  pet.setBounds(target);
+  const actual = pet.getBounds();
+  const fitted = keepInWorkArea(actual, area);
+  if (fitted.x !== actual.x || fitted.y !== actual.y) pet.setPosition(fitted.x, fitted.y);
+}
+
 function applyPetPreferences(): void {
   if (!pet || pet.isDestroyed()) return;
   const settings = preferences.snapshot();
   const bounds = pet.getBounds();
   const size = petSizes[settings.size];
   const area = screen.getDisplayMatching(bounds).workArea;
-  pet.setBounds({
-    ...size,
-    x: Math.max(
-      area.x,
-      Math.min(bounds.x + bounds.width - size.width, area.x + area.width - size.width),
-    ),
-    y: Math.max(
-      area.y,
-      Math.min(bounds.y + bounds.height - size.height, area.y + area.height - size.height),
-    ),
-  });
-  pet.setAlwaysOnTop(settings.alwaysOnTop);
+  placePet(
+    {
+      ...size,
+      x: bounds.x + bounds.width - size.width,
+      y: bounds.y + bounds.height - size.height,
+    },
+    area,
+  );
+  pet.setAlwaysOnTop(settings.alwaysOnTop, "screen-saver");
+  raisePet();
+}
+
+function raisePet(): void {
+  if (!pet || pet.isDestroyed() || !pet.isVisible() || !preferences.snapshot().alwaysOnTop) return;
+  pet.setAlwaysOnTop(true, "screen-saver");
+  // Reassert z-order without stealing keyboard focus from the user's active application.
+  pet.moveTop();
+}
+
+function findPet(): void {
+  if (!pet || pet.isDestroyed()) return;
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  // Off-screen Windows bounds can report a different size after a DPI transition.
+  const size = petSizes[preferences.snapshot().size];
+  placePet(
+    {
+      ...size,
+      x: area.x + area.width - size.width - 24,
+      y: area.y + area.height - size.height - 16,
+    },
+    area,
+  );
+  pet.showInactive();
+  pet.moveTop();
+  raisePet();
 }
 
 function showChat(): void {
@@ -147,7 +190,10 @@ async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   url.searchParams.set("view", role);
   trusted.set(window.webContents.id, { url: url.href, role });
   await window.loadURL(url.href);
-  window.show();
+  if (isPet) {
+    window.setAlwaysOnTop(preferences.snapshot().alwaysOnTop, "screen-saver");
+    window.showInactive();
+  } else window.show();
   return window;
 }
 
@@ -295,6 +341,29 @@ else {
         assertSender(event);
         showChat();
       });
+      ipcMain.handle(IPC.openOptions, (event) => {
+        assertSender(event);
+        showChat();
+        chat.webContents.send(IPC.optionsRequested);
+      });
+      ipcMain.handle(IPC.dragPet, (event, request: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet")
+          throw new Error("Only the companion can move itself.");
+        const phase = petDragSchema.parse(request);
+        if (phase === "start") petDrag.start(screen.getCursorScreenPoint(), pet.getBounds());
+        if (phase === "move" || phase === "end") {
+          const next = petDrag.move(screen.getCursorScreenPoint());
+          if (next) {
+            placePet(
+              { ...next, ...petSizes[preferences.snapshot().size] },
+              screen.getDisplayMatching(next).workArea,
+            );
+          }
+        }
+        if (phase === "cancel") petDrag.cancel();
+        return { moved: phase === "end" ? petDrag.end() : false };
+      });
       ipcMain.handle(IPC.hideChat, (event) => {
         assertSender(event, true);
         chat.hide();
@@ -310,8 +379,7 @@ else {
       });
       ipcMain.handle(IPC.showPet, (event) => {
         assertSender(event, true);
-        applyPetPreferences();
-        pet.show();
+        findPet();
       });
       ipcMain.handle(IPC.updatePreferences, async (event, request: unknown) => {
         assertSender(event, true);
@@ -335,6 +403,18 @@ else {
         !smoke && globalShortcut.register("CommandOrControl+Shift+Escape", () => controller.stop());
       chat = await createWindow("chat");
       pet = await createWindow("pet");
+      pet.on("blur", () => {
+        petDrag.cancel();
+        raisePet();
+      });
+      pet.on("hide", () => petDrag.cancel());
+      pet.webContents.on("did-start-loading", () => petDrag.cancel());
+      pet.on("show", raisePet);
+      powerMonitor.on("resume", raisePet);
+      powerMonitor.on("unlock-screen", raisePet);
+      screen.on("display-removed", applyPetPreferences);
+      screen.on("display-metrics-changed", applyPetPreferences);
+      presenceTimer = setInterval(raisePet, 2000);
       chat.on("close", (event) => {
         if (!quitting) {
           event.preventDefault();
@@ -356,7 +436,7 @@ else {
         tray.setContextMenu(
           Menu.buildFromTemplate([
             { label: "Open chat", click: showChat },
-            { label: "Show cat", click: () => pet.show() },
+            { label: "Find cat", click: findPet },
             { label: "Stop current reply", click: () => controller.stop() },
             { type: "separator" },
             { label: "Quit Computer Cat", click: () => app.quit() },
@@ -373,6 +453,8 @@ else {
 
 app.on("before-quit", () => {
   quitting = true;
+  clearInterval(presenceTimer);
+  petDrag.cancel();
   controller?.dispose();
   codex?.dispose();
   globalShortcut.unregisterAll();

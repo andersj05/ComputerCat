@@ -18,7 +18,12 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the full pixel cat to open chat. Drag its small handle to move it.
+- Click the pixel cat to open chat, or drag the cat itself to move it. Its grip still works too.
+- The buttons beneath the cat open Chat and Options; Stop appears during a reply.
+- The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
+  the system reduced-motion setting control motion.
+- Always on top keeps the cat above ordinary windows without taking keyboard focus.
+  Find cat in Options or the tray brings it to the display under your pointer.
 - The compact XP messenger keeps the conversation and message box in one window.
 - Starter links prepare an editable message. Press Enter or Send when it is ready.
 - Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
