@@ -13,8 +13,8 @@ SDK behind an application-owned runtime interface. Use the Node version in
   blinking, and separate idle/thinking motion. Tray actions and shortcuts show chat and stop replies.
 - Always on top recovers z-order without focus; Find cat brings it to the pointer’s display.
 - Default demo mode produces deterministic local replies without credentials or API calls.
-  Options → Models supports application-owned Codex subscription login, saved model/reasoning
-  defaults, and a separate explicitly configured environment API-key connection.
+  Connections supports app-owned Codex login; chat and cat expose direct model selection.
+  History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
 - Options stages pet size, animation, and always-on-top changes. Apply/OK persists them;
   Cancel/Escape discards unapplied changes. Saving failures preserve the previous live settings.
 - Project development memory lives in [this directory](README.md). Its entry points are shared
@@ -32,7 +32,7 @@ consume no subscription usage and cannot establish live account entitlement.
 | --- | --- | --- |
 | Shared developer knowledge | Markdown versioned in Git; agents update it deliberately | [Memory guide](README.md), [decisions](decisions.md) |
 | Pet preferences | Validated atomic writes to preferences.json in Electron user data | [Store](../../src/main/preferences.ts), [tests](../../tests/unit/preferences.test.ts) |
-| Visible chat | Local versioned transcripts; new chats preserve history; resume/delete by UUID | [Controller](../../src/main/chat-controller.ts), [tests](../../tests/unit/chat-controller.test.ts) |
+| Visible chat | Local versioned transcripts; new chats preserve history; resume/delete by UUID | [Store](../../src/main/conversation-store.ts), [tests](../../tests/unit/conversation-controller.test.ts) |
 | Pi conversation context | Native per-chat Pi JSONL restores tool results; model changes retain context | [Pi adapter](../../src/agent/pi-runtime.ts), [runtime prompt](../../src/agent/runtime.ts) |
 | Model defaults | Atomic models.json defaults; direct model changes persist per chat | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |

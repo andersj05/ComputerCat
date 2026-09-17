@@ -70,6 +70,31 @@ describe("conversation lifecycle", () => {
     expect(controller.list()).toHaveLength(1);
     await controller.dispose();
   });
+  it("waits for deletion before shutdown so the deleted chat cannot be saved again", async () => {
+    const { controller, created } = setup();
+    await send(controller, "delete this chat");
+    const id = controller.snapshot().conversationId;
+    const before = created.length;
+    expect((await controller.open(id)).ok).toBe(true);
+    expect(created).toHaveLength(before + 1);
+    let release: (() => void) | undefined;
+    const original = store.delete.bind(store);
+    vi.spyOn(store, "delete").mockImplementation(async (id) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await original(id);
+    });
+    const deletion = controller.delete(id);
+    const shutdown = controller.dispose();
+    release?.();
+    expect((await deletion).ok).toBe(true);
+    await shutdown;
+    const reloaded = new ConversationStore(directory);
+    await reloaded.load();
+    expect(reloaded.list()).toEqual([]);
+  });
+
   it("blocks history/model changes during tools and drops events after cancellation", async () => {
     let running = false;
     const controller = new ChatController(

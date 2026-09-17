@@ -39,6 +39,16 @@ export function OptionsDialog({
   const generalTab = useRef<HTMLButtonElement>(null);
   const modelsTab = useRef<HTMLButtonElement>(null);
   const pending = useRef(false);
+  const loginRef = useRef(info?.models.codex.login);
+  loginRef.current = info?.models.codex.login;
+  useEffect(
+    () => () => {
+      const login = loginRef.current;
+      if (login)
+        void window.computerCat.codexCancel({ attemptId: login.attemptId }).catch(() => {});
+    },
+    [],
+  );
   const dirtyPet =
     draft.size !== saved.size ||
     draft.animation !== saved.animation ||

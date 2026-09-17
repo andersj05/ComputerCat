@@ -8,6 +8,7 @@ import { PI_TOOL_NAMES } from "../shared/tools";
 import { modelSettingsSchema } from "../shared/validation";
 
 export const conversationIdSchema = z.uuid();
+const MAX_RECORD_BYTES = 32 * 1024 * 1024;
 const messageSchema = z.strictObject({
   id: z.string().min(1).max(256),
   role: z.enum(["user", "assistant"]),
@@ -84,7 +85,7 @@ export class ConversationStore {
         continue;
       try {
         const file = join(this.directory, name);
-        if ((await stat(file)).size > 32 * 1024 * 1024) throw new Error("Oversized conversation");
+        if ((await stat(file)).size > MAX_RECORD_BYTES) throw new Error("Oversized conversation");
         const record = conversationSchema.parse(JSON.parse(await readFile(file, "utf8")));
         if (name !== `${record.id}.json`) throw new Error("Mismatched conversation");
         record.messages = recoverMessages(record.messages);
@@ -120,10 +121,13 @@ export class ConversationStore {
   }
   save(record: Conversation): Promise<void> {
     const copy = conversationSchema.parse(structuredClone(record));
+    const serialized = JSON.stringify(copy);
+    if (Buffer.byteLength(serialized, "utf8") > MAX_RECORD_BYTES)
+      return Promise.reject(new Error("Conversation exceeds the storage limit"));
     const operation = this.pending.then(async () => {
       await mkdir(this.directory, { recursive: true });
       const target = join(this.directory, `${copy.id}.json`);
-      await writeFile(`${target}.tmp`, JSON.stringify(copy), { encoding: "utf8", mode: 0o600 });
+      await writeFile(`${target}.tmp`, serialized, { encoding: "utf8", mode: 0o600 });
       await rename(`${target}.tmp`, target);
       this.records.set(copy.id, copy);
     });

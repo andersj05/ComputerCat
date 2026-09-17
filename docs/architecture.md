@@ -121,7 +121,8 @@ JSON transcript and its separate native Pi JSONL context. Renderer requests cont
 paths. Writes serialize through a temporary file and atomic rename. The initial user message
 is saved before the model runs; streaming is checkpointed every half-second and completion
 is saved before releasing the busy state. Quit cancels the turn, lets the worker settle, and
-flushes writes. Interrupted messages and running tool indicators reopen as stopped.
+waits for any in-flight history change, then flushes writes. Reopening the active chat also
+replaces a failed worker with its saved context. Interrupted messages and running tool indicators reopen as stopped.
 
 History lists, resumes, and deletes conversations; New conversation retains the old chat.
 Startup opens the most recently updated saved chat. Corrupt metadata is skipped with a visible

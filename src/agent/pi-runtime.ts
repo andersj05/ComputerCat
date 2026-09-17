@@ -130,6 +130,8 @@ export async function createPiRuntime(
     async run(prompt, signal, onDelta, onTool) {
       signal.throwIfAborted();
       let providerFailed = false;
+      let hasText = false;
+      let separateText = false;
       const unsubscribe = session.subscribe((event) => {
         if (signal.aborted) return;
         if (event.type === "tool_execution_start" || event.type === "tool_execution_end") {
@@ -146,7 +148,14 @@ export async function createPiRuntime(
                     : "complete",
             });
         }
+        if (event.type === "message_start" && event.message.role === "assistant")
+          separateText = hasText;
         if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+          if (separateText) {
+            onDelta("\n\n");
+            separateText = false;
+          }
+          hasText = true;
           onDelta(event.assistantMessageEvent.delta);
         }
         if (event.type === "message_end" && event.message.role === "assistant") {
@@ -165,7 +174,7 @@ export async function createPiRuntime(
         if (providerFailed)
           throw new UserFacingError(
             config.provider === "openai-codex"
-              ? "Codex couldn't finish this reply. Your plan may not include this model, or its usage limit may be reached. Check your connection, try another model in Options → Models and start a new conversation, or reconnect."
+              ? "Codex couldn't finish this reply. Your plan may not include this model, or its usage limit may be reached. Check your connection, choose another model above the chat, or reconnect through Connections."
               : "The model couldn't finish this reply. Check your connection and model configuration, then try again.",
           );
       } finally {

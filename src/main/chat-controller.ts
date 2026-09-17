@@ -21,6 +21,7 @@ export class ChatController {
   private changing = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private turn: Promise<void> | undefined;
+  private transitionTask: Promise<ActionResult> | undefined;
 
   constructor(
     private readonly createRuntime: (conversation: Conversation) => AgentRuntime,
@@ -171,10 +172,12 @@ export class ChatController {
     this.changing = true;
     this.publish();
     try {
-      return await action();
+      this.transitionTask = action();
+      return await this.transitionTask;
     } catch {
       return { ok: false, message: "Couldn't change this conversation. Please try again." };
     } finally {
+      this.transitionTask = undefined;
       this.changing = false;
       this.publish();
     }
@@ -193,7 +196,12 @@ export class ChatController {
     return this.transition(async () => {
       const id = conversationIdSchema.safeParse(input);
       if (!id.success) return { ok: false, message: "Choose a valid saved conversation." };
-      if (id.data === this.record.id) return { ok: true };
+      if (id.data === this.record.id) {
+        const result = await this.save();
+        if (!result.ok) return result;
+        this.replace(structuredClone(this.record));
+        return { ok: true };
+      }
       const record = this.history?.store.get(id.data);
       if (!record) return { ok: false, message: "That conversation is no longer available." };
       const result = await this.save();
@@ -238,6 +246,7 @@ export class ChatController {
     this.disposed = true;
     this.stop();
     await this.turn;
+    await this.transitionTask;
     this.runtime.dispose();
     this.state.messages = recoverMessages(this.state.messages);
     await this.save();
