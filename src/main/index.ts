@@ -17,13 +17,8 @@ import {
 import { CodexAuth } from "../agent/codex-auth";
 import { readRuntimeConfig } from "../agent/config";
 import { type AppInfo, IPC } from "../shared/contracts";
-import {
-  activeModelInfo,
-  DEFAULT_MODEL_SETTINGS,
-  loginAttemptSchema,
-  loginCodeSchema,
-  loginRequestSchema,
-} from "../shared/models";
+import { activeModelInfo, DEFAULT_MODEL_SETTINGS } from "../shared/models";
+import { loginAttemptSchema, loginCodeSchema, loginRequestSchema } from "../shared/validation";
 import { ChatController } from "./chat-controller";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";

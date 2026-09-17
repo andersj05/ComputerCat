@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-17. Application baseline: `f977044` (XP companion merged into `dev`).
+Reviewed: 2026-09-17, including the Codex subscription integration.
 This is a capability map, not a live branch, issue tracker, or record of today's test results.
 Check Git and the relevant code when resuming; update this snapshot when capabilities change.
 
@@ -23,6 +23,9 @@ SDK behind an application-owned runtime interface. Use the Node version in
 User-facing behavior is documented in [README](../../README.md) and
 [XP design](../windows-xp-design.md). Verify desktop behavior with
 [Electron smoke tests](../../tests/smoke/desktop.spec.ts).
+The [Codex smoke tests](../../tests/smoke/codex.spec.ts) run real OAuth and worker code with
+intercepted network responses, including encrypted persistence and token refresh. They do not
+establish a particular account's live model entitlement or consume subscription usage.
 
 ## Persistence boundaries
 

@@ -704,7 +704,7 @@ input:disabled {
   gap: 8px;
   margin-top: 5px;
 }
-.model-row > span {
+.model-row > label {
   width: 69px;
   flex-shrink: 0;
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { reasoningSchema } from "../shared/models";
+import { reasoningSchema } from "../shared/validation";
 
 export const workerConfigSchema = z.strictObject({
   mode: z.literal("pi"),

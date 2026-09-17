@@ -90,7 +90,10 @@ provider and may incur its normal API charges. No live API requests are part of 
 
 The smoke tests open temporary Computer Cat windows and use a separate temporary user-data
 directory. They check the renderer boundary, demo streaming/cancellation, and loading the real
-Pi worker with an intentionally nonexistent provider. They never control other applications.
+Pi worker. Codex tests intercept OAuth and model traffic to verify sign-in, encrypted persistence,
+refresh, model selection, streaming, and provider errors without live credentials or usage.
+They never control other applications. Live account entitlement is verified only when you sign
+in and send a message yourself.
 
 ## Project layout
 

@@ -1,4 +1,5 @@
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
+import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import {
   createAgentSession,
   createExtensionRuntime,
@@ -28,12 +29,28 @@ export function isolatedResources(): ResourceLoader {
 }
 
 export async function createModelRuntime(): Promise<ModelRuntime> {
-  return ModelRuntime.create({
+  const runtime = await ModelRuntime.create({
     credentials: new InMemoryCredentialStore(),
     modelsPath: null,
     allowModelNetwork: false,
     refreshOnCreate: false,
   });
+  const codex = openaiCodexProvider();
+  // Main has already resolved OAuth. The worker accepts only that short-lived token;
+  // it cannot log in, refresh, or consult ambient provider credentials.
+  runtime.registerNativeProvider({
+    ...codex,
+    auth: {
+      apiKey: {
+        name: "Computer Cat Codex access token",
+        resolve: async ({ credential, signal }) => {
+          signal.throwIfAborted();
+          return credential?.key ? { auth: { apiKey: credential.key } } : undefined;
+        },
+      },
+    },
+  });
+  return runtime;
 }
 
 export async function createPiRuntime(
@@ -55,7 +72,11 @@ export async function createPiRuntime(
     noTools: "all",
     resourceLoader: isolatedResources(),
     sessionManager: SessionManager.inMemory(cwd),
-    settingsManager: SettingsManager.inMemory({ retry: { enabled: false } }),
+    settingsManager: SettingsManager.inMemory({
+      retry: { enabled: false },
+      // This conversation-only integration needs no background WebSocket connection cache.
+      ...(config.provider === "openai-codex" ? { transport: "sse" as const } : {}),
+    }),
   });
 
   return {

@@ -36,6 +36,10 @@ its tool allowlist is empty, and session state is in memory. Main resolves the s
 before each turn and sends validated configuration over the private worker port. The worker's
 environment contains no provider credentials. Model identity and reasoning remain fixed within
 that worker, while the access token can rotate without replacing the conversation.
+The worker registers a Codex request-auth adapter that accepts only the main-resolved access
+token. The SDK's unmodified Codex provider is OAuth-only and cannot consume its generic runtime
+API-key override. Main retains the original OAuth provider; the worker has no login/refresh
+handler. Codex replies stream over SSE without a background WebSocket connection cache.
 
 The app owns its Codex login through the pinned Pi provider's OAuth flow. The adapter in
 `src/agent/codex-auth.ts` runs in the privileged host, with encrypted persistence supplied by main.

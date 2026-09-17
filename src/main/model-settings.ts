@@ -1,7 +1,8 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ActionResult } from "../shared/contracts";
-import { type ModelSettings, modelSettingsSchema } from "../shared/models";
+import type { ModelSettings } from "../shared/models";
+import { modelSettingsSchema } from "../shared/validation";
 
 export class ModelSettingsStore {
   private value: ModelSettings;

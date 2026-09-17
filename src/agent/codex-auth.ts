@@ -11,12 +11,8 @@ import {
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { z } from "zod";
 import type { ActionResult } from "../shared/contracts";
-import {
-  type CodexConnection,
-  type LoginMethod,
-  type ModelChoice,
-  reasoningSchema,
-} from "../shared/models";
+import type { CodexConnection, LoginMethod, ModelChoice } from "../shared/models";
+import { reasoningSchema } from "../shared/validation";
 import { UserFacingError } from "./runtime";
 
 export const CODEX_PROVIDER = "openai-codex";
@@ -210,7 +206,7 @@ export class CodexAuth {
       })
       .then(() => {
         if (this.attempt !== attempt) return;
-        this.message = "Connected. Choose Codex subscription below and apply your default.";
+        this.message = null;
       })
       .catch(() => {
         if (this.attempt !== attempt) return;

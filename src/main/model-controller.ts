@@ -4,7 +4,8 @@ import { DemoRuntime } from "../agent/demo-runtime";
 import type { AgentRuntime } from "../agent/runtime";
 import { UserFacingError } from "../agent/runtime";
 import type { ActionResult } from "../shared/contracts";
-import { type ModelSettings, type ModelState, modelSettingsSchema } from "../shared/models";
+import type { ModelSettings, ModelState } from "../shared/models";
+import { modelSettingsSchema } from "../shared/validation";
 import type { ModelSettingsStore } from "./model-settings";
 
 export class ModelController {

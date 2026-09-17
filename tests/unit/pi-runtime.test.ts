@@ -15,6 +15,16 @@ afterEach(async () => {
 });
 
 describe("Pi integration without network or credentials", () => {
+  it("accepts only the parent's resolved Codex access token and supports rotation", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unrelated-secret");
+    const models = await createModelRuntime();
+    expect(await models.getAuth("openai-codex")).toBeUndefined();
+    await models.setRuntimeApiKey("openai-codex", "parent-access-token");
+    expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("parent-access-token");
+    await models.setRuntimeApiKey("openai-codex", "rotated-access-token");
+    expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("rotated-access-token");
+    expect(models.getRegisteredNativeProvider("openai-codex")?.auth.oauth).toBeUndefined();
+  });
   it("runs the real SDK with a local provider and no tools or discovered context", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
     const directory = await mkdtemp(join(tmpdir(), "computercat-pi-context-"));

@@ -171,8 +171,8 @@ export function ModelOptions({
       {!login && (
         <fieldset disabled={disabled || acting}>
           <legend>Default for new conversations</legend>
-          <label className="model-row" htmlFor="model-connection">
-            <span>Connection:</span>
+          <div className="model-row">
+            <label htmlFor="model-connection">Connection:</label>
             <select
               id="model-connection"
               value={draft.source}
@@ -188,11 +188,11 @@ export function ModelOptions({
                 <option value="environment">Environment API key</option>
               )}
             </select>
-          </label>
+          </div>
           {draft.source === "codex" && (
             <>
-              <label className="model-row" htmlFor="default-model">
-                <span>Model:</span>
+              <div className="model-row">
+                <label htmlFor="default-model">Model:</label>
                 <select
                   id="default-model"
                   value={draft.codexModel}
@@ -219,9 +219,9 @@ export function ModelOptions({
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="model-row" htmlFor="model-reasoning">
-                <span>Reasoning:</span>
+              </div>
+              <div className="model-row">
+                <label htmlFor="model-reasoning">Reasoning:</label>
                 <select
                   id="model-reasoning"
                   value={draft.reasoning}
@@ -238,7 +238,7 @@ export function ModelOptions({
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             </>
           )}
           <p className="option-note">
