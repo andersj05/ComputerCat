@@ -16,6 +16,7 @@ import { isConfigured, readRuntimeConfig } from "../agent/config";
 import { DemoRuntime } from "../agent/demo-runtime";
 import { type AppInfo, IPC } from "../shared/contracts";
 import { ChatController } from "./chat-controller";
+import { PreferencesStore } from "./preferences";
 import { WorkerRuntime } from "./worker-runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,33 @@ let tray: Tray | undefined;
 let quitting = false;
 let controller: ChatController;
 let shortcutRegistered = false;
+let stopShortcutRegistered = false;
+const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
+const petSizes = {
+  small: { width: 148, height: 244 },
+  medium: { width: 188, height: 298 },
+  large: { width: 228, height: 352 },
+};
+
+function applyPetPreferences(): void {
+  if (!pet || pet.isDestroyed()) return;
+  const settings = preferences.snapshot();
+  const bounds = pet.getBounds();
+  const size = petSizes[settings.size];
+  const area = screen.getDisplayMatching(bounds).workArea;
+  pet.setBounds({
+    ...size,
+    x: Math.max(
+      area.x,
+      Math.min(bounds.x + bounds.width - size.width, area.x + area.width - size.width),
+    ),
+    y: Math.max(
+      area.y,
+      Math.min(bounds.y + bounds.height - size.height, area.y + area.height - size.height),
+    ),
+  });
+  pet.setAlwaysOnTop(settings.alwaysOnTop);
+}
 
 function showChat(): void {
   if (!chat || chat.isDestroyed()) return;
@@ -53,18 +81,24 @@ function assertSender(event: IpcMainInvokeEvent, chatOnly = false): void {
 async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   const isPet = role === "pet";
   const area = screen.getPrimaryDisplay().workArea;
+  const petSize = petSizes[preferences.snapshot().size];
   const window = new BrowserWindow({
-    width: isPet ? 148 : 1000,
-    height: isPet ? 180 : 780,
-    ...(isPet ? { x: area.x + area.width - 174, y: area.y + area.height - 208 } : {}),
-    minWidth: isPet ? 148 : 700,
-    minHeight: isPet ? 180 : 590,
+    width: isPet ? petSize.width : 1080,
+    height: isPet ? petSize.height : 800,
+    ...(isPet
+      ? {
+          x: area.x + area.width - petSize.width - 24,
+          y: area.y + area.height - petSize.height - 16,
+        }
+      : {}),
+    minWidth: isPet ? 148 : 720,
+    minHeight: isPet ? 244 : 580,
     title: isPet ? "Computer Cat companion" : "Computer Cat",
-    frame: !isPet,
+    frame: false,
     transparent: isPet,
-    backgroundColor: isPet ? "#00000000" : "#fbf8f2",
+    backgroundColor: isPet ? "#00000000" : "#ece9d8",
     resizable: !isPet,
-    alwaysOnTop: isPet,
+    alwaysOnTop: isPet && preferences.snapshot().alwaysOnTop,
     skipTaskbar: isPet,
     show: false,
     autoHideMenuBar: true,
@@ -82,6 +116,10 @@ async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   window.webContents.on("will-attach-webview", (event) => event.preventDefault());
   const contentsId = window.webContents.id;
   window.on("closed", () => trusted.delete(contentsId));
+  if (!isPet) {
+    window.on("maximize", () => window.webContents.send(IPC.windowChanged, true));
+    window.on("unmaximize", () => window.webContents.send(IPC.windowChanged, false));
+  }
   const devURL = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined;
   const url = new URL(devURL ?? pathToFileURL(join(here, "../renderer/index.html")).href);
   url.searchParams.set("view", role);
@@ -99,6 +137,7 @@ else {
     .whenReady()
     .then(async () => {
       app.setAppUserModelId("com.andersj05.computercat");
+      await preferences.load();
       session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
         callback(false),
       );
@@ -139,6 +178,9 @@ else {
           provider: config.provider || null,
           model: config.model || null,
           shortcut: shortcutRegistered ? "Ctrl+Shift+Space" : "Use the cat or tray icon",
+          stopShortcut: stopShortcutRegistered ? "Ctrl+Shift+Escape" : "Use the Stop reply button",
+          preferences: preferences.snapshot(),
+          maximized: chat?.isMaximized() ?? false,
         };
       });
       ipcMain.handle(IPC.snapshot, (event) => {
@@ -165,13 +207,40 @@ else {
         assertSender(event, true);
         chat.hide();
       });
+      ipcMain.handle(IPC.minimizeChat, (event) => {
+        assertSender(event, true);
+        chat.minimize();
+      });
+      ipcMain.handle(IPC.toggleMaximizeChat, (event) => {
+        assertSender(event, true);
+        if (chat.isMaximized()) chat.unmaximize();
+        else chat.maximize();
+      });
+      ipcMain.handle(IPC.showPet, (event) => {
+        assertSender(event, true);
+        applyPetPreferences();
+        pet.show();
+      });
+      ipcMain.handle(IPC.updatePreferences, async (event, request: unknown) => {
+        assertSender(event, true);
+        const result = await preferences.update(request);
+        if (result.ok) {
+          applyPetPreferences();
+          for (const window of BrowserWindow.getAllWindows()) {
+            if (!window.isDestroyed())
+              window.webContents.send(IPC.preferencesChanged, preferences.snapshot());
+          }
+        }
+        return result;
+      });
       ipcMain.handle(IPC.quit, (event) => {
         assertSender(event);
         app.quit();
       });
       shortcutRegistered =
         !smoke && globalShortcut.register("CommandOrControl+Shift+Space", showChat);
-      if (!smoke) globalShortcut.register("CommandOrControl+Shift+Escape", () => controller.stop());
+      stopShortcutRegistered =
+        !smoke && globalShortcut.register("CommandOrControl+Shift+Escape", () => controller.stop());
       chat = await createWindow("chat");
       pet = await createWindow("pet");
       chat.on("close", (event) => {
