@@ -430,9 +430,10 @@ test("Options keep a failed draft available for retry without changing the live 
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
     await expect(options.getByRole("alert")).toBeHidden();
-    expect(
-      await page.evaluate(async () => (await window.computerCat.info()).preferences.size),
-    ).toBe("large");
+    // Apply is disabled and the old error is cleared while the save is still in flight.
+    await expect
+      .poll(() => page.evaluate(async () => (await window.computerCat.info()).preferences.size))
+      .toBe("large");
   } finally {
     await electron.close();
     await removeTestData(userData);
