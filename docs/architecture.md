@@ -40,3 +40,20 @@ Future computer and API tools belong behind a broker that checks scope and autho
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.
+
+## Companion presentation and preferences
+
+The XP caption bar uses named preload operations to minimize, maximize/restore, and hide the
+chat window. Only the chat renderer can request those controls or change companion settings.
+The companion can open chat and stop a reply. No generic window or IPC interface is exposed.
+
+Pet size, always-on-top, and animation are the only saved preferences. Main validates a strict
+partial update, serializes atomic writes to `preferences.json` in Electron user data, and
+broadcasts successful updates to both renderers. Unknown fields, invalid values, and empty
+updates are rejected. Missing or corrupt files use defaults; save failures keep the previous
+settings and return a message without filesystem details. The UI gives immediate feedback and
+restores the previous selection if saving fails. Conversation content remains in memory.
+
+The cat retains its original transparent silhouette. Size changes stay within the current
+display work area. Native drag regions move the pet and chat; renderer code never accesses the
+OS. Idle and thinking animation respect the operating system reduced-motion preference.

@@ -18,10 +18,14 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the cat to open chat. Drag its small dotted handle to move it.
+- Click the full pixel cat to open chat. Drag its small handle to move it.
+- The Windows XP workspace has three destinations: Chat, My cat, and Settings.
+- Starter cards prepare an editable message. Press Enter or Send when it is ready.
+- My cat controls pet size, idle animation, and always-on-top behavior. These preferences save locally.
+- Desktop mode and the close button tuck chat away; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
-- Closing chat leaves the cat and tray running. Quit through Preferences or the tray menu.
-- Conversations live only for the current app session. New conversation clears that context.
+- Closing chat leaves the cat and tray running. Quit through Settings or the tray menu.
+- Conversations live only for the current app session. New conversation asks before clearing a chat or draft.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
 computer control, external MCP connections, and long-term memory are not implemented yet.**
