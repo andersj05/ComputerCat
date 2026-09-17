@@ -27,7 +27,7 @@ Status: existing boundary retained; reviewed 2026-09-17.
 Computer Cat's Pi integration receives only application-controlled context, explicit
 configuration, and its conversation. Loading developer instructions, global Pi resources,
 or arbitrary files from a user's directory could change behavior and expose unrelated data.
-Discovery remains empty. D006 supersedes the original tool restriction.
+Discovery remains empty. D007 supersedes the original tool restriction.
 
 Consequences: adding AGENTS.md or a memory document cannot make the desktop cat remember it.
 The renderer cannot access files, provider credentials, or the SDK. A worker is crash isolation,
@@ -37,7 +37,7 @@ not a security sandbox. Evidence: [architecture](../architecture.md),
 
 ## D003: Conversations are transient; preferences and connections persist
 
-Status: superseded by D006 on 2026-09-17.
+Status: superseded by D007 on 2026-09-17.
 
 Companion preferences, model defaults, and an encrypted Codex connection are saved. New
 conversation creates a fresh runtime, and app restart does not restore chat. This keeps
@@ -73,7 +73,7 @@ unavailable secure storage must fail closed. Refresh tokens stay in the privileg
 The renderer receives only connection status and model choices.
 
 Save model defaults separately from pet preferences. Existing conversations keep their active
-model when defaults change; the direct selector can change a current chat (D006). A failed
+model when defaults change; the direct selector can change a current chat (D007). A failed
 save leaves the old default intact. Credentials and
 conversation text must never enter the model preferences file. Subscription availability is
 determined by the provider and account, not guaranteed by the SDK's model catalogue.
@@ -105,7 +105,7 @@ Evidence: [window lifecycle](../../src/main/index.ts), [drag rules](../../src/ma
 [desktop tests](../../tests/smoke/desktop.spec.ts), and
 [Electron window levels](https://www.electronjs.org/docs/latest/api/browser-window#winsetalwaysontopflag-level-relativelevel).
 
-## D006: Enable Pi tools and retain resumable conversations
+## D007: Enable Pi tools and retain resumable conversations
 
 Status: adopted at the user’s explicit request, 2026-09-17; supersedes D003 and the tool
 restriction in D002. Enable all eight built-in Pi tools with OS user privileges and Desktop
@@ -120,3 +120,15 @@ Keep saved defaults separate from immediate per-conversation model selection.
 Evidence: [Pi adapter](../../src/agent/pi-runtime.ts), [conversation store](../../src/main/conversation-store.ts),
 [controller tests](../../tests/unit/conversation-controller.test.ts),
 [Pi restoration tests](../../tests/unit/pi-runtime.test.ts), and [architecture](../architecture.md).
+
+## D008: Distribute Computer Cat under MIT
+
+Status: adopted at the owner's request; reviewed 2026-09-17.
+
+The repository and package metadata use the MIT license, with the copyright holder matching
+package.json. Packaged applications include the license in their resources directory.
+The package stays private to prevent accidental npm publication; this does not restrict the
+license granted in LICENSE. Dependencies retain their own licenses.
+
+Evidence: [license](../../LICENSE), [package metadata](../../package.json),
+[lockfile](../../package-lock.json), and [packaging](../../electron-builder.yml).

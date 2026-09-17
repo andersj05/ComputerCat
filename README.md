@@ -155,3 +155,7 @@ automatic application updates are intentionally not configured yet. A draft must
 before publishing. Reusing an existing version tag fails rather than overwriting a release.
 
 Report vulnerabilities through [private reporting](SECURITY.md).
+
+## License
+
+Computer Cat is licensed under the [MIT License](LICENSE).
