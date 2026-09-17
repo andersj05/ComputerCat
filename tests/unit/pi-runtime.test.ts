@@ -1,10 +1,11 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workerEnvironment } from "../../src/agent/config";
 import { createModelRuntime, createPiRuntime } from "../../src/agent/pi-runtime";
+import { PI_TOOL_NAMES } from "../../src/shared/tools";
 
 const fixtureDirectories: string[] = [];
 afterEach(async () => {
@@ -15,7 +16,17 @@ afterEach(async () => {
 });
 
 describe("Pi integration without network or credentials", () => {
-  it("runs the real SDK with a local provider and no tools or discovered context", async () => {
+  it("accepts only the parent's resolved Codex access token and supports rotation", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unrelated-secret");
+    const models = await createModelRuntime();
+    expect(await models.getAuth("openai-codex")).toBeUndefined();
+    await models.setRuntimeApiKey("openai-codex", "parent-access-token");
+    expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("parent-access-token");
+    await models.setRuntimeApiKey("openai-codex", "rotated-access-token");
+    expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("rotated-access-token");
+    expect(models.getRegisteredNativeProvider("openai-codex")?.auth.oauth).toBeUndefined();
+  });
+  it("exposes all built-in tools without discovering developer context", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
     const directory = await mkdtemp(join(tmpdir(), "computercat-pi-context-"));
     fixtureDirectories.push(directory);
@@ -28,7 +39,7 @@ describe("Pi integration without network or credentials", () => {
     models.registerNativeProvider(provider.provider);
     provider.setResponses([
       (context) => {
-        expect(context.tools ?? []).toHaveLength(0);
+        expect(context.tools?.map((tool) => tool.name).sort()).toEqual([...PI_TOOL_NAMES].sort());
         expect(context.systemPrompt).toContain("You are Computer Cat");
         expect(context.systemPrompt).not.toContain("GitHub authentication");
         expect(JSON.stringify(context)).not.toContain(canary);
@@ -49,6 +60,106 @@ describe("Pi integration without network or credentials", () => {
       expect(provider.state.callCount).toBe(1);
     } finally {
       runtime.dispose();
+    }
+  });
+
+  it("executes file tools through the real Pi loop and reports activity", async () => {
+    vi.stubEnv("PI_OFFLINE", "1");
+    const directory = await mkdtemp(join(tmpdir(), "computercat-pi-tools-"));
+    fixtureDirectories.push(directory);
+    const models = await createModelRuntime();
+    const provider = fauxProvider({ provider: "cat-tools", models: [{ id: "offline" }] });
+    models.registerNativeProvider(provider.provider);
+    provider.setResponses([
+      fauxAssistantMessage(fauxToolCall("write", { path: "note.txt", content: "fixture one" }), {
+        stopReason: "toolUse",
+      }),
+      fauxAssistantMessage(
+        fauxToolCall("edit", { path: "note.txt", oldText: "one", newText: "two" }),
+        { stopReason: "toolUse" },
+      ),
+      fauxAssistantMessage(fauxToolCall("read", { path: "note.txt" }), { stopReason: "toolUse" }),
+      (context) => {
+        expect(JSON.stringify(context.messages)).toContain("fixture two");
+        return fauxAssistantMessage("Read and updated the fixture.");
+      },
+    ]);
+    const runtime = await createPiRuntime(
+      { provider: "cat-tools", model: "offline", apiKey: "" },
+      directory,
+      models,
+    );
+    const activity = vi.fn();
+    try {
+      await runtime.run("Update the fixture", new AbortController().signal, () => {}, activity);
+      expect(await readFile(join(directory, "note.txt"), "utf8")).toBe("fixture two");
+      expect(activity.mock.calls.map(([tool]) => [tool.name, tool.state])).toEqual([
+        ["write", "running"],
+        ["write", "complete"],
+        ["edit", "running"],
+        ["edit", "complete"],
+        ["read", "running"],
+        ["read", "complete"],
+      ]);
+    } finally {
+      runtime.dispose();
+    }
+  });
+
+  it("restores native context including tool results and honors a new model", async () => {
+    vi.stubEnv("PI_OFFLINE", "1");
+    const directory = await mkdtemp(join(tmpdir(), "computercat-pi-restore-"));
+    fixtureDirectories.push(directory);
+    await writeFile(join(directory, "fact.txt"), "native-tool-result-canary");
+    const models = await createModelRuntime();
+    const provider = fauxProvider({
+      provider: "cat-restore",
+      models: [{ id: "one" }, { id: "two" }],
+    });
+    models.registerNativeProvider(provider.provider);
+    provider.setResponses([
+      fauxAssistantMessage(fauxToolCall("read", { path: "fact.txt" }), { stopReason: "toolUse" }),
+      fauxAssistantMessage("The fixture is read."),
+      (context, _options, _state, model) => {
+        expect(model.id).toBe("two");
+        expect(JSON.stringify(context.messages)).toContain("native-tool-result-canary");
+        expect(JSON.stringify(context.messages)).toContain("demo-gap-canary");
+        expect(
+          context.messages.filter(
+            (m) => m.role === "user" && JSON.stringify(m.content).includes("Read fact.txt"),
+          ),
+        ).toHaveLength(1);
+        return fauxAssistantMessage("Restored.");
+      },
+    ]);
+    const saved = { sessionFile: join(directory, "session.jsonl"), history: [] };
+    const first = await createPiRuntime(
+      { provider: "cat-restore", model: "one", apiKey: "fixture-secret" },
+      directory,
+      models,
+      saved,
+    );
+    await first.run("Read fact.txt", new AbortController().signal, () => {});
+    first.dispose();
+    const second = await createPiRuntime(
+      { provider: "cat-restore", model: "two", apiKey: "fixture-secret" },
+      directory,
+      models,
+      {
+        ...saved,
+        history: [
+          { id: "1", role: "user", text: "Read fact.txt", state: "complete" },
+          { id: "2", role: "assistant", text: "The fixture is read.", state: "complete" },
+          { id: "3", role: "user", text: "demo-gap-canary", state: "complete" },
+          { id: "4", role: "assistant", text: "Demo response", state: "complete" },
+        ],
+      },
+    );
+    try {
+      await second.run("Continue", new AbortController().signal, () => {});
+      expect(await readFile(saved.sessionFile, "utf8")).not.toContain("fixture-secret");
+    } finally {
+      second.dispose();
     }
   });
 
@@ -98,7 +209,6 @@ describe("Pi integration without network or credentials", () => {
       PI_OFFLINE: "1",
       NO_COLOR: "1",
       PATH: "system-path",
-      COMPUTERCAT_API_KEY: "chosen-secret",
     });
   });
 });

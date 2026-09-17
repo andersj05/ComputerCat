@@ -5,6 +5,7 @@ import {
   IPC,
   type PetPreferences,
 } from "../shared/contracts";
+import type { ModelState } from "../shared/models";
 
 const api: ComputerCatAPI = {
   info: () => ipcRenderer.invoke(IPC.info),
@@ -12,12 +13,40 @@ const api: ComputerCatAPI = {
   send: (request) => ipcRenderer.invoke(IPC.send, request),
   stop: () => ipcRenderer.invoke(IPC.stop),
   clear: () => ipcRenderer.invoke(IPC.clear),
+  conversations: () => ipcRenderer.invoke(IPC.conversations),
+  openConversation: (id) => ipcRenderer.invoke(IPC.openConversation, id),
+  deleteConversation: (id) => ipcRenderer.invoke(IPC.deleteConversation, id),
+  selectModel: (settings) => ipcRenderer.invoke(IPC.selectModel, settings),
+  openModels: () => ipcRenderer.invoke(IPC.openModels),
+  onModelsRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.modelsRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.modelsRequested, receive);
+  },
   openChat: () => ipcRenderer.invoke(IPC.openChat),
+  openOptions: () => ipcRenderer.invoke(IPC.openOptions),
+  dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),
+  onOptionsRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.optionsRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.optionsRequested, receive);
+  },
   hideChat: () => ipcRenderer.invoke(IPC.hideChat),
   minimizeChat: () => ipcRenderer.invoke(IPC.minimizeChat),
   toggleMaximizeChat: () => ipcRenderer.invoke(IPC.toggleMaximizeChat),
   showPet: () => ipcRenderer.invoke(IPC.showPet),
   updatePreferences: (patch) => ipcRenderer.invoke(IPC.updatePreferences, patch),
+  updateModels: (settings) => ipcRenderer.invoke(IPC.updateModels, settings),
+  codexLogin: (request) => ipcRenderer.invoke(IPC.codexLogin, request),
+  codexCancel: (request) => ipcRenderer.invoke(IPC.codexCancel, request),
+  codexOpen: (request) => ipcRenderer.invoke(IPC.codexOpen, request),
+  codexCode: (request) => ipcRenderer.invoke(IPC.codexCode, request),
+  codexDisconnect: () => ipcRenderer.invoke(IPC.codexDisconnect),
+  onModelsChanged: (listener) => {
+    const receive = (_event: Electron.IpcRendererEvent, state: ModelState) => listener(state);
+    ipcRenderer.on(IPC.modelsChanged, receive);
+    return () => ipcRenderer.removeListener(IPC.modelsChanged, receive);
+  },
   onPreferencesChanged: (listener) => {
     const receive = (_event: Electron.IpcRendererEvent, preferences: PetPreferences) =>
       listener(preferences);

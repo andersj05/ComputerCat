@@ -18,34 +18,86 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the full pixel cat to open chat. Drag its small handle to move it.
+- Click the pixel cat to open chat, or drag the cat itself to move it. Its grip still works too.
+- The buttons beneath the cat open Chat and Options; Stop appears during a reply.
+- The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
+  the system reduced-motion setting control motion.
+- Always on top keeps the cat above ordinary windows without taking keyboard focus.
+  Find cat in Options or the tray brings it to the display under your pointer.
 - The compact XP messenger keeps the conversation and message box in one window.
 - Starter links prepare an editable message. Press Enter or Send when it is ready.
 - Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
   locally; Cancel or Escape discards unapplied changes.
+- Options → Models connects your Codex subscription and saves a default model and reasoning level.
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
-- Conversations live only for the current app session. New conversation asks before clearing a chat or draft.
+- Conversations save automatically on this computer. **History** lets you find, reopen, or delete them.
+- **New conversation** keeps the old chat in History; it only asks before discarding an unsent draft.
+- The model and reasoning selectors above chat apply to your next reply without clearing the chat.
+  The model button beneath the desktop cat opens the same controls; **Connections** opens sign-in.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
 computer control, external MCP connections, and long-term memory are not implemented yet.**
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
 
-## Connect a model later
+## Connect your Codex subscription
 
-Credential setup is deliberately deferred. When ready, copy `.env.example` to `.env.local`,
+1. Open **Options → Models → Sign in with ChatGPT**. Finish on the OpenAI page in your browser.
+   If the browser cannot return to the app, expand the fallback and paste its complete localhost
+   callback URL. **Use a device code** is an alternative; your ChatGPT security settings may need
+   device-code login enabled. Closing Options cancels an unfinished sign-in.
+2. Choose **Codex subscription** under Connection, select a model and reasoning level, and click
+   **Apply** or **OK**. Model choices come from the pinned Pi SDK catalogue. Your account and plan
+   determine which models are available and the applicable usage limits.
+3. If a conversation already has messages, choose **New conversation** to use the new default.
+   Empty chats use it immediately. To change a current chat, use the selector above the conversation.
+   Defaults and saved conversations survive app restarts.
+
+Codex CLI installation and API keys are not required for this connection. Computer Cat uses
+the Pi SDK's Codex OAuth integration and its own encrypted credential file in app user data.
+It does not read, import, or change your global Codex/Pi login. Windows protects the saved tokens
+through Electron safeStorage; insecure storage fails closed. Tokens never enter the renderer,
+Git, or model preferences. Main refreshes expired credentials before replies.
+
+**Disconnect** removes Computer Cat's saved credential and stops its Codex session. It leaves the
+transcript visible; reconnect and choose a model, or select Local demo directly above chat, to continue.
+Stop any active reply before disconnecting. Disconnecting here does not sign you out of other
+Codex apps or revoke your subscription. Local demo is always available without model requests.
+
+If sign-in or a reply fails, check your connection, retry sign-in, or select another model and
+start a new conversation. The app does not switch to a paid API connection automatically.
+See [OpenAI's authentication documentation](https://learn.chatgpt.com/docs/auth).
+
+## Use an API-key connection
+
+For a separate API-key connection, copy `.env.example` to `.env.local`,
 set `COMPUTERCAT_RUNTIME=pi`, and supply a Pi-supported provider ID, model ID, and its API key
 through `COMPUTERCAT_PROVIDER`, `COMPUTERCAT_MODEL`, and `COMPUTERCAT_API_KEY`.
 `npm run dev` loads `.env.local`. The file is ignored by Git. Never put a key in source, a Vite
 `VITE_*` variable, a screenshot, or a GitHub issue.
 
 Only the explicitly selected credential is passed to the Pi worker. Global Pi logins,
-extensions, project instruction discovery, and built-in shell/file tools are not loaded.
+extensions and project instruction discovery are not loaded. All eight built-in Pi file/search
+and shell tools are enabled, with the Desktop as the working folder. Tools run with your OS
+permissions; PowerShell is available on Windows, and Bash needs an installed Bash executable.
+Tool activity appears in chat. The find/grep helpers (fd and ripgrep) can download on first use
+into Computer Cat’s own cache.
 The packaged app currently accepts the same process environment variables; a secure credential
-settings UI is a future feature. Model requests use the configured provider and may incur its
-normal API charges. No live API requests are part of the test suite.
+settings UI for other providers is a future feature. If a saved model default already exists,
+choose **Environment API key** in Options → Models and apply it. Model requests use the configured
+provider and may incur its normal API charges. No live API requests are part of the test suite.
+
+## Saved conversations
+
+Chat transcripts and native Pi tool context are stored as local plaintext in the app’s user-data
+folder, separately from encrypted sign-in credentials. They remain until you delete them in History.
+The most recently updated conversation opens at startup. Unreadable records are kept on disk and
+reported; a save failure stays visible and blocks switching away from unsaved chat.
+Deleting a conversation removes its transcript and Pi context, but does not undo files changed
+by tools. Unsent drafts survive switching chats while the app is running; they are not saved on quit.
+Chats from app versions that kept history only in memory cannot be recovered after that app exits.
 
 ## Development commands
 
@@ -61,7 +113,10 @@ normal API charges. No live API requests are part of the test suite.
 
 The smoke tests open temporary Computer Cat windows and use a separate temporary user-data
 directory. They check the renderer boundary, demo streaming/cancellation, and loading the real
-Pi worker with an intentionally nonexistent provider. They never control other applications.
+Pi worker. Codex tests intercept OAuth and model traffic to verify sign-in, encrypted persistence,
+refresh, model selection, streaming, and provider errors without live credentials or usage.
+They never control other applications. Live account entitlement is verified only when you sign
+in and send a message yourself.
 
 ## Project layout
 
@@ -100,3 +155,7 @@ automatic application updates are intentionally not configured yet. A draft must
 before publishing. Reusing an existing version tag fails rather than overwriting a release.
 
 Report vulnerabilities through [private reporting](SECURITY.md).
+
+## License
+
+Computer Cat is licensed under the [MIT License](LICENSE).

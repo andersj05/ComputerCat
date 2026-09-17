@@ -6,6 +6,8 @@ files:
   - out/**/*
   - package.json
 extraResources:
+  - from: LICENSE
+    to: LICENSE
   - from: assets/computer_cat.png
     to: computer_cat.png
 asar: true

@@ -52,7 +52,7 @@ Evidence: the [audit verification record](../audits/2026-09-17-agent-memory.md).
 Reviewed: 2026-09-17. Scope: planning or upgrading the Pi integration.
 
 The [research plan](../research-and-build-plan.md) includes future tools and session restoration.
-Current code intentionally disables discovered resources and disk sessions. Read the
+Current code disables discovered resources; app-owned tools and disk sessions are now enabled. Read the
 [capability map](current-state.md) and [adapter](../../src/agent/pi-runtime.ts), then run the
 [isolation tests](../../tests/unit/pi-runtime.test.ts) when changing SDK integration.
 Do not enable default filesystem discovery to make development memory available to the app.
@@ -66,3 +66,56 @@ also differ from the receiver's checkout. Transfer the intended commits or expli
 the sanitized handoff; inspect Git before continuing. Never resolve that mismatch by resetting
 someone else's changes. Evidence: [contribution workflow](../../CONTRIBUTING.md) and the
 [handoff protocol](handoffs/README.md).
+
+## Codex worker tokens need an explicit request-auth adapter
+
+Reviewed: 2026-09-17. Scope: Pi 0.85.1 subscription integration.
+
+The built-in Codex provider is OAuth-only. Setting a runtime API key does not make it accept an
+access token; session setup reports an unconfigured provider. Main owns OAuth and refresh, while
+the [Pi worker adapter](../../src/agent/pi-runtime.ts) registers a narrow auth resolver for the
+access token sent over its private port. Do not move refresh credentials into the renderer or
+worker to work around this. [SDK tests](../../tests/unit/pi-runtime.test.ts) verify rotation and
+ambient-key isolation; [desktop tests](../../tests/smoke/codex.spec.ts) exercise real worker replies.
+
+The pinned provider compresses SSE request bodies with Zstandard when available. Offline
+network fixtures must decode that format before checking request payloads; a fixture's JSON
+parse failure is not a provider outage. Evidence: the [worker fixture](../../tests/fixtures/codex-worker.mjs).
+
+
+## Windows off-screen recovery must move before resizing
+
+Reviewed: 2026-09-17. Scope: Electron companion windows on Windows with display scaling.
+
+Moving a window far off-screen can change the DIP size reported by getBounds. Combining a
+move back to a display with a resize in setBounds produced an oversized cat extending beyond
+the work area. Move to the destination first, then setBounds with the configured size and clamp
+the actual result only if needed. setSize after the move kept the non-resizable window at its
+previous size when shrinking. Use the placement helper for recovery, preference changes, and
+body dragging so repeated position updates cannot accumulate size rounding.
+Evidence: [placement helper](../../src/main/index.ts) and the off-screen/display-change cases in
+[desktop smoke tests](../../tests/smoke/desktop.spec.ts).
+
+## Send acknowledgements and reply completion are separate events
+
+Reviewed: 2026-09-17. Scope: renderer drafts and Electron smoke tests.
+
+Main can broadcast a turn before the send IPC promise settles. Clear only the unchanged draft
+revision on acceptance; comparing its text can erase a newly retyped identical message. A
+controlled delayed response reproduced this loss; [desktop tests](../../tests/smoke/desktop.spec.ts)
+cover retyping, unchanged accepted drafts, and rejected sends.
+
+An absent Stop button immediately after clicking Send does not prove the new reply completed.
+Wait for the new assistant message's completed state, then idle and the send acknowledgement.
+The [chat helper](../../tests/smoke/chat.ts) uses the next message index so a previous reply
+cannot satisfy the assertion. This corrects premature model/context assertions in the packaged
+Windows [Codex tests](../../tests/smoke/codex.spec.ts).
+
+Wait for native dialogs to close before composing, too. Options saves and History opens are
+asynchronous; Playwright's fill action does not check whether a modal obscures the input.
+The same helper waits for no open dialog before filling and counts replies only after a
+history switch completes. See [Playwright actionability](https://playwright.dev/docs/actionability).
+
+A disabled Apply button and a cleared error can also mean a save is in flight, not finished.
+After retrying a failed preference write, poll the persisted preference before asserting the
+new state. The packaged Windows run exposed this in the Options retry smoke test.

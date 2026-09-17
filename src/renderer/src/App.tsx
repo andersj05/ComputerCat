@@ -6,7 +6,10 @@ import {
   DEFAULT_PREFERENCES,
   type PetPreferences,
 } from "../../shared/contracts";
+import { activeModelInfo } from "../../shared/models";
+import { HistoryDialog } from "./HistoryDialog";
 import { Icon } from "./Icon";
+import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
 import { WindowCaption } from "./WindowCaption";
@@ -21,11 +24,20 @@ export function App() {
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
   const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
-  const [text, setText] = useState("");
+  const [text, setTextState] = useState("");
+  const draftRevision = useRef(0);
+  function setText(value: string) {
+    draftRevision.current++;
+    setTextState(value);
+  }
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [optionsTab, setOptionsTab] = useState<"cat" | "models">("cat");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [modelsOpen, setModelsOpen] = useState(false);
+  const drafts = useRef(new Map<string, string>());
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -42,6 +54,28 @@ export function App() {
     let received = false;
     let receivedPreferences = false;
     let receivedWindow = false;
+    let latestModels: AppInfo["models"] | undefined;
+    const unsubscribeOptions = window.computerCat.onOptionsRequested(() => {
+      if (!isPet) {
+        setOptionsTab("cat");
+        setModelsOpen(false);
+        setHistoryOpen(false);
+        setOptionsOpen(true);
+      }
+    });
+    const unsubscribeModelPicker = window.computerCat.onModelsRequested(() => {
+      if (!isPet) {
+        setHistoryOpen(false);
+        setOptionsOpen(false);
+        setModelsOpen(true);
+      }
+    });
+    const unsubscribeModels = window.computerCat.onModelsChanged((state) => {
+      latestModels = state;
+      setInfo((current) =>
+        current ? { ...current, ...activeModelInfo(state), models: state } : current,
+      );
+    });
     const unsubscribe = window.computerCat.onChanged((state) => {
       received = true;
       setSnapshot(state);
@@ -57,7 +91,11 @@ export function App() {
     void Promise.all([window.computerCat.info(), window.computerCat.snapshot()])
       .then(([appInfo, state]) => {
         if (!active) return;
-        setInfo(appInfo);
+        setInfo(
+          latestModels
+            ? { ...appInfo, ...activeModelInfo(latestModels), models: latestModels }
+            : appInfo,
+        );
         if (!received) setSnapshot(state);
         if (!receivedPreferences) setPreferences(appInfo.preferences);
         if (!receivedWindow) setMaximized(appInfo.maximized);
@@ -70,6 +108,9 @@ export function App() {
       unsubscribe();
       unsubscribePreferences();
       unsubscribeWindow();
+      unsubscribeModels();
+      unsubscribeOptions();
+      unsubscribeModelPicker();
     };
   }, [isPet]);
 
@@ -85,9 +126,9 @@ export function App() {
       cancelClear.current?.focus();
     } else {
       dialog.current?.close();
-      if (!isPet && !optionsOpen) input.current?.focus();
+      if (!isPet && !optionsOpen && !modelsOpen && !historyOpen) input.current?.focus();
     }
-  }, [confirmClear, optionsOpen, isPet]);
+  }, [confirmClear, optionsOpen, modelsOpen, historyOpen, isPet]);
 
   async function action(run: () => Promise<void>, failure: string) {
     try {
@@ -100,14 +141,16 @@ export function App() {
   async function send() {
     if (!text.trim() || snapshot.busy || pendingSend.current || clearing || !info) return;
     const draft = text;
+    const revision = draftRevision.current;
     pendingSend.current = true;
     setSending(true);
     setError("");
     followReply.current = true;
     try {
       const result = await window.computerCat.send({ id: crypto.randomUUID(), text: draft });
-      if (result.ok) setText((current) => (current === draft ? "" : current));
-      else setError(result.message);
+      if (result.ok) {
+        if (draftRevision.current === revision) setText("");
+      } else setError(result.message);
     } catch {
       setError("Couldn't send your message. Try again.");
     } finally {
@@ -138,10 +181,10 @@ export function App() {
 
   function newChat() {
     if (snapshot.busy || sending || clearing || !info) return;
-    if (snapshot.messages.length || text.trim()) setConfirmClear(true);
+    if (text.trim()) setConfirmClear(true);
     else {
       setError("");
-      input.current?.focus();
+      void clear();
     }
   }
 
@@ -166,6 +209,13 @@ export function App() {
         preferences={preferences}
         error={error}
         openChat={() => void action(() => window.computerCat.openChat(), "Couldn't open chat.")}
+        openOptions={() =>
+          void action(() => window.computerCat.openOptions(), "Couldn't open Options.")
+        }
+        modelLabel={info?.mode === "demo" ? "Local demo" : (info?.model ?? "Choose model")}
+        openModels={() =>
+          void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
+        }
         stop={stop}
       />
     );
@@ -173,7 +223,11 @@ export function App() {
   return (
     <div className={`app-shell ${maximized ? "maximized" : ""}`}>
       <WindowCaption
-        title="Computer Cat"
+        title={
+          snapshot.messages.length
+            ? `${snapshot.title ?? "Conversation"} — Computer Cat`
+            : "Computer Cat"
+        }
         maximized={maximized}
         onClose={desktop}
         onMinimize={() =>
@@ -193,11 +247,22 @@ export function App() {
           <Icon name="new" />
           New conversation
         </button>
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => setHistoryOpen(true)}
+          disabled={working || clearing || !ready}
+        >
+          History…
+        </button>
         <span className="toolbar-separator" aria-hidden="true" />
         <button
           type="button"
           className="toolbar-button"
-          onClick={() => setOptionsOpen(true)}
+          onClick={() => {
+            setOptionsTab("cat");
+            setOptionsOpen(true);
+          }}
           disabled={!ready}
         >
           <Icon name="options" />
@@ -213,18 +278,28 @@ export function App() {
           Desktop
         </button>
       </div>
-      {error && (
+      <ModelControls
+        state={info?.models}
+        busy={working || clearing}
+        onConnections={() => {
+          setOptionsTab("models");
+          setOptionsOpen(true);
+        }}
+      />
+      {(error || snapshot.persistenceError) && (
         <div className="error-banner" role="alert">
           <Icon name="help" />
-          <span>{error}</span>
-          <button
-            type="button"
-            className="xp-button"
-            aria-label="Dismiss error"
-            onClick={() => setError("")}
-          >
-            Dismiss
-          </button>
+          <span>{error || snapshot.persistenceError}</span>
+          {error && (
+            <button
+              type="button"
+              className="xp-button"
+              aria-label="Dismiss error"
+              onClick={() => setError("")}
+            >
+              Dismiss
+            </button>
+          )}
         </div>
       )}
       <main className="chat-content">
@@ -284,6 +359,15 @@ export function App() {
                           ? "Reply stopped."
                           : "No reply received. Try again.")}
                   </p>
+                  {message.tools?.length ? (
+                    <ul className="tool-activity" aria-label="Tool activity">
+                      {message.tools.map((tool) => (
+                        <li key={tool.id}>
+                          {tool.name} · {tool.state}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {message.state === "stopped" && message.text && (
                     <small className="message-note">Reply stopped</small>
                   )}
@@ -351,18 +435,59 @@ export function App() {
         </form>
       </main>
       <footer className="statusbar">
-        <span role="status">{working ? "Computer Cat is typing…" : "Ready"}</span>
+        <span role="status">
+          {working
+            ? snapshot.messages.at(-1)?.tools?.findLast((tool) => tool.state === "running")
+              ? `Using ${snapshot.messages.at(-1)?.tools?.findLast((tool) => tool.state === "running")?.name}…`
+              : "Computer Cat is working…"
+            : "Ready"}
+        </span>
         <span title={modeLabel}>{modeLabel}</span>
         <span className="statusbar-grip" aria-hidden="true" />
       </footer>
       {optionsOpen && (
         <OptionsDialog
+          key={optionsTab}
+          initialTab={optionsTab}
           info={info}
+          busy={snapshot.busy}
           preferences={preferences}
           onApply={(next) => window.computerCat.updatePreferences(next)}
           onClose={() => setOptionsOpen(false)}
           onShowPet={() => window.computerCat.showPet()}
           onQuit={() => window.computerCat.quit()}
+        />
+      )}
+      {historyOpen && (
+        <HistoryDialog
+          currentId={snapshot.conversationId}
+          onClose={() => setHistoryOpen(false)}
+          onOpen={async (id) => {
+            const result = await window.computerCat.openConversation(id);
+            if (result.ok) {
+              if (snapshot.conversationId) drafts.current.set(snapshot.conversationId, text);
+              setText(drafts.current.get(id) ?? "");
+              setError("");
+              followReply.current = true;
+            }
+            return result;
+          }}
+          onDeleted={(id) => {
+            drafts.current.delete(id);
+            if (id === snapshot.conversationId) setText("");
+          }}
+        />
+      )}
+      {modelsOpen && (
+        <ModelPickerDialog
+          state={info?.models}
+          busy={working}
+          onClose={() => setModelsOpen(false)}
+          onConnections={() => {
+            setModelsOpen(false);
+            setOptionsTab("models");
+            setOptionsOpen(true);
+          }}
         />
       )}
       <dialog
@@ -385,7 +510,10 @@ export function App() {
           <span className="question-icon" aria-hidden="true">
             ?
           </span>
-          <p id="clear-description">Clear the current messages and draft?</p>
+          <p id="clear-description">
+            Start a new conversation and discard this unsent draft? Your current conversation stays
+            in History.
+          </p>
         </div>
         <div className="dialog-actions">
           <button
@@ -403,7 +531,7 @@ export function App() {
             disabled={clearing}
             onClick={() => void clear()}
           >
-            {clearing ? "Clearing…" : "Start new chat"}
+            {clearing ? "Starting…" : "Start new chat"}
           </button>
         </div>
       </dialog>
