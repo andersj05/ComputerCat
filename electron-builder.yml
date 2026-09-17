@@ -11,6 +11,7 @@ extraResources:
 asar: true
 npmRebuild: true
 win:
+  icon: assets/computer-cat.png
   target: nsis
   artifactName: ComputerCat-${version}-${arch}-setup.${ext}
 nsis:
