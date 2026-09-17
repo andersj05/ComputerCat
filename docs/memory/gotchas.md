@@ -95,3 +95,18 @@ previous size when shrinking. Use the placement helper for recovery, preference 
 body dragging so repeated position updates cannot accumulate size rounding.
 Evidence: [placement helper](../../src/main/index.ts) and the off-screen/display-change cases in
 [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
+
+## Send acknowledgements and reply completion are separate events
+
+Reviewed: 2026-09-17. Scope: renderer drafts and Electron smoke tests.
+
+Main can broadcast a turn before the send IPC promise settles. Clear only the unchanged draft
+revision on acceptance; comparing its text can erase a newly retyped identical message. A
+controlled delayed response reproduced this loss; [desktop tests](../../tests/smoke/desktop.spec.ts)
+cover retyping, unchanged accepted drafts, and rejected sends.
+
+An absent Stop button immediately after clicking Send does not prove the new reply completed.
+Wait for the new assistant message's completed state, then idle and the send acknowledgement.
+The [chat helper](../../tests/smoke/chat.ts) uses the next message index so a previous reply
+cannot satisfy the assertion. This corrects premature model/context assertions in the packaged
+Windows [Codex tests](../../tests/smoke/codex.spec.ts).

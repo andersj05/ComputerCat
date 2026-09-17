@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
+import { sendAndWaitForReply } from "./chat";
 
 async function launch(userData: string) {
   const env = Object.fromEntries(
@@ -181,10 +182,9 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
     await page.getByRole("button", { name: "OK", exact: true }).click();
     await expect(page.locator(".statusbar")).toContainText("gpt-5.6-terra");
-    await input.fill("follow-up");
-    await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.locator(".message.assistant").last()).toContainText("Offline Codex reply.");
-    await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
+    await expect(await sendAndWaitForReply(page, "follow-up")).toContainText(
+      "Offline Codex reply.",
+    );
     const requests = await app.electron.evaluate(
       () => Reflect.get(globalThis, "offlineCodex").requests,
     );
@@ -211,9 +211,10 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     expect(JSON.stringify(requests[2].input)).toContain("first-context-canary");
     await page.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-sol");
     await page.getByLabel("Chat reasoning", { exact: true }).selectOption("medium");
-    await input.fill("Continue after changing models");
-    await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
+    await expect(page.getByLabel("Chat model", { exact: true })).toHaveValue("codex:gpt-5.6-sol");
+    await expect(page.getByLabel("Chat reasoning", { exact: true })).toHaveValue("medium");
+    await expect(page.getByLabel("Chat reasoning", { exact: true })).toBeEnabled();
+    await sendAndWaitForReply(page, "Continue after changing models");
     const switched = await app.electron.evaluate(() =>
       Reflect.get(globalThis, "offlineCodex").requests.at(-1),
     );
@@ -259,11 +260,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await page.getByRole("button", { name: "History…" }).click();
     await page.getByRole("button", { name: /first-context-canary/ }).click();
     await page.getByRole("button", { name: "Open conversation", exact: true }).click();
-    await page
-      .getByRole("textbox", { name: "Message Computer Cat" })
-      .fill("Continue the restored chat");
-    await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
+    await sendAndWaitForReply(page, "Continue the restored chat");
     const resumed = await app.electron.evaluate(() =>
       Reflect.get(globalThis, "offlineCodex").requests.at(-1),
     );

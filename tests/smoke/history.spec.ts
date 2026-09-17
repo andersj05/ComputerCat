@@ -2,6 +2,7 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
+import { sendAndWaitForReply } from "./chat";
 
 async function launch(userData: string) {
   const env: NodeJS.ProcessEnv = {
@@ -33,15 +34,10 @@ test("history survives restart, resumes drafts, and deletes only the chosen conv
   let app = await launch(userData);
   try {
     let page = app.page;
-    const send = async (text: string) => {
-      await page.getByRole("textbox", { name: "Message Computer Cat" }).fill(text);
-      await page.getByRole("button", { name: "Send message" }).click();
-      await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
-    };
-    await send("first saved chat");
+    await sendAndWaitForReply(page, "first saved chat");
     await page.getByRole("button", { name: "New conversation" }).click();
     await expect(page.locator(".message")).toHaveCount(0);
-    await send("second saved chat");
+    await sendAndWaitForReply(page, "second saved chat");
     const input = page.getByRole("textbox", { name: "Message Computer Cat" });
     await input.fill("second chat draft");
     await page.getByRole("button", { name: "History…" }).click();

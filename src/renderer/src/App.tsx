@@ -24,7 +24,12 @@ export function App() {
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
   const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
-  const [text, setText] = useState("");
+  const [text, setTextState] = useState("");
+  const draftRevision = useRef(0);
+  function setText(value: string) {
+    draftRevision.current++;
+    setTextState(value);
+  }
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [maximized, setMaximized] = useState(false);
@@ -136,14 +141,16 @@ export function App() {
   async function send() {
     if (!text.trim() || snapshot.busy || pendingSend.current || clearing || !info) return;
     const draft = text;
+    const revision = draftRevision.current;
     pendingSend.current = true;
     setSending(true);
     setError("");
     followReply.current = true;
     try {
       const result = await window.computerCat.send({ id: crypto.randomUUID(), text: draft });
-      if (result.ok) setText((current) => (current === draft ? "" : current));
-      else setError(result.message);
+      if (result.ok) {
+        if (draftRevision.current === revision) setText("");
+      } else setError(result.message);
     } catch {
       setError("Couldn't send your message. Try again.");
     } finally {
