@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-17, including desktop cat interaction and presence.
+Reviewed: 2026-09-17.
 Check Git and relevant code when resuming; this map does not establish checkout or test results.
 
 ## What exists
@@ -65,4 +65,4 @@ completion checklist. A worker process isolates crashes but is not an OS securit
 Future user memory needs a storage design with inspection/deletion, retention, migrations,
 corruption recovery, and tests for context selection. Conversation history is a separate feature.
 
-Find unfinished work in the relevant [handoff](handoffs/README.md) and Git.
+See [handoffs](handoffs/README.md) for unfinished work.

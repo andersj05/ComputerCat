@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import {
@@ -8,6 +9,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import type { ChatMessage } from "../shared/contracts";
 import { PI_TOOL_NAMES } from "../shared/tools";
 import type { RuntimeConfig } from "./config";
 import { type AgentRuntime, SYSTEM_PROMPT, UserFacingError } from "./runtime";
@@ -58,12 +60,57 @@ export async function createPiRuntime(
   config: Pick<RuntimeConfig, "provider" | "model" | "apiKey" | "reasoning">,
   cwd: string,
   injectedModels?: ModelRuntime,
+  saved?: { sessionFile: string; history: ChatMessage[] },
 ): Promise<AgentRuntime> {
   const models = injectedModels ?? (await createModelRuntime());
   const model = models.getModel(config.provider, config.model);
   if (!model)
     throw new UserFacingError("The configured model is unavailable. Check your model settings.");
   if (config.apiKey) await models.setRuntimeApiKey(config.provider, config.apiKey);
+  let manager: SessionManager;
+  try {
+    manager = saved
+      ? SessionManager.open(saved.sessionFile, dirname(saved.sessionFile), cwd)
+      : SessionManager.inMemory(cwd);
+  } catch {
+    throw new UserFacingError(
+      "This conversation's model context couldn't be opened. Its saved files were kept. Start a new conversation to continue.",
+    );
+  }
+  let visibleCount = saved?.history.length ?? 0;
+  const marker = manager
+    .getEntries()
+    .findLast((entry) => entry.type === "custom" && entry.customType === "computercat-transcript");
+  const data = marker?.type === "custom" ? (marker.data as { count?: unknown }) : undefined;
+  const synced =
+    typeof data?.count === "number" && Number.isSafeInteger(data.count) && data.count >= 0
+      ? data.count
+      : 0;
+  // Fill gaps from demo conversations or a missing native file. Native Pi tool results stay intact.
+  for (const message of saved?.history.slice(synced) ?? []) {
+    if (!message.text) continue;
+    if (message.role === "user")
+      manager.appendMessage({ role: "user", content: message.text, timestamp: Date.now() });
+    else
+      manager.appendMessage({
+        role: "assistant",
+        content: [{ type: "text", text: message.text }],
+        api: model.api,
+        provider: model.provider,
+        model: model.id,
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason:
+          message.state === "stopped" ? "aborted" : message.state === "error" ? "error" : "stop",
+        timestamp: Date.now(),
+      });
+  }
   const { session } = await createAgentSession({
     cwd,
     modelRuntime: models,
@@ -71,7 +118,7 @@ export async function createPiRuntime(
     ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
     tools: [...PI_TOOL_NAMES],
     resourceLoader: isolatedResources(),
-    sessionManager: SessionManager.inMemory(cwd),
+    sessionManager: manager,
     settingsManager: SettingsManager.inMemory({
       retry: { enabled: false },
       // Use SSE without a background WebSocket connection cache.
@@ -111,6 +158,8 @@ export async function createPiRuntime(
       };
       signal.addEventListener("abort", abort, { once: true });
       try {
+        visibleCount += 2;
+        manager.appendCustomEntry("computercat-transcript", { count: visibleCount });
         await session.prompt(prompt, { expandPromptTemplates: false });
         signal.throwIfAborted();
         if (providerFailed)

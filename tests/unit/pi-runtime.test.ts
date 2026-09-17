@@ -106,6 +106,63 @@ describe("Pi integration without network or credentials", () => {
     }
   });
 
+  it("restores native context including tool results and honors a new model", async () => {
+    vi.stubEnv("PI_OFFLINE", "1");
+    const directory = await mkdtemp(join(tmpdir(), "computercat-pi-restore-"));
+    fixtureDirectories.push(directory);
+    await writeFile(join(directory, "fact.txt"), "native-tool-result-canary");
+    const models = await createModelRuntime();
+    const provider = fauxProvider({
+      provider: "cat-restore",
+      models: [{ id: "one" }, { id: "two" }],
+    });
+    models.registerNativeProvider(provider.provider);
+    provider.setResponses([
+      fauxAssistantMessage(fauxToolCall("read", { path: "fact.txt" }), { stopReason: "toolUse" }),
+      fauxAssistantMessage("The fixture is read."),
+      (context, _options, _state, model) => {
+        expect(model.id).toBe("two");
+        expect(JSON.stringify(context.messages)).toContain("native-tool-result-canary");
+        expect(JSON.stringify(context.messages)).toContain("demo-gap-canary");
+        expect(
+          context.messages.filter(
+            (m) => m.role === "user" && JSON.stringify(m.content).includes("Read fact.txt"),
+          ),
+        ).toHaveLength(1);
+        return fauxAssistantMessage("Restored.");
+      },
+    ]);
+    const saved = { sessionFile: join(directory, "session.jsonl"), history: [] };
+    const first = await createPiRuntime(
+      { provider: "cat-restore", model: "one", apiKey: "fixture-secret" },
+      directory,
+      models,
+      saved,
+    );
+    await first.run("Read fact.txt", new AbortController().signal, () => {});
+    first.dispose();
+    const second = await createPiRuntime(
+      { provider: "cat-restore", model: "two", apiKey: "fixture-secret" },
+      directory,
+      models,
+      {
+        ...saved,
+        history: [
+          { id: "1", role: "user", text: "Read fact.txt", state: "complete" },
+          { id: "2", role: "assistant", text: "The fixture is read.", state: "complete" },
+          { id: "3", role: "user", text: "demo-gap-canary", state: "complete" },
+          { id: "4", role: "assistant", text: "Demo response", state: "complete" },
+        ],
+      },
+    );
+    try {
+      await second.run("Continue", new AbortController().signal, () => {});
+      expect(await readFile(saved.sessionFile, "utf8")).not.toContain("fixture-secret");
+    } finally {
+      second.dispose();
+    }
+  });
+
   it("retains context within a runtime but starts a replacement runtime with a fresh session", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
     const models = await createModelRuntime();
