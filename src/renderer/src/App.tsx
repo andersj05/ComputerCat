@@ -63,6 +63,7 @@ export function App() {
   const pendingSend = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const cancelClear = useRef<HTMLButtonElement>(null);
+  const focusAfterClear = useRef(false);
 
   useEffect(() => {
     document.body.classList.toggle("pet-body", isPet);
@@ -114,7 +115,13 @@ export function App() {
     if (confirmClear) {
       dialog.current?.showModal();
       cancelClear.current?.focus();
-    } else dialog.current?.close();
+    } else {
+      dialog.current?.close();
+      if (focusAfterClear.current) {
+        input.current?.focus();
+        focusAfterClear.current = false;
+      }
+    }
   }, [confirmClear]);
   useEffect(() => {
     if (!notice) return;
@@ -160,6 +167,7 @@ export function App() {
         setText("");
         setView("chat");
         followReply.current = true;
+        focusAfterClear.current = true;
       }
     } catch {
       setError("Couldn't start a new chat. Please try again.");
@@ -174,18 +182,25 @@ export function App() {
     if (snapshot.busy || sending || clearing) return;
     if (snapshot.messages.length || text.trim()) setConfirmClear(true);
     else {
+      setError("");
       setView("chat");
       input.current?.focus();
     }
   }
 
   async function updatePreferences(patch: Partial<PetPreferences>) {
+    const previous = preferences;
+    setPreferences({ ...previous, ...patch });
     setSaving(true);
     setError("");
     try {
       const result = await window.computerCat.updatePreferences(patch);
-      if (!result.ok) setError(result.message);
+      if (!result.ok) {
+        setPreferences(previous);
+        setError(result.message);
+      }
     } catch {
+      setPreferences(previous);
       setError("Couldn't update your cat. Please try again.");
     } finally {
       setSaving(false);

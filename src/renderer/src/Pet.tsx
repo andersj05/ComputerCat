@@ -25,7 +25,7 @@ export function Pet({
         : lastReply?.state === "stopped"
           ? "Here when you're ready."
           : lastReply
-            ? "I've got a reply!"
+            ? "Ready when you are."
             : "Need a little help?";
   return (
     <main
