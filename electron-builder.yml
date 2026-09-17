@@ -1,0 +1,22 @@
+appId: com.andersj05.computercat
+productName: Computer Cat
+directories:
+  output: release
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: assets/computer-cat.png
+    to: computer-cat.png
+asar: true
+npmRebuild: true
+win:
+  icon: assets/computer-cat.png
+  target: nsis
+  artifactName: ComputerCat-${version}-${arch}-setup.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
