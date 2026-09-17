@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, rmdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
@@ -11,7 +11,7 @@ async function launch(userData: string, mode: "demo" | "pi" = "demo") {
   );
   delete env.ELECTRON_RUN_AS_NODE;
   const executable = process.env.COMPUTERCAT_PACKAGED_EXECUTABLE;
-  const electron = await _electron.launch({
+  return _electron.launch({
     ...(executable ? { executablePath: executable, args: [] } : { args: [resolve(".")] }),
     env: {
       ...env,
@@ -23,7 +23,6 @@ async function launch(userData: string, mode: "demo" | "pi" = "demo") {
       COMPUTERCAT_TEST_USER_DATA: userData,
     },
   });
-  return electron;
 }
 
 async function windows(electron: ElectronApplication) {
@@ -42,20 +41,16 @@ async function removeTestData(userData: string) {
 }
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
-test("XP workspace, companion controls, isolated bridge, and conversation lifecycle", async ({}, testInfo) => {
+test("XP messenger, keyboard controls, isolated bridge, and conversation lifecycle", async ({}, testInfo) => {
   test.setTimeout(60_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
   const electron = await launch(userData);
   try {
     const { page, pet } = await windows(electron);
-    // Windows rounds frameless window bounds at fractional display scales.
     const rendererErrors: string[] = [];
     page.on("pageerror", (error) => rendererErrors.push(error.message));
     pet.on("pageerror", (error) => rendererErrors.push(error.message));
-    await expect(
-      page.getByRole("heading", { name: "A little company. A little help." }),
-    ).toBeVisible();
-    await expect(page.locator(".composer-footer")).toContainText("No API calls");
+    await expect(page.locator(".statusbar")).toContainText("Demo — no API calls");
     expect(
       await page.evaluate(() => ({
         require: typeof Reflect.get(window, "require"),
@@ -90,11 +85,21 @@ test("XP workspace, companion controls, isolated bridge, and conversation lifecy
         .locator(".pet-button img")
         .evaluate((element) => getComputedStyle(element).animationName),
     ).toBe("none");
+    // Verify an actual rendered corner stays transparent, not merely the PNG source.
+    expect(
+      await electron.evaluate(async ({ BrowserWindow }) => {
+        const window = BrowserWindow.getAllWindows().find((candidate) =>
+          candidate.webContents.getURL().includes("view=pet"),
+        );
+        return (await window?.webContents.capturePage())?.toBitmap()[3];
+      }),
+    ).toBe(0);
+    await expect(pet.getByRole("status")).toHaveText("");
     await page.screenshot({ path: testInfo.outputPath("welcome.png") });
     await pet.screenshot({ path: testInfo.outputPath("companion.png"), omitBackground: true });
 
-    await page.getByRole("button", { name: "Say hello" }).click();
     const input = page.getByRole("textbox", { name: "Message Computer Cat" });
+    await page.getByRole("button", { name: "Say hello" }).click();
     await expect(input).toHaveValue("Hey, Computer Cat. Nice to meet you!");
     await expect(page.locator(".message")).toHaveCount(0);
     await expect(input).toBeFocused();
@@ -102,7 +107,7 @@ test("XP workspace, companion controls, isolated bridge, and conversation lifecy
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeVisible();
     await expect(pet.getByRole("status")).toContainText("Thinking");
     await expect(page.getByRole("button", { name: "New conversation" })).toBeDisabled();
-    await expect(page.locator(".message.assistant")).toContainText("no API calls are being made");
+    await expect(page.locator(".message.assistant")).toContainText("local demo");
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
     await page.screenshot({ path: testInfo.outputPath("conversation.png") });
     await input.fill("First line");
@@ -113,58 +118,47 @@ test("XP workspace, companion controls, isolated bridge, and conversation lifecy
     await pet.getByRole("button", { name: "Stop reply" }).click();
     await expect(page.locator('[data-state="stopped"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
-
+    await input.fill("Keep this draft");
     await page.getByRole("button", { name: "New conversation" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("new-conversation.png") });
-    await page.getByRole("button", { name: "Keep chatting" }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.locator(".message")).toHaveCount(4);
+    await expect(input).toHaveValue("Keep this draft");
     await page.getByRole("button", { name: "New conversation" }).click();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(page.locator(".message")).toHaveCount(4);
+    await expect(input).toHaveValue("Keep this draft");
     await page.getByRole("button", { name: "New conversation" }).click();
     await page.getByRole("button", { name: "Start new chat" }).click();
     await expect(page.locator(".message")).toHaveCount(0);
     await expect(input).toHaveValue("");
     await expect(input).toBeFocused();
 
-    await page.getByRole("button", { name: "My cat", exact: true }).click();
-    await page.getByRole("radio", { name: "Small", exact: true }).check();
-    await expect
-      .poll(() =>
-        electron.evaluate(({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows()
-            .find((window) => window.webContents.getURL().includes("view=pet"))
-            ?.getSize()
-            .every((value, index) => Math.abs(value - (index === 0 ? 148 : 244)) <= 1),
-        ),
-      )
-      .toBe(true);
-    await page.getByRole("checkbox", { name: "Keep cat on top" }).uncheck();
-    await expect
-      .poll(() =>
-        electron.evaluate(({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows()
-            .find((window) => window.webContents.getURL().includes("view=pet"))
-            ?.isAlwaysOnTop(),
-        ),
-      )
-      .toBe(false);
-    await page.getByRole("checkbox", { name: "A little animation" }).uncheck();
-    await expect(pet.locator(".pet-wrap")).not.toHaveClass(/animated/);
-    await page.getByRole("radio", { name: "Medium", exact: true }).check();
-    await page.getByRole("checkbox", { name: "Keep cat on top" }).check();
-    await page.screenshot({ path: testInfo.outputPath("my-cat.png") });
-    await page.getByRole("button", { name: "Find my cat" }).click();
-    await expect(page.locator(".statusbar")).toContainText("Your cat is on the desktop");
+    await page.getByRole("button", { name: "Options…" }).click();
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await expect(page.getByRole("tab", { name: "Desktop cat" })).toBeFocused();
+    await page.screenshot({ path: testInfo.outputPath("options-cat.png") });
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "General", exact: true })).toBeFocused();
+    await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
+    await expect(options.getByText("Local demo", { exact: true })).toBeVisible();
+    await expect(options.getByText("Off", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("options-general.png") });
+    await page.keyboard.press("Home");
+    await expect(page.getByRole("tab", { name: "Desktop cat" })).toBeFocused();
+    await page.getByRole("button", { name: "Find cat", exact: true }).click();
+    expect(
+      await electron.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((window) => window.webContents.getURL().includes("view=pet"))
+          ?.isVisible(),
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(options).toBeHidden();
+    await expect(input).toBeFocused();
 
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await expect(page.getByText("Screen & app access is off.", { exact: false })).toBeVisible();
-    await expect(
-      page.getByText("A local demo with sample replies.", { exact: false }),
-    ).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath("settings.png") });
     await page.getByRole("button", { name: "Maximize window" }).click();
     await expect(page.getByRole("button", { name: "Restore window" })).toBeVisible();
     await page.getByRole("button", { name: "Restore window" }).click();
@@ -189,48 +183,62 @@ test("XP workspace, companion controls, isolated bridge, and conversation lifecy
         ),
       )
       .toBe(false);
-    await page.getByRole("button", { name: "Close chat to desktop" }).click();
-    await expect
-      .poll(() =>
-        electron.evaluate(({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows()
-            .find((window) => window.webContents.getURL().includes("view=chat"))
-            ?.isVisible(),
-        ),
-      )
-      .toBe(false);
-    await pet.getByRole("button", { name: "Open Computer Cat chat" }).click();
-    await expect
-      .poll(() =>
-        electron.evaluate(({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows()
-            .find((window) => window.webContents.getURL().includes("view=chat"))
-            ?.isVisible(),
-        ),
-      )
-      .toBe(true);
-    await expect(page.getByRole("heading", { name: "Simple by nature." })).toBeVisible();
+    for (const button of ["Close chat to desktop", "Desktop"]) {
+      await page.getByRole("button", { name: button, exact: true }).click();
+      await expect
+        .poll(() =>
+          electron.evaluate(({ BrowserWindow }) =>
+            BrowserWindow.getAllWindows()
+              .find((window) => window.webContents.getURL().includes("view=chat"))
+              ?.isVisible(),
+          ),
+        )
+        .toBe(false);
+      await pet.getByRole("button", { name: "Open Computer Cat chat" }).click();
+      await expect
+        .poll(() =>
+          electron.evaluate(({ BrowserWindow }) =>
+            BrowserWindow.getAllWindows()
+              .find((window) => window.webContents.getURL().includes("view=chat"))
+              ?.isVisible(),
+          ),
+        )
+        .toBe(true);
+    }
 
     await electron.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()
         .find((window) => window.webContents.getURL().includes("view=chat"))
-        ?.setSize(720, 580),
+        ?.setSize(500, 420),
     );
-    await page.screenshot({ path: testInfo.outputPath("settings-small.png") });
-    await page.getByRole("button", { name: "My cat", exact: true }).click();
-    expect(
-      await page
-        .locator(".page-content")
-        .evaluate((element) => element.scrollWidth <= element.clientWidth),
-    ).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath("my-cat-small.png") });
-    await page.getByRole("button", { name: "Chat", exact: true }).click();
     await expect(input).toBeInViewport();
     await expect(page.getByRole("button", { name: "Send message" })).toBeInViewport();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
     await page.screenshot({ path: testInfo.outputPath("welcome-small.png") });
+    await page.getByRole("button", { name: "Options…" }).click();
+    await expect(options.getByRole("button", { name: "OK", exact: true })).toBeInViewport();
+    for (const tab of ["Desktop cat", "General"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      expect(
+        await options.evaluate(
+          (element) =>
+            element.scrollWidth <= element.clientWidth &&
+            element.scrollHeight <= element.clientHeight,
+        ),
+      ).toBe(true);
+      expect(
+        await page
+          .getByRole("tabpanel", { name: tab, exact: true })
+          .evaluate(
+            (element) =>
+              element.scrollWidth <= element.clientWidth &&
+              element.scrollHeight <= element.clientHeight,
+          ),
+      ).toBe(true);
+    }
+    await page.screenshot({ path: testInfo.outputPath("options-small.png") });
     expect(rendererErrors).toEqual([]);
   } finally {
     await electron.close();
@@ -258,21 +266,51 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
   }
 });
 
-test("cat preferences survive restart while conversations stay session-only", async () => {
+test("Options stage, cancel, apply, and persist cat settings without persisting chat", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
   let electron = await launch(userData);
   try {
-    const { page } = await windows(electron);
+    const { page, pet } = await windows(electron);
+    const saved = () => page.evaluate(async () => (await window.computerCat.info()).preferences);
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    await page.getByRole("checkbox", { name: "Always on top" }).uncheck();
+    expect(await saved()).toEqual({ size: "medium", animation: true, alwaysOnTop: true });
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Options…" }).click();
+    await expect(page.getByRole("radio", { name: "Medium", exact: true })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "Always on top" })).toBeChecked();
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    await page.getByRole("checkbox", { name: "Always on top" }).uncheck();
+    await page.getByRole("checkbox", { name: "Animate cat" }).uncheck();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    expect(await saved()).toEqual({ size: "small", animation: false, alwaysOnTop: false });
+    await expect(pet.locator(".pet-wrap")).not.toHaveClass(/animated/);
+    // Windows rounds frameless window bounds at fractional display scales.
     expect(
-      await page.evaluate(() =>
-        window.computerCat.updatePreferences({
-          size: "large",
-          animation: false,
-          alwaysOnTop: false,
-        }),
-      ),
-    ).toEqual({ ok: true });
+      await electron.evaluate(({ BrowserWindow }) => {
+        const pet = BrowserWindow.getAllWindows().find((window) =>
+          window.webContents.getURL().includes("view=pet"),
+        );
+        return {
+          sizeMatches: pet
+            ?.getSize()
+            .every((value, index) => Math.abs(value - (index === 0 ? 148 : 244)) <= 1),
+          onTop: pet?.isAlwaysOnTop(),
+        };
+      }),
+    ).toEqual({ sizeMatches: true, onTop: false });
+    await page.getByRole("radio", { name: "Medium", exact: true }).check();
+    await page.keyboard.press("Escape");
+    expect(await saved()).toEqual({ size: "small", animation: false, alwaysOnTop: false });
+    await page.getByRole("button", { name: "Options…" }).click();
+    await expect(page.getByRole("radio", { name: "Small", exact: true })).toBeChecked();
+    await page.getByRole("radio", { name: "Large", exact: true }).check();
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
     await page.getByRole("textbox", { name: "Message Computer Cat" }).fill("Hello");
     await page.getByRole("button", { name: "Send message" }).click();
     await page.getByRole("button", { name: "Stop reply" }).click();
@@ -297,6 +335,37 @@ test("cat preferences survive restart while conversations stay session-only", as
         };
       }),
     ).toEqual({ sizeMatches: true, onTop: false });
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+test("Options keep a failed draft available for retry without changing the live cat", async () => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const obstruction = join(userData, "preferences.json.tmp");
+  await mkdir(obstruction);
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("radio", { name: "Large", exact: true }).check();
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await expect(options.getByRole("alert")).toContainText("Couldn't save");
+    await expect(options.getByRole("alert")).not.toContainText(userData);
+    await expect(page.getByRole("radio", { name: "Large", exact: true })).toBeChecked();
+    expect(
+      await page.evaluate(async () => (await window.computerCat.info()).preferences.size),
+    ).toBe("medium");
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeEnabled();
+    await rmdir(obstruction);
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    await expect(options.getByRole("alert")).toBeHidden();
+    expect(
+      await page.evaluate(async () => (await window.computerCat.info()).preferences.size),
+    ).toBe("large");
   } finally {
     await electron.close();
     await removeTestData(userData);
