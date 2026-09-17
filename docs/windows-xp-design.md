@@ -1,39 +1,50 @@
-# Computer Cat: a familiar little friend
+# Windows XP presentation
 
-The supplied transparent pixel cat is the product's character. Show the whole silhouette on the
-desktop, preserve its proportions, and use the same artwork in chat, onboarding, and the tray.
+The transparent cat is the app's character. Keep its full silhouette and original proportions.
+The surrounding interface follows XP's desktop conventions: a compact messenger window, a
+Luna caption, Tahoma text, cream controls, inset white panes, and small colored toolbar icons.
 
-## Design direction
+## Layout and copy
 
-Windows XP's Luna blue, warm gray controls, inset white surfaces, grassy green accents, Tahoma,
-and small illustrated icons give the app a familiar home. Apply those details to a spacious,
-readable workspace: nostalgia in the chrome, clarity in the content.
+- One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,
+  hero headings, or repeated brand introductions.
+- The toolbar contains three working actions: New conversation, Options, and Desktop.
+- Two plain starter links prepare editable drafts. They do not send anything automatically.
+- Speaker names and text form a plain chat log. Streaming appears in the status bar; Stop stays
+  next to the message box and is also available from the cat.
+- One status bar reports activity and the current mode. Put details in Options instead of
+  repeating them around the workspace.
+- Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
+- The desktop cat shows no idle caption. Its small grip moves it; clicking the cat opens chat.
 
-- One primary action: talk to the cat. Keep the composer visible throughout a conversation.
-- A small, stable sidebar: chat, the desktop companion, and settings. No empty destinations.
-- A welcoming home with the cat, a short introduction, and useful starter prompts that populate
-  an editable draft. In demo mode, clearly describe the sample conversation.
-- Desktop mode closes the chat into the companion. Clicking the cat or using the existing
-  shortcut brings the same conversation back. Window controls must perform real window actions.
-- Companion settings should actually control its size, presence, and motion. Keep them simple.
-- Show streaming, cancellation, connection failures, and stopped replies where they happen.
-- Keep keyboard focus visible, respect reduced motion, and support the minimum window size.
-- Keep the current privacy model: session-only chat, explicit model configuration, and no screen
-  access or computer actions. Describe capabilities truthfully in the UI.
+## Controls and dialogs
 
-## Product references
+Use the same blue caption, cream buttons, dotted keyboard focus, green checks, blue fieldset
+legends, and orange selected-tab edge throughout. Caption buttons perform native window
+operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
-These references inform the hierarchy and interaction patterns, without copying their branding.
+Options is an XP property sheet with Desktop cat and General tabs. Stage changes until Apply
+or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
+keep the dialog and draft open, show the error there, and leave the running cat unchanged.
 
-- [Notion's sidebar](https://www.notion.com/en-gb/help/navigate-with-the-sidebar): a stable place
-  to navigate, with a clear current location and secondary detail revealed when needed.
-- [Spotify's design history](https://newsroom.spotify.com/2026-04-23/spotify-design-history/):
-  recognizable personality with controls that stay familiar as the content changes.
-- [Robinhood Legend layouts](https://robinhood.com/us/en/support/articles/layouts-on-legend/):
-  a useful starting point and a focused workspace that can adapt to its user.
+New conversation asks before clearing messages or a draft. Default keyboard focus goes to
+Cancel. Return focus to the composer after either dialog closes.
+
+The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep a stable height.
+Keep all controls reachable by keyboard and respect the operating system's reduced-motion
+preference. Preserve transparent pixels around the desktop pet at every size.
+
+## References
+
+- [Microsoft's Windows interface text guidance](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/bb246446(v=vs.85)) informs concise labels and restrained descriptions.
+- [XP.css's control reference](https://botoxparty.github.io/XP.css/) informs XP control proportions
+  and visual states. The app uses its own styles and does not add a theme dependency.
+- The useful lesson from Notion, Spotify, and Robinhood is clarity of purpose and predictable
+  interaction. Computer Cat expresses that through XP's existing desktop conventions.
 
 ## Verification
 
-Review real Electron screenshots of home, chat, settings, companion, and the minimum window
-size. Exercise keyboard compose, cancellation from both windows, clear chat, window controls,
-and validated preferences. Run the repository's offline verification and desktop smoke suite.
+Inspect real Electron screenshots of the empty window, conversation, both Options tabs,
+confirmation dialog, transparent pet, and minimum-size layout. Test composing, cancellation,
+window controls, staged preferences, persistence, save failure and retry, and keyboard focus.
+Run `npm run verify` and `npm run test:smoke`; all model tests remain offline.

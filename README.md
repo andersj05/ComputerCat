@@ -1,6 +1,6 @@
 # Computer Cat
 
-A little company. A little help. A desktop companion built with Electron, React, TypeScript,
+A Windows XP-inspired desktop companion built with Electron, React, TypeScript,
 and the [Pi SDK](https://github.com/earendil-works/pi).
 
 [![CI](https://github.com/andersj05/ComputerCat/actions/workflows/ci.yml/badge.svg)](https://github.com/andersj05/ComputerCat/actions/workflows/ci.yml)
@@ -19,12 +19,13 @@ The first launch may download Electron. The app starts in **local demo mode**: s
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
 - Click the full pixel cat to open chat. Drag its small handle to move it.
-- The Windows XP workspace has three destinations: Chat, My cat, and Settings.
-- Starter cards prepare an editable message. Press Enter or Send when it is ready.
-- My cat controls pet size, idle animation, and always-on-top behavior. These preferences save locally.
-- Desktop mode and the close button tuck chat away; the cat stays with you.
+- The compact XP messenger keeps the conversation and message box in one window.
+- Starter links prepare an editable message. Press Enter or Send when it is ready.
+- Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
+  locally; Cancel or Escape discards unapplied changes.
+- Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
-- Closing chat leaves the cat and tray running. Quit through Settings or the tray menu.
+- Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
 - Conversations live only for the current app session. New conversation asks before clearing a chat or draft.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,

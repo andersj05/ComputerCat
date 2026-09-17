@@ -51,8 +51,10 @@ Pet size, always-on-top, and animation are the only saved preferences. Main vali
 partial update, serializes atomic writes to `preferences.json` in Electron user data, and
 broadcasts successful updates to both renderers. Unknown fields, invalid values, and empty
 updates are rejected. Missing or corrupt files use defaults; save failures keep the previous
-settings and return a message without filesystem details. The UI gives immediate feedback and
-restores the previous selection if saving fails. Conversation content remains in memory.
+settings and return a message without filesystem details. The Options dialog stages changes until
+Apply or OK succeeds. Cancel, Escape, or closing the dialog discards unapplied changes; a save
+failure leaves the draft available to retry without changing the live cat. Conversation content
+remains in memory.
 
 The cat retains its original transparent silhouette. Size changes stay within the current
 display work area. Native drag regions move the pet and chat; renderer code never accesses the
