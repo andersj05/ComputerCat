@@ -81,3 +81,6 @@ Evidence: [model settings](../../src/main/model-settings.ts),
 [encrypted store](../../src/main/secret-store.ts),
 [persistence tests](../../tests/unit/secret-store.test.ts), and
 [OpenAI authentication guidance](https://learn.chatgpt.com/docs/auth).
+The [OAuth adapter](../../src/agent/codex-auth.ts) uses the pinned provider's browser/device
+flows and serializes refresh with credential deletion. [Offline tests](../../tests/unit/codex-auth.test.ts)
+intercept the real SDK's device flow and cover cancellation, stale callbacks, and rotated tokens.
