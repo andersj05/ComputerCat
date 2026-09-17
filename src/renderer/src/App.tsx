@@ -371,6 +371,7 @@ export function App() {
       {optionsOpen && (
         <OptionsDialog
           info={info}
+          busy={snapshot.busy}
           preferences={preferences}
           onApply={(next) => window.computerCat.updatePreferences(next)}
           onClose={() => setOptionsOpen(false)}

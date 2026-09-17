@@ -23,9 +23,14 @@ Use the same blue caption, cream buttons, dotted keyboard focus, green checks, b
 legends, and orange selected-tab edge throughout. Caption buttons perform native window
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
-Options is an XP property sheet with Desktop cat and General tabs. Stage changes until Apply
+Options is an XP property sheet with Desktop cat, Models, and General tabs. Stage changes until Apply
 or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
 keep the dialog and draft open, show the error there, and leave the running cat unchanged.
+Models uses native select controls for the default connection, model, and reasoning. Saving a
+default does not replace an existing conversation; New conversation applies it. Account sign-in
+and Disconnect take effect immediately, separately from staged defaults. Closing Options cancels
+an unfinished sign-in. Authentication stays in the user's browser; the property sheet shows status,
+device codes, and an optional callback-URL fallback, never saved credentials.
 
 New conversation asks before clearing messages or a draft. Default keyboard focus goes to
 Cancel. Return focus to the composer after either dialog closes.
@@ -44,7 +49,7 @@ preference. Preserve transparent pixels around the desktop pet at every size.
 
 ## Verification
 
-Inspect real Electron screenshots of the empty window, conversation, both Options tabs,
+Inspect real Electron screenshots of the empty window, conversation, all Options tabs,
 confirmation dialog, transparent pet, and minimum-size layout. Test composing, cancellation,
 window controls, staged preferences, persistence, save failure and retry, and keyboard focus.
 Run `npm run verify` and `npm run test:smoke`; all model tests remain offline.

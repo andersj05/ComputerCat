@@ -13,7 +13,7 @@ SDK behind an application-owned runtime interface. Use the Node version in
 - The transparent pixel cat opens a compact XP messenger. Tray actions and global shortcuts
   show chat and stop replies. Closing chat hides it; quitting ends the application.
 - Default demo mode produces deterministic local replies without credentials or API calls.
-  The typed bridge supports application-owned Codex subscription login, saved model/reasoning
+  Options → Models supports application-owned Codex subscription login, saved model/reasoning
   defaults, and a separate explicitly configured environment API-key connection.
 - Options stages pet size, animation, and always-on-top changes. Apply/OK persists them;
   Cancel/Escape discards unapplied changes. Saving failures preserve the previous live settings.

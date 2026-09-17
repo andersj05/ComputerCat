@@ -691,6 +691,116 @@ input:disabled {
 .clear-dialog {
   width: 345px;
 }
+.model-options fieldset {
+  padding: 7px 9px 9px;
+}
+.model-options .option-note {
+  margin: 7px 0 0;
+  line-height: 1.35;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.model-row > span {
+  width: 69px;
+  flex-shrink: 0;
+}
+.model-row select {
+  min-width: 0;
+  flex: 1;
+  height: 23px;
+  border: 1px solid #7f9db9;
+  background: #fff;
+  color: #000;
+}
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.connection-light {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #8f8b7d;
+  background: #c9c7ba;
+  border-radius: 50%;
+}
+.connection-light.connected {
+  border-color: #277322;
+  background: #49ad35;
+}
+.connection-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.connection-actions .option-note {
+  flex: 1;
+  margin: 0;
+}
+.text-button {
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #0046d5;
+  text-decoration: underline;
+}
+.text-button:disabled {
+  color: var(--muted);
+}
+.connection-message,
+.connection-error {
+  margin: 8px 0 0;
+  line-height: 1.4;
+}
+.connection-message {
+  color: #325b29;
+}
+.connection-error {
+  color: #a12a12;
+}
+.callback-fallback {
+  margin-top: 10px;
+}
+.callback-fallback summary {
+  color: #0046d5;
+  cursor: pointer;
+}
+.callback-fallback label {
+  display: block;
+  margin: 8px 0 4px;
+}
+.callback-row {
+  display: flex;
+  gap: 5px;
+}
+.callback-row input {
+  width: 0;
+  min-width: 0;
+  flex: 1;
+}
+.callback-row input,
+.device-code input {
+  border: 1px solid #7f9db9;
+  background: #fff;
+  padding: 3px;
+}
+.device-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.device-code input {
+  width: 105px;
+  font-weight: bold;
+  text-align: center;
+}
 .dialog-content {
   display: flex;
   align-items: center;

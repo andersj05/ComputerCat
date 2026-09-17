@@ -140,9 +140,17 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(page.getByRole("tab", { name: "Desktop cat" })).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath("options-cat.png") });
     await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Models", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Sign in with ChatGPT" })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("options-models.png") });
+    await page.keyboard.press("ArrowRight");
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeFocused();
     await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
-    await expect(options.getByText("Local demo", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole("tabpanel", { name: "General", exact: true })
+        .getByText("Local demo", { exact: true }),
+    ).toBeVisible();
     await expect(options.getByText("Off", { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("options-general.png") });
     await page.keyboard.press("Home");
@@ -219,7 +227,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await page.screenshot({ path: testInfo.outputPath("welcome-small.png") });
     await page.getByRole("button", { name: "Options…" }).click();
     await expect(options.getByRole("button", { name: "OK", exact: true })).toBeInViewport();
-    for (const tab of ["Desktop cat", "General"]) {
+    for (const tab of ["Desktop cat", "Models", "General"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       expect(
         await options.evaluate(
@@ -228,6 +236,8 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
             element.scrollHeight <= element.clientHeight,
         ),
       ).toBe(true);
+      if (tab === "Models")
+        await page.screenshot({ path: testInfo.outputPath("models-small.png") });
       expect(
         await page
           .getByRole("tabpanel", { name: tab, exact: true })
