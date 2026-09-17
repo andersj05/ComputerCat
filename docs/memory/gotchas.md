@@ -66,3 +66,18 @@ also differ from the receiver's checkout. Transfer the intended commits or expli
 the sanitized handoff; inspect Git before continuing. Never resolve that mismatch by resetting
 someone else's changes. Evidence: [contribution workflow](../../CONTRIBUTING.md) and the
 [handoff protocol](handoffs/README.md).
+
+## Codex worker tokens need an explicit request-auth adapter
+
+Reviewed: 2026-09-17. Scope: Pi 0.85.1 subscription integration.
+
+The built-in Codex provider is OAuth-only. Setting a runtime API key does not make it accept an
+access token; session setup reports an unconfigured provider. Main owns OAuth and refresh, while
+the [Pi worker adapter](../../src/agent/pi-runtime.ts) registers a narrow auth resolver for the
+access token sent over its private port. Do not move refresh credentials into the renderer or
+worker to work around this. [SDK tests](../../tests/unit/pi-runtime.test.ts) verify rotation and
+ambient-key isolation; [desktop tests](../../tests/smoke/codex.spec.ts) exercise real worker replies.
+
+The pinned provider compresses SSE request bodies with Zstandard when available. Offline
+network fixtures must decode that format before checking request payloads; a fixture's JSON
+parse failure is not a provider outage. Evidence: the [worker fixture](../../tests/fixtures/codex-worker.mjs).

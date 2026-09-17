@@ -23,6 +23,7 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 - Starter links prepare an editable message. Press Enter or Send when it is ready.
 - Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
   locally; Cancel or Escape discards unapplied changes.
+- Options → Models connects your Codex subscription and saves a default model and reasoning level.
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
@@ -33,9 +34,36 @@ computer control, external MCP connections, and long-term memory are not impleme
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
 
-## Connect a model later
+## Connect your Codex subscription
 
-Credential setup is deliberately deferred. When ready, copy `.env.example` to `.env.local`,
+1. Open **Options → Models → Sign in with ChatGPT**. Finish on the OpenAI page in your browser.
+   If the browser cannot return to the app, expand the fallback and paste its complete localhost
+   callback URL. **Use a device code** is an alternative; your ChatGPT security settings may need
+   device-code login enabled. Closing Options cancels an unfinished sign-in.
+2. Choose **Codex subscription** under Connection, select a model and reasoning level, and click
+   **Apply** or **OK**. Model choices come from the pinned Pi SDK catalogue. Your account and plan
+   determine which models are available and the applicable usage limits.
+3. If a conversation already has messages, choose **New conversation** to use the new default.
+   Empty chats use it immediately. The default survives app restarts; conversation history does not.
+
+Codex CLI installation and API keys are not required for this connection. Computer Cat uses
+the Pi SDK's Codex OAuth integration and its own encrypted credential file in app user data.
+It does not read, import, or change your global Codex/Pi login. Windows protects the saved tokens
+through Electron safeStorage; insecure storage fails closed. Tokens never enter the renderer,
+Git, or model preferences. Main refreshes expired credentials before replies.
+
+**Disconnect** removes Computer Cat's saved credential and stops its Codex session. It leaves the
+transcript visible; reconnect or select Local demo and start a new conversation to continue.
+Stop any active reply before disconnecting. Disconnecting here does not sign you out of other
+Codex apps or revoke your subscription. Local demo is always available without model requests.
+
+If sign-in or a reply fails, check your connection, retry sign-in, or select another model and
+start a new conversation. The app does not switch to a paid API connection automatically.
+See [OpenAI's authentication documentation](https://learn.chatgpt.com/docs/auth).
+
+## Use an API-key connection
+
+For a separate API-key connection, copy `.env.example` to `.env.local`,
 set `COMPUTERCAT_RUNTIME=pi`, and supply a Pi-supported provider ID, model ID, and its API key
 through `COMPUTERCAT_PROVIDER`, `COMPUTERCAT_MODEL`, and `COMPUTERCAT_API_KEY`.
 `npm run dev` loads `.env.local`. The file is ignored by Git. Never put a key in source, a Vite
@@ -44,8 +72,9 @@ through `COMPUTERCAT_PROVIDER`, `COMPUTERCAT_MODEL`, and `COMPUTERCAT_API_KEY`.
 Only the explicitly selected credential is passed to the Pi worker. Global Pi logins,
 extensions, project instruction discovery, and built-in shell/file tools are not loaded.
 The packaged app currently accepts the same process environment variables; a secure credential
-settings UI is a future feature. Model requests use the configured provider and may incur its
-normal API charges. No live API requests are part of the test suite.
+settings UI for other providers is a future feature. If a saved model default already exists,
+choose **Environment API key** in Options → Models and apply it. Model requests use the configured
+provider and may incur its normal API charges. No live API requests are part of the test suite.
 
 ## Development commands
 
@@ -61,7 +90,10 @@ normal API charges. No live API requests are part of the test suite.
 
 The smoke tests open temporary Computer Cat windows and use a separate temporary user-data
 directory. They check the renderer boundary, demo streaming/cancellation, and loading the real
-Pi worker with an intentionally nonexistent provider. They never control other applications.
+Pi worker. Codex tests intercept OAuth and model traffic to verify sign-in, encrypted persistence,
+refresh, model selection, streaming, and provider errors without live credentials or usage.
+They never control other applications. Live account entitlement is verified only when you sign
+in and send a message yourself.
 
 ## Project layout
 

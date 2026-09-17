@@ -8,6 +8,7 @@ export class ChatController {
   private active: AbortController | undefined;
   private runtime: AgentRuntime;
   private disposed = false;
+  private connectionInvalidated = false;
 
   constructor(
     private readonly createRuntime: () => AgentRuntime,
@@ -29,6 +30,11 @@ export class ChatController {
     if (!parsed.success)
       return { ok: false, message: "Enter a message between 1 and 6,000 characters." };
     if (this.disposed) return { ok: false, message: "The app is closing." };
+    if (this.connectionInvalidated)
+      return {
+        ok: false,
+        message: "Start a new conversation after reconnecting or changing the default connection.",
+      };
     if (this.state.busy) return { ok: false, message: "Wait for the current reply or press Stop." };
     if (this.state.messages.length >= 80)
       return { ok: false, message: "Start a new chat to continue." };
@@ -85,6 +91,7 @@ export class ChatController {
       return { ok: false, message: "Stop the current reply before starting a new chat." };
     this.runtime.dispose();
     this.runtime = this.createRuntime();
+    this.connectionInvalidated = false;
     this.state = { messages: [], busy: false };
     this.publish();
     return { ok: true };
@@ -92,6 +99,12 @@ export class ChatController {
 
   dispose(): void {
     this.disposed = true;
+    this.stop();
+    this.runtime.dispose();
+  }
+
+  invalidateConnection(): void {
+    this.connectionInvalidated = true;
     this.stop();
     this.runtime.dispose();
   }

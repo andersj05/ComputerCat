@@ -1,26 +1,47 @@
 import { randomUUID } from "node:crypto";
 import { type UtilityProcess, utilityProcess } from "electron";
-import { workerEnvironment } from "../agent/config";
-import { workerEventSchema } from "../agent/protocol";
+import { isConfigured, type RuntimeConfig, workerEnvironment } from "../agent/config";
+import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
 
 export class WorkerRuntime implements AgentRuntime {
   private child: UtilityProcess | undefined;
   private finish: ((error?: Error) => void) | undefined;
   private faulted = false;
+  private preparing = false;
+  private readonly lifetime = new AbortController();
 
   constructor(
     private readonly entry: string,
     private readonly cwd: string,
+    private readonly resolveConfig: (signal: AbortSignal) => Promise<RuntimeConfig>,
   ) {}
 
   async run(prompt: string, signal: AbortSignal, onDelta: (text: string) => void): Promise<void> {
     signal.throwIfAborted();
-    if (this.finish) throw new UserFacingError("A reply is already in progress.");
+    if (this.finish || this.preparing) throw new UserFacingError("A reply is already in progress.");
     if (this.faulted)
       throw new UserFacingError(
         "The model session was interrupted. Start a new chat to reconnect.",
       );
+    const preparationSignal = AbortSignal.any([signal, this.lifetime.signal]);
+    this.preparing = true;
+    let config: RuntimeConfig;
+    try {
+      preparationSignal.throwIfAborted();
+      config = await this.resolveConfig(preparationSignal);
+      preparationSignal.throwIfAborted();
+      if (!isConfigured(config))
+        throw new UserFacingError(
+          "A model isn't connected yet. Open Options → Models to choose a connection.",
+        );
+      const parsed = workerConfigSchema.safeParse(config);
+      if (!parsed.success)
+        throw new UserFacingError("The model configuration is invalid. Check Options → Models.");
+      config = parsed.data;
+    } finally {
+      this.preparing = false;
+    }
     const child =
       this.child ??
       utilityProcess.fork(this.entry, [], {
@@ -42,11 +63,14 @@ export class WorkerRuntime implements AgentRuntime {
     const id = randomUUID();
     await new Promise<void>((resolve, reject) => {
       let stopTimer: ReturnType<typeof setTimeout> | undefined;
-      const timeout = setTimeout(() => {
-        this.faulted = true;
-        child.kill();
-        finish(new UserFacingError("The model took too long. Start a new chat to reconnect."));
-      }, 120_000);
+      const timeout = setTimeout(
+        () => {
+          this.faulted = true;
+          child.kill();
+          finish(new UserFacingError("The model took too long. Start a new chat to reconnect."));
+        },
+        config.provider === "openai-codex" ? 600_000 : 120_000,
+      );
       const finish = (error?: Error) => {
         clearTimeout(timeout);
         clearTimeout(stopTimer);
@@ -87,11 +111,12 @@ export class WorkerRuntime implements AgentRuntime {
       child.on("message", message);
       child.once("exit", exited);
       signal.addEventListener("abort", stop, { once: true });
-      child.postMessage({ type: "run", id, prompt });
+      child.postMessage({ type: "run", id, prompt, config });
     });
   }
 
   dispose(): void {
+    this.lifetime.abort();
     this.finish?.();
     this.child?.kill();
     this.child = undefined;

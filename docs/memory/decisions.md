@@ -35,13 +35,13 @@ not a security sandbox. Evidence: [architecture](../architecture.md),
 [Pi resource loader](../../src/agent/pi-runtime.ts),
 [worker environment](../../src/agent/config.ts), [Pi tests](../../tests/unit/pi-runtime.test.ts).
 
-## D003: Conversations are transient; companion preferences persist
+## D003: Conversations are transient; preferences and connections persist
 
-Status: existing product behavior retained; reviewed 2026-09-17.
+Status: expanded for Codex subscription integration; reviewed 2026-09-17.
 
-Only the three companion preferences are saved. New conversation creates a fresh runtime, and
-app restart does not restore chat. This keeps the foundation's persistence contract narrow
-until a user-facing retention and memory design exists.
+Companion preferences, model defaults, and an encrypted Codex connection are saved. New
+conversation creates a fresh runtime, and app restart does not restore chat. This keeps
+conversation persistence separate from connection setup and personal preferences.
 
 Consequences: do not describe preferences.json or this memory directory as user conversation
 memory. Any future retained user context needs its own deletion, migration, and isolation
@@ -62,3 +62,25 @@ Consequences: use the [XP design guide](../windows-xp-design.md) as the maintain
 verify actual Electron windows, keyboard focus, transparent pixels, and save/cancel behavior.
 Evidence: application baseline `f977044`, [renderer](../../src/renderer/src/App.tsx), and
 [desktop tests](../../tests/smoke/desktop.spec.ts).
+
+## D005: Own the Codex connection and keep the saved default separate from the active chat
+
+Status: adopted for subscription integration, 2026-09-17.
+
+Use the pinned Pi provider's Codex OAuth flow with an app-owned encrypted credential file.
+Do not import or mutate global Codex/Pi logins. Electron safeStorage protects credentials;
+unavailable secure storage must fail closed. Refresh tokens stay in the privileged process.
+The renderer receives only connection status and model choices.
+
+Save model defaults separately from pet preferences. Existing conversations keep their active
+model until New conversation; a failed save leaves the old default intact. Credentials and
+conversation text must never enter the model preferences file. Subscription availability is
+determined by the provider and account, not guaranteed by the SDK's model catalogue.
+
+Evidence: [model settings](../../src/main/model-settings.ts),
+[encrypted store](../../src/main/secret-store.ts),
+[persistence tests](../../tests/unit/secret-store.test.ts), and
+[OpenAI authentication guidance](https://learn.chatgpt.com/docs/auth).
+The [OAuth adapter](../../src/agent/codex-auth.ts) uses the pinned provider's browser/device
+flows and serializes refresh with credential deletion. [Offline tests](../../tests/unit/codex-auth.test.ts)
+intercept the real SDK's device flow and cover cancellation, stale callbacks, and rotated tokens.

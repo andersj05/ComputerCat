@@ -6,6 +6,7 @@ import {
   DEFAULT_PREFERENCES,
   type PetPreferences,
 } from "../../shared/contracts";
+import { activeModelInfo } from "../../shared/models";
 import { Icon } from "./Icon";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
@@ -42,6 +43,13 @@ export function App() {
     let received = false;
     let receivedPreferences = false;
     let receivedWindow = false;
+    let latestModels: AppInfo["models"] | undefined;
+    const unsubscribeModels = window.computerCat.onModelsChanged((state) => {
+      latestModels = state;
+      setInfo((current) =>
+        current ? { ...current, ...activeModelInfo(state), models: state } : current,
+      );
+    });
     const unsubscribe = window.computerCat.onChanged((state) => {
       received = true;
       setSnapshot(state);
@@ -57,7 +65,11 @@ export function App() {
     void Promise.all([window.computerCat.info(), window.computerCat.snapshot()])
       .then(([appInfo, state]) => {
         if (!active) return;
-        setInfo(appInfo);
+        setInfo(
+          latestModels
+            ? { ...appInfo, ...activeModelInfo(latestModels), models: latestModels }
+            : appInfo,
+        );
         if (!received) setSnapshot(state);
         if (!receivedPreferences) setPreferences(appInfo.preferences);
         if (!receivedWindow) setMaximized(appInfo.maximized);
@@ -70,6 +82,7 @@ export function App() {
       unsubscribe();
       unsubscribePreferences();
       unsubscribeWindow();
+      unsubscribeModels();
     };
   }, [isPet]);
 
@@ -141,7 +154,7 @@ export function App() {
     if (snapshot.messages.length || text.trim()) setConfirmClear(true);
     else {
       setError("");
-      input.current?.focus();
+      void clear();
     }
   }
 
@@ -358,6 +371,7 @@ export function App() {
       {optionsOpen && (
         <OptionsDialog
           info={info}
+          busy={snapshot.busy}
           preferences={preferences}
           onApply={(next) => window.computerCat.updatePreferences(next)}
           onClose={() => setOptionsOpen(false)}

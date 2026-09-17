@@ -1,4 +1,5 @@
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
+import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import {
   createAgentSession,
   createExtensionRuntime,
@@ -28,16 +29,32 @@ export function isolatedResources(): ResourceLoader {
 }
 
 export async function createModelRuntime(): Promise<ModelRuntime> {
-  return ModelRuntime.create({
+  const runtime = await ModelRuntime.create({
     credentials: new InMemoryCredentialStore(),
     modelsPath: null,
     allowModelNetwork: false,
     refreshOnCreate: false,
   });
+  const codex = openaiCodexProvider();
+  // Main has already resolved OAuth. The worker accepts only that short-lived token;
+  // it cannot log in, refresh, or consult ambient provider credentials.
+  runtime.registerNativeProvider({
+    ...codex,
+    auth: {
+      apiKey: {
+        name: "Computer Cat Codex access token",
+        resolve: async ({ credential, signal }) => {
+          signal.throwIfAborted();
+          return credential?.key ? { auth: { apiKey: credential.key } } : undefined;
+        },
+      },
+    },
+  });
+  return runtime;
 }
 
 export async function createPiRuntime(
-  config: Pick<RuntimeConfig, "provider" | "model" | "apiKey">,
+  config: Pick<RuntimeConfig, "provider" | "model" | "apiKey" | "reasoning">,
   cwd: string,
   injectedModels?: ModelRuntime,
 ): Promise<AgentRuntime> {
@@ -50,11 +67,16 @@ export async function createPiRuntime(
     cwd,
     modelRuntime: models,
     model,
+    ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
     tools: [],
     noTools: "all",
     resourceLoader: isolatedResources(),
     sessionManager: SessionManager.inMemory(cwd),
-    settingsManager: SettingsManager.inMemory({ retry: { enabled: false } }),
+    settingsManager: SettingsManager.inMemory({
+      retry: { enabled: false },
+      // This conversation-only integration needs no background WebSocket connection cache.
+      ...(config.provider === "openai-codex" ? { transport: "sse" as const } : {}),
+    }),
   });
 
   return {
@@ -79,7 +101,9 @@ export async function createPiRuntime(
         signal.throwIfAborted();
         if (providerFailed)
           throw new UserFacingError(
-            "The model couldn't finish this reply. Check your connection and model configuration, then try again.",
+            config.provider === "openai-codex"
+              ? "Codex couldn't finish this reply. Your plan may not include this model, or its usage limit may be reached. Check your connection, try another model in Options → Models and start a new conversation, or reconnect."
+              : "The model couldn't finish this reply. Check your connection and model configuration, then try again.",
           );
       } finally {
         signal.removeEventListener("abort", abort);

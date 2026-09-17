@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import catImage from "../../../assets/computer_cat.png";
 import type { ActionResult, AppInfo, PetPreferences } from "../../shared/contracts";
+import { DEFAULT_MODEL_SETTINGS } from "../../shared/models";
+import { ModelOptions } from "./ModelOptions";
 import { WindowCaption } from "./WindowCaption";
+
+const optionTabs = ["cat", "models", "general"] as const;
+type OptionTab = (typeof optionTabs)[number];
 
 export function OptionsDialog({
   info,
@@ -10,6 +15,7 @@ export function OptionsDialog({
   onClose,
   onShowPet,
   onQuit,
+  busy,
 }: {
   info: AppInfo | undefined;
   preferences: PetPreferences;
@@ -17,20 +23,41 @@ export function OptionsDialog({
   onClose: () => void;
   onShowPet: () => Promise<void>;
   onQuit: () => Promise<void>;
+  busy: boolean;
 }) {
-  const [tab, setTab] = useState<"cat" | "general">("cat");
+  const [tab, setTab] = useState<OptionTab>("cat");
   const [draft, setDraft] = useState(preferences);
   const [saved, setSaved] = useState(preferences);
+  const [draftModels, setDraftModels] = useState(info?.models.defaults ?? DEFAULT_MODEL_SETTINGS);
+  const [savedModels, setSavedModels] = useState(draftModels);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const catTab = useRef<HTMLButtonElement>(null);
   const generalTab = useRef<HTMLButtonElement>(null);
+  const modelsTab = useRef<HTMLButtonElement>(null);
   const pending = useRef(false);
-  const dirty =
+  const dirtyPet =
     draft.size !== saved.size ||
     draft.animation !== saved.animation ||
     draft.alwaysOnTop !== saved.alwaysOnTop;
+  const dirtyModels =
+    draftModels.source !== savedModels.source ||
+    draftModels.codexModel !== savedModels.codexModel ||
+    draftModels.reasoning !== savedModels.reasoning;
+  const dirty = dirtyPet || dirtyModels;
+
+  async function close() {
+    if (info?.models.codex.login) {
+      try {
+        await window.computerCat.codexCancel({ attemptId: info.models.codex.login.attemptId });
+      } catch {
+        setError("Couldn't cancel sign-in. Please try again.");
+        return;
+      }
+    }
+    onClose();
+  }
 
   useEffect(() => {
     const element = dialog.current;
@@ -42,18 +69,30 @@ export function OptionsDialog({
   async function apply(closeAfter: boolean) {
     if (pending.current) return;
     if (!dirty) {
-      if (closeAfter) onClose();
+      if (closeAfter) await close();
       return;
     }
     pending.current = true;
     setSaving(true);
     setError("");
     try {
-      const result = await onApply(draft);
-      if (result.ok) {
+      if (dirtyPet) {
+        const result = await onApply(draft);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
         setSaved(draft);
-        if (closeAfter) onClose();
-      } else setError(result.message);
+      }
+      if (dirtyModels) {
+        const result = await window.computerCat.updateModels(draftModels);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setSavedModels(draftModels);
+      }
+      if (closeAfter) await close();
     } catch {
       setError("Couldn't save these settings. Try again.");
     } finally {
@@ -71,9 +110,9 @@ export function OptionsDialog({
     }
   }
 
-  function selectTab(next: "cat" | "general") {
+  function selectTab(next: OptionTab) {
     setTab(next);
-    (next === "cat" ? catTab : generalTab).current?.focus();
+    ({ cat: catTab, models: modelsTab, general: generalTab })[next].current?.focus();
   }
 
   return (
@@ -83,10 +122,15 @@ export function OptionsDialog({
       aria-labelledby="options-title"
       onCancel={(event) => {
         event.preventDefault();
-        if (!saving) onClose();
+        if (!saving) void close();
       }}
     >
-      <WindowCaption title="Options" titleId="options-title" onClose={onClose} disabled={saving} />
+      <WindowCaption
+        title="Options"
+        titleId="options-title"
+        onClose={() => void close()}
+        disabled={saving}
+      />
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -101,7 +145,11 @@ export function OptionsDialog({
             onKeyDown={(event) => {
               if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                 event.preventDefault();
-                selectTab(tab === "cat" ? "general" : "cat");
+                selectTab(
+                  optionTabs[
+                    (optionTabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : 2)) % 3
+                  ] ?? "cat",
+                );
               }
               if (event.key === "Home" || event.key === "End") {
                 event.preventDefault();
@@ -124,6 +172,18 @@ export function OptionsDialog({
             <button
               type="button"
               role="tab"
+              ref={modelsTab}
+              id="models-tab"
+              aria-controls="models-options"
+              aria-selected={tab === "models"}
+              tabIndex={tab === "models" ? 0 : -1}
+              onClick={() => setTab("models")}
+            >
+              Models
+            </button>
+            <button
+              type="button"
+              role="tab"
               ref={generalTab}
               id="general-tab"
               aria-controls="general-options"
@@ -133,6 +193,21 @@ export function OptionsDialog({
             >
               General
             </button>
+          </div>
+          <div
+            className="tab-panel"
+            role="tabpanel"
+            id="models-options"
+            aria-labelledby="models-tab"
+            hidden={tab !== "models"}
+          >
+            <ModelOptions
+              state={info?.models}
+              draft={draftModels}
+              onChange={setDraftModels}
+              disabled={saving || !info}
+              busy={busy}
+            />
           </div>
           <div
             className="tab-panel"
@@ -214,9 +289,11 @@ export function OptionsDialog({
                     ? "Loading…"
                     : info.mode === "demo"
                       ? "Local demo"
-                      : info.configured
-                        ? "Configured model"
-                        : "Model setup needed"}
+                      : info.models.active.source === "codex" && info.configured
+                        ? "Codex subscription"
+                        : info.configured
+                          ? "Configured model"
+                          : "Model setup needed"}
                 </dd>
                 {info?.mode === "pi" && (
                   <>
@@ -264,7 +341,12 @@ export function OptionsDialog({
           <button type="submit" className="xp-button default-button" disabled={saving}>
             OK
           </button>
-          <button type="button" className="xp-button" disabled={saving} onClick={onClose}>
+          <button
+            type="button"
+            className="xp-button"
+            disabled={saving}
+            onClick={() => void close()}
+          >
             Cancel
           </button>
           <button

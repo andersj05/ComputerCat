@@ -5,6 +5,7 @@ import {
   IPC,
   type PetPreferences,
 } from "../shared/contracts";
+import type { ModelState } from "../shared/models";
 
 const api: ComputerCatAPI = {
   info: () => ipcRenderer.invoke(IPC.info),
@@ -18,6 +19,17 @@ const api: ComputerCatAPI = {
   toggleMaximizeChat: () => ipcRenderer.invoke(IPC.toggleMaximizeChat),
   showPet: () => ipcRenderer.invoke(IPC.showPet),
   updatePreferences: (patch) => ipcRenderer.invoke(IPC.updatePreferences, patch),
+  updateModels: (settings) => ipcRenderer.invoke(IPC.updateModels, settings),
+  codexLogin: (request) => ipcRenderer.invoke(IPC.codexLogin, request),
+  codexCancel: (request) => ipcRenderer.invoke(IPC.codexCancel, request),
+  codexOpen: (request) => ipcRenderer.invoke(IPC.codexOpen, request),
+  codexCode: (request) => ipcRenderer.invoke(IPC.codexCode, request),
+  codexDisconnect: () => ipcRenderer.invoke(IPC.codexDisconnect),
+  onModelsChanged: (listener) => {
+    const receive = (_event: Electron.IpcRendererEvent, state: ModelState) => listener(state);
+    ipcRenderer.on(IPC.modelsChanged, receive);
+    return () => ipcRenderer.removeListener(IPC.modelsChanged, receive);
+  },
   onPreferencesChanged: (listener) => {
     const receive = (_event: Electron.IpcRendererEvent, preferences: PetPreferences) =>
       listener(preferences);

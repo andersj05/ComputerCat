@@ -1,8 +1,11 @@
+import type { ReasoningLevel } from "../shared/models";
+
 export interface RuntimeConfig {
   mode: "demo" | "pi";
   provider: string;
   model: string;
   apiKey: string;
+  reasoning?: ReasoningLevel;
 }
 
 export function readRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
@@ -36,10 +39,6 @@ export function workerEnvironment(env: NodeJS.ProcessEnv): Record<string, string
     "https_proxy",
     "http_proxy",
     "no_proxy",
-    "computercat_runtime",
-    "computercat_provider",
-    "computercat_model",
-    "computercat_api_key",
   ]);
   for (const [key, value] of Object.entries(env)) {
     if (allowed.has(key.toLowerCase()) && value !== undefined) result[key] = value;

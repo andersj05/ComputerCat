@@ -69,4 +69,18 @@ describe("chat boundary", () => {
     expect(controller.snapshot().messages[1]?.state).toBe("error");
     expect(JSON.stringify(controller.snapshot())).not.toContain("secret credential");
   });
+
+  it("disposes disconnected workers and preserves the transcript until a new conversation", async () => {
+    const { controller, runtime } = harness(async (_prompt, _signal, delta) => {
+      delta("Old conversation");
+    });
+    controller.send({ id: randomUUID(), text: "hi" });
+    await vi.waitFor(() => expect(controller.snapshot().busy).toBe(false));
+    controller.invalidateConnection();
+    expect(runtime.dispose).toHaveBeenCalledOnce();
+    expect(controller.snapshot().messages).toHaveLength(2);
+    expect(controller.send({ id: randomUUID(), text: "stale" }).ok).toBe(false);
+    expect(controller.clear().ok).toBe(true);
+    expect(controller.send({ id: randomUUID(), text: "fresh" }).ok).toBe(true);
+  });
 });
