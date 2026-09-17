@@ -22,6 +22,21 @@ export const workerRequestSchema = z.discriminatedUnion("type", [
     id: z.uuid(),
     prompt: z.string().min(1).max(6000),
     config: workerConfigSchema,
+    context: z
+      .strictObject({
+        sessionFile: z.string().min(1).max(4096),
+        history: z
+          .array(
+            z.strictObject({
+              id: z.string().max(256),
+              role: z.enum(["user", "assistant"]),
+              text: z.string().max(65536),
+              state: z.enum(["complete", "streaming", "stopped", "error"]),
+            }),
+          )
+          .max(1000),
+      })
+      .optional(),
   }),
   z.strictObject({ type: z.literal("stop"), id: z.uuid() }),
 ]);

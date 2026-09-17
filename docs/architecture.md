@@ -2,11 +2,11 @@
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
 a local demo mode that works without credentials. Screen capture, mouse/keyboard control,
-external MCP servers, persistent user memory, and voice are later features, not implicit privileges.
+external MCP servers, selected-fact user memory, and voice are later features, not implicit privileges.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
-not provide conversation persistence. Keep these two forms of memory separate when adding features.
+not supply the app’s conversation history. Keep these two forms of memory separate when adding features.
 
 ```text
 Sandboxed React renderer
@@ -32,12 +32,12 @@ navigation, new windows, and browser permission requests are denied. Model outpu
 as plain text. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools, and session state is in memory.
+its explicit allowlist contains all eight built-in Pi tools, and native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
-environment contains no provider credentials. Model identity and reasoning remain fixed within
-that worker, while the access token can rotate without replacing the conversation.
+environment contains no provider credentials. Changing a conversation’s model creates a fresh worker that restores the same native Pi
+context, including tool results. The access token rotates between turns without a new worker.
 The worker registers a Codex request-auth adapter that accepts only the main-resolved access
 token. The SDK's unmodified Codex provider is OAuth-only and cannot consume its generic runtime
 API-key override. Main retains the original OAuth provider; the worker has no login/refresh
@@ -54,7 +54,7 @@ Electron safeStorage encrypts `codex-credentials.enc` in app user data. Unavaila
 (including Linux's plaintext backend) fails closed. OAuth refresh and deletion serialize through
 one credential store; refresh tokens never leave main, and storage/provider errors are sanitized.
 Disconnect is blocked during a reply, deletes the saved credential, and invalidates an active
-Codex worker. The transcript stays visible; New conversation is required before sending again.
+Codex worker. The transcript stays visible; reconnect and select a model, or start a new conversation, to continue.
 No global Codex/Pi credentials, configuration, or resources are imported or changed.
 
 `models.json` saves only the default connection, Codex model ID, and reasoning level. Main validates
@@ -97,8 +97,7 @@ broadcasts successful updates to both renderers. Unknown fields, invalid values,
 updates are rejected. Missing or corrupt files use defaults; save failures keep the previous
 settings and return a message without filesystem details. The Options dialog stages changes until
 Apply or OK succeeds. Cancel, Escape, or closing the dialog discards unapplied changes; a save
-failure leaves the draft available to retry without changing the live cat. Conversation content
-remains in memory.
+failure leaves the draft available to retry without changing the live cat.
 
 The cat retains its original transparent silhouette. Size changes stay within the current
 display work area. The cat body uses pointer capture and the narrow drag bridge; native drag
@@ -114,3 +113,27 @@ the ordinary desktop window stack. See [Electron’s window API](https://www.ele
 
 The original artwork is clipped into overlapping head/body layers in an SVG, with blink overlays.
 Idle, hover, and thinking motion respect both Animate cat and the OS reduced-motion preference.
+
+## Saved conversations (reviewed 2026-09-17)
+
+Main owns version-1 conversation records under app user data: a validated UUID selects each
+JSON transcript and its separate native Pi JSONL context. Renderer requests contain IDs, never
+paths. Writes serialize through a temporary file and atomic rename. The initial user message
+is saved before the model runs; streaming is checkpointed every half-second and completion
+is saved before releasing the busy state. Quit cancels the turn, lets the worker settle, and
+flushes writes. Interrupted messages and running tool indicators reopen as stopped.
+
+History lists, resumes, and deletes conversations; New conversation retains the old chat.
+Startup opens the most recently updated saved chat. Corrupt metadata is skipped with a visible
+notice and left untouched. A corrupt native session fails closed when resumed. The Pi adapter
+records transcript offsets to bridge demo-only turns without duplicating native tool context.
+Deletion removes both transcript and native context. Files edited by tools are not undone.
+
+Saved content and tool results are local plaintext, retained until explicitly deleted. OAuth
+credentials remain in their separate encrypted vault and are never part of session configuration
+on disk. Model changes are validated and blocked during replies, then persist on the current
+conversation; Options still sets defaults for new conversations.
+
+Pi’s find/grep tools can provision fd/ripgrep into an app-owned pi-runtime cache on first use.
+Helper downloads are disabled in smoke tests. Model catalogue network refresh remains disabled.
+Bash needs an installed shell; PowerShell is the default suggested shell on Windows.

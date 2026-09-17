@@ -17,6 +17,7 @@ export class ModelController {
     private readonly environment: RuntimeConfig,
     private readonly worker: (
       config: (signal: AbortSignal) => Promise<RuntimeConfig>,
+      context?: { sessionFile: string; history: import("../shared/contracts").ChatMessage[] },
     ) => AgentRuntime,
     private readonly changed: () => void,
   ) {
@@ -37,7 +38,7 @@ export class ModelController {
     };
   }
 
-  async update(input: unknown): Promise<ActionResult> {
+  validate(input: unknown): ActionResult {
     const parsed = modelSettingsSchema.safeParse(input);
     if (!parsed.success) return { ok: false, message: "Choose valid model settings." };
     const settings = parsed.data;
@@ -54,13 +55,22 @@ export class ModelController {
         ok: false,
         message: "Configure the environment provider, model, and API key first.",
       };
+    return { ok: true };
+  }
+
+  async update(input: unknown): Promise<ActionResult> {
+    const valid = this.validate(input);
+    if (!valid.ok) return valid;
+    const settings = modelSettingsSchema.parse(input);
     const result = await this.settings.update(settings);
     if (result.ok) this.changed();
     return result;
   }
 
-  createRuntime(): AgentRuntime {
-    const selected = this.settings.snapshot();
+  createRuntime(
+    selected: ModelSettings = this.settings.snapshot(),
+    context?: { sessionFile: string; history: import("../shared/contracts").ChatMessage[] },
+  ): AgentRuntime {
     this.active = selected;
     this.changed();
     if (selected.source === "demo") return new DemoRuntime();
@@ -78,6 +88,6 @@ export class ModelController {
         apiKey: await this.codex.accessToken(signal),
         reasoning: selected.reasoning,
       };
-    });
+    }, context);
   }
 }

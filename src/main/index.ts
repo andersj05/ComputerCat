@@ -24,9 +24,11 @@ import {
   loginAttemptSchema,
   loginCodeSchema,
   loginRequestSchema,
+  modelSettingsSchema,
   petDragSchema,
 } from "../shared/validation";
 import { ChatController } from "./chat-controller";
+import { ConversationStore } from "./conversation-store";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
 import { keepInWorkArea, PetDrag } from "./pet-window";
@@ -44,6 +46,7 @@ let chat: BrowserWindow;
 let pet: BrowserWindow;
 let tray: Tray | undefined;
 let quitting = false;
+let shutdownComplete = false;
 let controller: ChatController;
 let models: ModelController;
 let codex: CodexAuth;
@@ -61,10 +64,15 @@ const modelSettings = new ModelSettingsStore(join(app.getPath("userData"), "mode
 function publishModels(): void {
   if (!models) return;
   for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed() && trusted.get(window.webContents.id)?.role === "chat")
-      window.webContents.send(IPC.modelsChanged, models.snapshot());
+    if (!window.isDestroyed()) {
+      const state = models.snapshot();
+      if (trusted.get(window.webContents.id)?.role !== "chat") state.codex.login = null;
+      window.webContents.send(IPC.modelsChanged, state);
+    }
   }
 }
+const conversations = new ConversationStore(join(app.getPath("userData"), "conversations"));
+
 const petSizes = {
   small: { width: 148, height: 244 },
   medium: { width: 188, height: 298 },
@@ -207,6 +215,7 @@ else {
       app.setAppUserModelId("com.andersj05.computercat");
       await preferences.load();
       await modelSettings.load();
+      await conversations.load();
       codex = new CodexAuth(
         new EncryptedSecretStore(join(app.getPath("userData"), "codex-credentials.enc"), {
           available: () =>
@@ -224,8 +233,14 @@ else {
         modelSettings,
         codex,
         config,
-        (resolveConfig) =>
-          new WorkerRuntime(join(here, "agent-worker.js"), app.getPath("desktop"), resolveConfig),
+        (resolveConfig, context) =>
+          new WorkerRuntime(
+            join(here, "agent-worker.js"),
+            app.getPath("desktop"),
+            resolveConfig,
+            context,
+            { directory: join(app.getPath("userData"), "pi-runtime"), allowDownloads: !smoke },
+          ),
         publishModels,
       );
       session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
@@ -249,13 +264,43 @@ else {
         ]),
       );
       controller = new ChatController(
-        () => models.createRuntime(),
+        (conversation) =>
+          models.createRuntime(conversation.model, {
+            sessionFile: conversations.sessionFile(conversation.id),
+            history: conversation.messages,
+          }),
         (snapshot) => {
           for (const window of BrowserWindow.getAllWindows()) {
             if (!window.isDestroyed()) window.webContents.send(IPC.changed, snapshot);
           }
         },
+        { store: conversations, defaults: () => modelSettings.snapshot() },
       );
+      ipcMain.handle(IPC.conversations, (event) => {
+        assertSender(event, true);
+        return controller.list();
+      });
+      ipcMain.handle(IPC.openConversation, (event, id: unknown) => {
+        assertSender(event, true);
+        return controller.open(id);
+      });
+      ipcMain.handle(IPC.deleteConversation, (event, id: unknown) => {
+        assertSender(event, true);
+        return controller.delete(id);
+      });
+      ipcMain.handle(IPC.selectModel, (event, request: unknown) => {
+        assertSender(event, true);
+        if (disconnecting)
+          return { ok: false, message: "Wait for the connection change to finish." };
+        const valid = models.validate(request);
+        if (!valid.ok) return valid;
+        return controller.selectModel(modelSettingsSchema.parse(request));
+      });
+      ipcMain.handle(IPC.openModels, (event) => {
+        assertSender(event);
+        showChat();
+        chat.webContents.send(IPC.modelsRequested);
+      });
       ipcMain.handle(IPC.info, (event): AppInfo => {
         assertSender(event);
         const modelState = models.snapshot();
@@ -284,7 +329,7 @@ else {
         assertSender(event, true);
         const result = await models.update(request);
         if (result.ok && !controller.snapshot().busy && controller.snapshot().messages.length === 0)
-          controller.clear();
+          await controller.selectModel(models.snapshot().defaults);
         return result;
       });
       ipcMain.handle(IPC.codexLogin, (event, request: unknown) => {
@@ -451,11 +496,19 @@ else {
     });
 }
 
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  if (!shutdownComplete && controller) {
+    event.preventDefault();
+    if (quitting) return;
+    quitting = true;
+    void controller.dispose().finally(() => {
+      shutdownComplete = true;
+      app.quit();
+    });
+  }
   quitting = true;
   clearInterval(presenceTimer);
   petDrag.cancel();
-  controller?.dispose();
   codex?.dispose();
   globalShortcut.unregisterAll();
   tray?.destroy();

@@ -32,9 +32,9 @@ consume no subscription usage and cannot establish live account entitlement.
 | --- | --- | --- |
 | Shared developer knowledge | Markdown versioned in Git; agents update it deliberately | [Memory guide](README.md), [decisions](decisions.md) |
 | Pet preferences | Validated atomic writes to preferences.json in Electron user data | [Store](../../src/main/preferences.ts), [tests](../../tests/unit/preferences.test.ts) |
-| Visible chat | In-memory controller; New conversation clears it and replaces its runtime | [Controller](../../src/main/chat-controller.ts), [tests](../../tests/unit/chat-controller.test.ts) |
-| Pi conversation context | In-memory session for the runtime; no disk session restoration | [Pi adapter](../../src/agent/pi-runtime.ts), [runtime prompt](../../src/agent/runtime.ts) |
-| Model defaults | Validated atomic writes to models.json; active chats keep their selection until reset | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
+| Visible chat | Local versioned transcripts; new chats preserve history; resume/delete by UUID | [Controller](../../src/main/chat-controller.ts), [tests](../../tests/unit/chat-controller.test.ts) |
+| Pi conversation context | Native per-chat Pi JSONL restores tool results; model changes retain context | [Pi adapter](../../src/agent/pi-runtime.ts), [runtime prompt](../../src/agent/runtime.ts) |
+| Model defaults | Atomic models.json defaults; direct model changes persist per chat | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |
 
 The Pi resource loader returns no discovered agent files, extensions, skills, or prompts;
@@ -57,8 +57,8 @@ See [architecture](../architecture.md) and [Pi isolation tests](../../tests/unit
 
 ## Not implemented
 
-Screen capture, computer control, external MCP connections, user long-term memory, conversation
-restoration, voice, credential settings for other providers, code signing, and automatic app updates remain
+Screen capture, computer control, external MCP connections, selected-fact user memory, voice,
+credential settings for other providers, code signing, and automatic app updates remain
 future work. The [research plan](../research-and-build-plan.md) discusses these; it is not a
 completion checklist. A worker process isolates crashes but is not an OS security sandbox.
 

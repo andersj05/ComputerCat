@@ -13,6 +13,16 @@ const api: ComputerCatAPI = {
   send: (request) => ipcRenderer.invoke(IPC.send, request),
   stop: () => ipcRenderer.invoke(IPC.stop),
   clear: () => ipcRenderer.invoke(IPC.clear),
+  conversations: () => ipcRenderer.invoke(IPC.conversations),
+  openConversation: (id) => ipcRenderer.invoke(IPC.openConversation, id),
+  deleteConversation: (id) => ipcRenderer.invoke(IPC.deleteConversation, id),
+  selectModel: (settings) => ipcRenderer.invoke(IPC.selectModel, settings),
+  openModels: () => ipcRenderer.invoke(IPC.openModels),
+  onModelsRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.modelsRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.modelsRequested, receive);
+  },
   openChat: () => ipcRenderer.invoke(IPC.openChat),
   openOptions: () => ipcRenderer.invoke(IPC.openOptions),
   dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),

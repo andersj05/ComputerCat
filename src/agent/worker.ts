@@ -33,7 +33,7 @@ port.on("message", async ({ data }) => {
     models ??= await createModelRuntime();
     // Resolve in main for every turn so a long-running worker cannot reuse an expired token.
     if (runtime) await models.setRuntimeApiKey(config.provider, config.apiKey);
-    runtime ??= await createPiRuntime(config, process.cwd(), models);
+    runtime ??= await createPiRuntime(config, process.cwd(), models, request.context);
     sessionKey = key;
     current.abort.signal.throwIfAborted();
     await runtime.run(
