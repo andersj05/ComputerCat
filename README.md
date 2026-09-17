@@ -1,6 +1,6 @@
 # Computer Cat
 
-A little company. A little help. A desktop companion built with Electron, React, TypeScript,
+A Windows XP-inspired desktop companion built with Electron, React, TypeScript,
 and the [Pi SDK](https://github.com/earendil-works/pi).
 
 [![CI](https://github.com/andersj05/ComputerCat/actions/workflows/ci.yml/badge.svg)](https://github.com/andersj05/ComputerCat/actions/workflows/ci.yml)
@@ -16,15 +16,22 @@ npm run dev
 ```
 
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
-no credentials, and no API calls. The original supplied artwork is in `assets/computer-cat.png`.
+no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the cat to open chat. Drag its small dotted handle to move it.
+- Click the full pixel cat to open chat. Drag its small handle to move it.
+- The compact XP messenger keeps the conversation and message box in one window.
+- Starter links prepare an editable message. Press Enter or Send when it is ready.
+- Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
+  locally; Cancel or Escape discards unapplied changes.
+- Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
-- Closing chat leaves the cat and tray running. Quit through Preferences or the tray menu.
-- Conversations live only for the current app session. New conversation clears that context.
+- Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
+- Conversations live only for the current app session. New conversation asks before clearing a chat or draft.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
 computer control, external MCP connections, and long-term memory are not implemented yet.**
+Agents developing this repository share versioned [project memory](docs/memory/README.md).
+That development context is separate from the app's conversation memory.
 
 ## Connect a model later
 
@@ -45,7 +52,8 @@ normal API charges. No live API requests are part of the test suite.
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Development app with hot reload |
-| `npm run verify` | Lint, TypeScript, offline unit/integration tests, production build |
+| `npm run memory:check` | Offline checks for shared agent context and documentation links |
+| `npm run verify` | Memory checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run package:dir` | Build an unpacked desktop application |
@@ -68,11 +76,12 @@ tests/unit/       Offline behavioral tests and real Pi SDK integration
 tests/smoke/      Electron desktop and packaged-worker checks
 scripts/          Repository automation
 .github/          CI, CodeQL, Dependabot, release workflow, templates
-docs/             Architecture and research
+docs/             Architecture, design, research, audits, and shared project memory
 ```
 
 See [architecture](docs/architecture.md), [research](docs/research-and-build-plan.md), and
 [contribution guidelines](CONTRIBUTING.md).
+Coding agents start with [AGENTS.md](AGENTS.md) and the [current state](docs/memory/current-state.md).
 
 ## Git and releases
 

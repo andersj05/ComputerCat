@@ -6,12 +6,12 @@ files:
   - out/**/*
   - package.json
 extraResources:
-  - from: assets/computer-cat.png
-    to: computer-cat.png
+  - from: assets/computer_cat.png
+    to: computer_cat.png
 asar: true
 npmRebuild: true
 win:
-  icon: assets/computer-cat.png
+  icon: assets/computer_cat.png
   target: nsis
   artifactName: ComputerCat-${version}-${arch}-setup.${ext}
 nsis:

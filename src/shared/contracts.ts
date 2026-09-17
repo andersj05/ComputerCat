@@ -6,6 +6,12 @@ export const IPC = {
   clear: "cat:clear",
   openChat: "cat:open-chat",
   hideChat: "cat:hide-chat",
+  minimizeChat: "cat:minimize-chat",
+  toggleMaximizeChat: "cat:toggle-maximize-chat",
+  windowChanged: "cat:window-changed",
+  showPet: "cat:show-pet",
+  updatePreferences: "cat:update-preferences",
+  preferencesChanged: "cat:preferences-changed",
   quit: "cat:quit",
   changed: "cat:changed",
 } as const;
@@ -34,7 +40,22 @@ export interface AppInfo {
   model: string | null;
   configured: boolean;
   shortcut: string;
+  stopShortcut: string;
+  preferences: PetPreferences;
+  maximized: boolean;
 }
+
+export interface PetPreferences {
+  size: "small" | "medium" | "large";
+  alwaysOnTop: boolean;
+  animation: boolean;
+}
+
+export const DEFAULT_PREFERENCES: PetPreferences = {
+  size: "medium",
+  alwaysOnTop: true,
+  animation: true,
+};
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
@@ -46,6 +67,12 @@ export interface ComputerCatAPI {
   clear(): Promise<ActionResult>;
   openChat(): Promise<void>;
   hideChat(): Promise<void>;
+  minimizeChat(): Promise<void>;
+  toggleMaximizeChat(): Promise<void>;
+  showPet(): Promise<void>;
+  updatePreferences(patch: Partial<PetPreferences>): Promise<ActionResult>;
+  onPreferencesChanged(listener: (preferences: PetPreferences) => void): () => void;
+  onWindowChanged(listener: (maximized: boolean) => void): () => void;
   quit(): Promise<void>;
   onChanged(listener: (snapshot: ChatSnapshot) => void): () => void;
 }
