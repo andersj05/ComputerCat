@@ -50,3 +50,28 @@ export interface ModelState {
   codex: CodexConnection;
   environment: { configured: boolean; provider: string | null; model: string | null };
 }
+
+export function activeModelInfo(state: ModelState) {
+  const source = state.active.source;
+  return {
+    mode: source === "demo" ? ("demo" as const) : ("pi" as const),
+    provider:
+      source === "codex"
+        ? "openai-codex"
+        : source === "environment"
+          ? state.environment.provider
+          : null,
+    model:
+      source === "codex"
+        ? state.active.codexModel
+        : source === "environment"
+          ? state.environment.model
+          : null,
+    configured:
+      source === "codex"
+        ? state.codex.connected
+        : source === "environment"
+          ? state.environment.configured
+          : false,
+  };
+}

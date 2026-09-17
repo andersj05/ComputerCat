@@ -14,6 +14,13 @@ export const IPC = {
   preferencesChanged: "cat:preferences-changed",
   quit: "cat:quit",
   changed: "cat:changed",
+  updateModels: "cat:update-models",
+  modelsChanged: "cat:models-changed",
+  codexLogin: "cat:codex-login",
+  codexCancel: "cat:codex-cancel",
+  codexOpen: "cat:codex-open",
+  codexCode: "cat:codex-code",
+  codexDisconnect: "cat:codex-disconnect",
 } as const;
 
 export interface SendRequest {
@@ -43,6 +50,7 @@ export interface AppInfo {
   stopShortcut: string;
   preferences: PetPreferences;
   maximized: boolean;
+  models: ModelState;
 }
 
 export interface PetPreferences {
@@ -73,6 +81,15 @@ export interface ComputerCatAPI {
   updatePreferences(patch: Partial<PetPreferences>): Promise<ActionResult>;
   onPreferencesChanged(listener: (preferences: PetPreferences) => void): () => void;
   onWindowChanged(listener: (maximized: boolean) => void): () => void;
+  updateModels(settings: ModelSettings): Promise<ActionResult>;
+  onModelsChanged(listener: (state: ModelState) => void): () => void;
+  codexLogin(request: { method: LoginMethod }): Promise<ActionResult>;
+  codexCancel(request: { attemptId: string }): Promise<ActionResult>;
+  codexOpen(request: { attemptId: string }): Promise<ActionResult>;
+  codexCode(request: { attemptId: string; code: string }): Promise<ActionResult>;
+  codexDisconnect(): Promise<ActionResult>;
   quit(): Promise<void>;
   onChanged(listener: (snapshot: ChatSnapshot) => void): () => void;
 }
+
+import type { LoginMethod, ModelSettings, ModelState } from "./models";

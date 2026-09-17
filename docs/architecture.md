@@ -31,10 +31,32 @@ only named application operations. Main validates both sender identity and argum
 navigation, new windows, and browser permission requests are denied. Model output is rendered
 as plain text. The app never imports extensions or instructions discovered in arbitrary folders.
 
-The Pi worker owns a session for the current app run. Its resource loader is explicitly empty,
-its tool allowlist is empty, and session state is in memory. Configuration comes from explicit
-environment variables; main passes the selected credential to the worker, never over renderer IPC. The app does not
-reuse a global Pi login or scan the user's environment for unrelated providers.
+The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
+its tool allowlist is empty, and session state is in memory. Main resolves the selected connection
+before each turn and sends validated configuration over the private worker port. The worker's
+environment contains no provider credentials. Model identity and reasoning remain fixed within
+that worker, while the access token can rotate without replacing the conversation.
+
+The app owns its Codex login through the pinned Pi provider's OAuth flow. The adapter in
+`src/agent/codex-auth.ts` runs in the privileged host, with encrypted persistence supplied by main.
+Browser sign-in uses the SDK's PKCE/local callback; the manual fallback requires the complete
+callback URL and matching state. Device-code sign-in is also supported. Only exact OpenAI auth
+destinations can be opened; renderer requests never supply an arbitrary browser URL. Sign-in
+attempts are cancellable, expire after fifteen minutes, and reject stale callbacks.
+
+Electron safeStorage encrypts `codex-credentials.enc` in app user data. Unavailable encryption
+(including Linux's plaintext backend) fails closed. OAuth refresh and deletion serialize through
+one credential store; refresh tokens never leave main, and storage/provider errors are sanitized.
+Disconnect is blocked during a reply, deletes the saved credential, and invalidates an active
+Codex worker. The transcript stays visible; New conversation is required before sending again.
+No global Codex/Pi credentials, configuration, or resources are imported or changed.
+
+`models.json` saves only the default connection, Codex model ID, and reasoning level. Main validates
+Codex selections against the pinned SDK catalogue. That catalogue is not an account entitlement
+check; unsupported models and subscription limits remain provider errors. Existing chats keep
+their active model until New conversation. With an empty chat, applying a default uses it
+immediately. Explicit environment API-key configuration remains a separate selectable connection;
+it is never an automatic fallback after Codex authentication fails.
 
 Only one message is processed at a time. Request IDs correlate streamed events. Stop cancels
 the active turn; closing the app terminates the worker. A failed or unresponsive worker must
@@ -51,7 +73,7 @@ The XP caption bar uses named preload operations to minimize, maximize/restore, 
 chat window. Only the chat renderer can request those controls or change companion settings.
 The companion can open chat and stop a reply. No generic window or IPC interface is exposed.
 
-Pet size, always-on-top, and animation are the only saved preferences. Main validates a strict
+Pet size, always-on-top, and animation are saved in their own preference file. Main validates a strict
 partial update, serializes atomic writes to `preferences.json` in Electron user data, and
 broadcasts successful updates to both renderers. Unknown fields, invalid values, and empty
 updates are rejected. Missing or corrupt files use defaults; save failures keep the previous

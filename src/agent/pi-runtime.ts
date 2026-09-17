@@ -37,7 +37,7 @@ export async function createModelRuntime(): Promise<ModelRuntime> {
 }
 
 export async function createPiRuntime(
-  config: Pick<RuntimeConfig, "provider" | "model" | "apiKey">,
+  config: Pick<RuntimeConfig, "provider" | "model" | "apiKey" | "reasoning">,
   cwd: string,
   injectedModels?: ModelRuntime,
 ): Promise<AgentRuntime> {
@@ -50,6 +50,7 @@ export async function createPiRuntime(
     cwd,
     modelRuntime: models,
     model,
+    ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
     tools: [],
     noTools: "all",
     resourceLoader: isolatedResources(),
@@ -79,7 +80,9 @@ export async function createPiRuntime(
         signal.throwIfAborted();
         if (providerFailed)
           throw new UserFacingError(
-            "The model couldn't finish this reply. Check your connection and model configuration, then try again.",
+            config.provider === "openai-codex"
+              ? "Codex couldn't finish this reply. Your plan may not include this model, or its usage limit may be reached. Check your connection, try another model in Options → Models and start a new conversation, or reconnect."
+              : "The model couldn't finish this reply. Check your connection and model configuration, then try again.",
           );
       } finally {
         signal.removeEventListener("abort", abort);

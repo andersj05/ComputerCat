@@ -98,7 +98,6 @@ describe("Pi integration without network or credentials", () => {
       PI_OFFLINE: "1",
       NO_COLOR: "1",
       PATH: "system-path",
-      COMPUTERCAT_API_KEY: "chosen-secret",
     });
   });
 });

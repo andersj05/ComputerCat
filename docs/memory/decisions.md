@@ -35,13 +35,13 @@ not a security sandbox. Evidence: [architecture](../architecture.md),
 [Pi resource loader](../../src/agent/pi-runtime.ts),
 [worker environment](../../src/agent/config.ts), [Pi tests](../../tests/unit/pi-runtime.test.ts).
 
-## D003: Conversations are transient; companion preferences persist
+## D003: Conversations are transient; preferences and connections persist
 
-Status: existing product behavior retained; reviewed 2026-09-17.
+Status: expanded for Codex subscription integration; reviewed 2026-09-17.
 
-Only the three companion preferences are saved. New conversation creates a fresh runtime, and
-app restart does not restore chat. This keeps the foundation's persistence contract narrow
-until a user-facing retention and memory design exists.
+Companion preferences, model defaults, and an encrypted Codex connection are saved. New
+conversation creates a fresh runtime, and app restart does not restore chat. This keeps
+conversation persistence separate from connection setup and personal preferences.
 
 Consequences: do not describe preferences.json or this memory directory as user conversation
 memory. Any future retained user context needs its own deletion, migration, and isolation
