@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { IPC } from "../../src/shared/contracts";
+import { composeMessage } from "./chat";
 
 async function launch(userData: string, mode: "demo" | "pi" = "demo") {
   const env = Object.fromEntries(
@@ -622,7 +623,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
       await pet.getByRole("button", { name: "Cat options" }).click();
       await page.getByRole("radio", { name: size, exact: true }).check();
       await page.getByRole("button", { name: "OK", exact: true }).click();
-      await page.getByRole("textbox", { name: "Message Computer Cat" }).fill("Hello");
+      await composeMessage(page, "Hello");
       await page.getByRole("button", { name: "Send message" }).click();
       await expect(pet.getByRole("button", { name: "Stop reply" })).toBeVisible();
       expect(

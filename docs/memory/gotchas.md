@@ -110,3 +110,8 @@ Wait for the new assistant message's completed state, then idle and the send ack
 The [chat helper](../../tests/smoke/chat.ts) uses the next message index so a previous reply
 cannot satisfy the assertion. This corrects premature model/context assertions in the packaged
 Windows [Codex tests](../../tests/smoke/codex.spec.ts).
+
+Wait for native dialogs to close before composing, too. Options saves and History opens are
+asynchronous; Playwright's fill action does not check whether a modal obscures the input.
+The same helper waits for no open dialog before filling and counts replies only after a
+history switch completes. See [Playwright actionability](https://playwright.dev/docs/actionability).
