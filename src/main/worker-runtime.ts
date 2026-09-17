@@ -29,6 +29,15 @@ export class WorkerRuntime implements AgentRuntime {
         serviceName: "Computer Cat agent",
         stdio: "ignore",
       });
+    if (!this.child) {
+      child.once("exit", () => {
+        // Also notice a crash between turns, when no request listener is attached.
+        if (this.child === child) {
+          this.child = undefined;
+          this.faulted = true;
+        }
+      });
+    }
     this.child = child;
     const id = randomUUID();
     await new Promise<void>((resolve, reject) => {
