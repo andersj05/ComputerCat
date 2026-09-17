@@ -3,6 +3,7 @@ import { type UtilityProcess, utilityProcess } from "electron";
 import { isConfigured, type RuntimeConfig, workerEnvironment } from "../agent/config";
 import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
+import type { ToolActivity } from "../shared/tools";
 
 export class WorkerRuntime implements AgentRuntime {
   private child: UtilityProcess | undefined;
@@ -15,9 +16,19 @@ export class WorkerRuntime implements AgentRuntime {
     private readonly entry: string,
     private readonly cwd: string,
     private readonly resolveConfig: (signal: AbortSignal) => Promise<RuntimeConfig>,
+    private readonly context?: {
+      sessionFile: string;
+      history: import("../shared/contracts").ChatMessage[];
+    },
+    private readonly toolCache?: { directory: string; allowDownloads: boolean },
   ) {}
 
-  async run(prompt: string, signal: AbortSignal, onDelta: (text: string) => void): Promise<void> {
+  async run(
+    prompt: string,
+    signal: AbortSignal,
+    onDelta: (text: string) => void,
+    onTool?: (activity: ToolActivity) => void,
+  ): Promise<void> {
     signal.throwIfAborted();
     if (this.finish || this.preparing) throw new UserFacingError("A reply is already in progress.");
     if (this.faulted)
@@ -46,7 +57,15 @@ export class WorkerRuntime implements AgentRuntime {
       this.child ??
       utilityProcess.fork(this.entry, [], {
         cwd: this.cwd,
-        env: workerEnvironment(process.env),
+        env: {
+          ...workerEnvironment(process.env),
+          ...(this.toolCache
+            ? {
+                PI_CODING_AGENT_DIR: this.toolCache.directory,
+                PI_OFFLINE: this.toolCache.allowDownloads ? "0" : "1",
+              }
+            : {}),
+        },
         serviceName: "Computer Cat agent",
         stdio: "ignore",
       });
@@ -87,6 +106,7 @@ export class WorkerRuntime implements AgentRuntime {
         if (!parsed.success || parsed.data.id !== id) return;
         const event = parsed.data;
         if (event.type === "delta" && !signal.aborted) onDelta(event.text);
+        if (event.type === "tool" && !signal.aborted) onTool?.(event.activity);
         if (event.type === "done") finish();
         if (event.type === "error") finish(new UserFacingError(event.message));
       };
@@ -111,7 +131,25 @@ export class WorkerRuntime implements AgentRuntime {
       child.on("message", message);
       child.once("exit", exited);
       signal.addEventListener("abort", stop, { once: true });
-      child.postMessage({ type: "run", id, prompt, config });
+      child.postMessage({
+        type: "run",
+        id,
+        prompt,
+        config,
+        ...(this.context
+          ? {
+              context: {
+                sessionFile: this.context.sessionFile,
+                history: this.context.history.map(({ id, role, text, state }) => ({
+                  id,
+                  role,
+                  text,
+                  state,
+                })),
+              },
+            }
+          : {}),
+      });
     });
   }
 

@@ -254,7 +254,7 @@ export function ModelOptions({
       <p className="option-note">
         {login
           ? "Closing Options cancels this sign-in."
-          : "Apply saves the default. Existing chats keep their current model until New conversation."}
+          : "Apply saves defaults for new conversations. Use the selector above chat to change this conversation."}
       </p>
       {connection?.message && (
         <p className="connection-error" role="alert">

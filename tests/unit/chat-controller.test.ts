@@ -52,11 +52,11 @@ describe("chat boundary", () => {
       delta(" should never appear");
     });
     controller.send({ id: randomUUID(), text: "hi" });
-    expect(controller.clear().ok).toBe(false);
+    expect((await controller.clear()).ok).toBe(false);
     controller.stop();
     await vi.waitFor(() => expect(controller.snapshot().busy).toBe(false));
     expect(controller.snapshot().messages[1]).toMatchObject({ text: "Start", state: "stopped" });
-    expect(controller.clear().ok).toBe(true);
+    expect((await controller.clear()).ok).toBe(true);
     expect(controller.snapshot().messages).toHaveLength(0);
   });
 
@@ -80,7 +80,7 @@ describe("chat boundary", () => {
     expect(runtime.dispose).toHaveBeenCalledOnce();
     expect(controller.snapshot().messages).toHaveLength(2);
     expect(controller.send({ id: randomUUID(), text: "stale" }).ok).toBe(false);
-    expect(controller.clear().ok).toBe(true);
+    expect((await controller.clear()).ok).toBe(true);
     expect(controller.send({ id: randomUUID(), text: "fresh" }).ok).toBe(true);
   });
 });

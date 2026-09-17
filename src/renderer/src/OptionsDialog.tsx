@@ -16,6 +16,7 @@ export function OptionsDialog({
   onShowPet,
   onQuit,
   busy,
+  initialTab = "cat",
 }: {
   info: AppInfo | undefined;
   preferences: PetPreferences;
@@ -24,8 +25,9 @@ export function OptionsDialog({
   onShowPet: () => Promise<void>;
   onQuit: () => Promise<void>;
   busy: boolean;
+  initialTab?: OptionTab;
 }) {
-  const [tab, setTab] = useState<OptionTab>("cat");
+  const [tab, setTab] = useState<OptionTab>(initialTab);
   const [draft, setDraft] = useState(preferences);
   const [saved, setSaved] = useState(preferences);
   const [draftModels, setDraftModels] = useState(info?.models.defaults ?? DEFAULT_MODEL_SETTINGS);
@@ -37,6 +39,16 @@ export function OptionsDialog({
   const generalTab = useRef<HTMLButtonElement>(null);
   const modelsTab = useRef<HTMLButtonElement>(null);
   const pending = useRef(false);
+  const loginRef = useRef(info?.models.codex.login);
+  loginRef.current = info?.models.codex.login;
+  useEffect(
+    () => () => {
+      const login = loginRef.current;
+      if (login)
+        void window.computerCat.codexCancel({ attemptId: login.attemptId }).catch(() => {});
+    },
+    [],
+  );
   const dirtyPet =
     draft.size !== saved.size ||
     draft.animation !== saved.animation ||
@@ -62,9 +74,9 @@ export function OptionsDialog({
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
-    catTab.current?.focus();
+    ({ cat: catTab, models: modelsTab, general: generalTab })[initialTab].current?.focus();
     return () => element?.close();
-  }, []);
+  }, [initialTab]);
 
   async function apply(closeAfter: boolean) {
     if (pending.current) return;
@@ -304,7 +316,7 @@ export function OptionsDialog({
                   </>
                 )}
                 <dt>History:</dt>
-                <dd>This session only</dd>
+                <dd>Saved on this computer</dd>
                 <dt>Screen access:</dt>
                 <dd>Off</dd>
               </dl>

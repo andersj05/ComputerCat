@@ -832,7 +832,7 @@ input:disabled {
 .pet-wrap {
   height: 100%;
   display: grid;
-  grid-template-rows: 30px minmax(0, 1fr) 26px;
+  grid-template-rows: 30px minmax(0, 1fr) 26px 23px;
   gap: 2px;
   padding: 3px 7px 5px;
   user-select: none;
@@ -1073,4 +1073,133 @@ input:focus-visible + span {
   .pet-wrap.animated .pet-button:hover .pet-art {
     transform: none;
   }
+}
+
+/* Conversation history and direct model selection retain the compact XP layout. */
+.model-picker {
+  padding: 5px 7px;
+  border-bottom: 1px solid #aca899;
+}
+.quick-model-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.quick-model-row label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.quick-model-row label:first-child {
+  flex: 1;
+}
+.quick-model-row select {
+  min-width: 0;
+  min-height: 23px;
+}
+.quick-model-row label:first-child select {
+  width: 100%;
+}
+.quick-model-row .xp-button {
+  min-width: 0;
+}
+.model-picker .connection-error {
+  margin: 5px 0 0;
+}
+.model-dialog {
+  width: 490px;
+  max-width: calc(100vw - 20px);
+}
+.model-dialog-content {
+  padding: 10px;
+}
+.model-dialog .model-picker {
+  padding: 0 0 10px;
+  border: 0;
+}
+.history-dialog {
+  width: 550px;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
+}
+.history-content {
+  padding: 12px;
+  min-height: 0;
+}
+.history-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.history-search input {
+  min-width: 0;
+  flex: 1;
+  min-height: 23px;
+}
+.history-list {
+  height: min(250px, 38vh);
+  overflow: auto;
+  background: white;
+  border: 1px solid #7f9db9;
+}
+.history-list > p {
+  padding: 10px;
+  color: var(--muted);
+}
+.history-item {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  width: 100%;
+  gap: 5px;
+  padding: 9px;
+  background: white;
+  border: 0;
+  border-bottom: 1px solid #eee;
+}
+.history-item.selected {
+  background: #316ac5;
+  color: white;
+}
+.history-item strong {
+  overflow-wrap: anywhere;
+}
+.history-meta {
+  font-size: 10px;
+}
+.delete-confirmation {
+  padding: 6px 0;
+}
+.delete-confirmation .xp-button {
+  margin-right: 5px;
+}
+.tool-activity {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.tool-activity li {
+  padding: 3px 5px;
+  background: #f4f2e8;
+  border: 1px solid #d8d4c3;
+}
+.pet-model {
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+  height: 23px;
+  min-height: 23px;
+  padding: 2px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
 }

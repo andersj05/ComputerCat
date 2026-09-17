@@ -4,6 +4,12 @@ export const IPC = {
   send: "cat:send",
   stop: "cat:stop",
   clear: "cat:clear",
+  conversations: "cat:conversations",
+  openConversation: "cat:open-conversation",
+  deleteConversation: "cat:delete-conversation",
+  selectModel: "cat:select-model",
+  openModels: "cat:open-models",
+  modelsRequested: "cat:models-requested",
   openChat: "cat:open-chat",
   openOptions: "cat:open-options",
   optionsRequested: "cat:options-requested",
@@ -36,9 +42,22 @@ export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   state: "complete" | "streaming" | "stopped" | "error";
+  tools?: import("./tools").ToolActivity[] | undefined;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  model: ModelSettings;
+  messageCount: number;
 }
 
 export interface ChatSnapshot {
+  conversationId?: string;
+  title?: string;
+  persistenceError?: string;
   messages: ChatMessage[];
   busy: boolean;
 }
@@ -76,6 +95,12 @@ export interface ComputerCatAPI {
   send(request: SendRequest): Promise<ActionResult>;
   stop(): Promise<void>;
   clear(): Promise<ActionResult>;
+  conversations(): Promise<ConversationSummary[]>;
+  openConversation(id: string): Promise<ActionResult>;
+  deleteConversation(id: string): Promise<ActionResult>;
+  selectModel(settings: ModelSettings): Promise<ActionResult>;
+  openModels(): Promise<void>;
+  onModelsRequested(listener: () => void): () => void;
   openChat(): Promise<void>;
   openOptions(): Promise<void>;
   onOptionsRequested(listener: () => void): () => void;

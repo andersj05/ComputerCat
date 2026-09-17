@@ -2,6 +2,8 @@ import { mkdir, mkdtemp, rm, rmdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
+import { IPC } from "../../src/shared/contracts";
+import { composeMessage } from "./chat";
 
 async function launch(userData: string, mode: "demo" | "pi" = "demo") {
   const env = Object.fromEntries(
@@ -30,7 +32,7 @@ async function windows(electron: ElectronApplication) {
   const page = electron.windows().find((window) => window.url().includes("view=chat"));
   const pet = electron.windows().find((window) => window.url().includes("view=pet"));
   if (!page || !pet) throw new Error("Companion windows did not open");
-  await expect(page.getByRole("button", { name: "Say hello" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "History…" })).toBeEnabled();
   return { page, pet };
 }
 
@@ -254,6 +256,62 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
   }
 });
 
+test("delayed send acknowledgements preserve edited drafts, including identical text", async () => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    // Hold the IPC response at the boundary; this test makes no model requests.
+    await electron.evaluate(({ ipcMain }, channel) => {
+      ipcMain.removeHandler(channel);
+      ipcMain.handle(
+        channel,
+        () =>
+          new Promise((resolve) => {
+            Reflect.set(globalThis, "releaseTestSend", resolve);
+          }),
+      );
+    }, IPC.send);
+    const input = page.getByRole("textbox", { name: "Message Computer Cat" });
+    const send = page.getByRole("button", { name: "Send message" });
+    const release = async (ok: boolean) => {
+      await expect
+        .poll(() => electron.evaluate(() => typeof Reflect.get(globalThis, "releaseTestSend")))
+        .toBe("function");
+      await electron.evaluate((_electron, accepted) => {
+        Reflect.get(
+          globalThis,
+          "releaseTestSend",
+        )(accepted ? { ok: true } : { ok: false, message: "Message was not accepted." });
+        Reflect.deleteProperty(globalThis, "releaseTestSend");
+      }, ok);
+      await expect(page.locator(".statusbar").getByRole("status")).toHaveText("Ready");
+    };
+    await input.fill("Repeat this");
+    await send.click();
+    await expect(send).toBeDisabled();
+    await input.fill("");
+    await input.fill("Repeat this");
+    await release(true);
+    await expect(input).toHaveValue("Repeat this");
+    await expect(send).toBeEnabled();
+
+    // An untouched accepted draft is still cleared.
+    await send.click();
+    await release(true);
+    await expect(input).toHaveValue("");
+
+    await input.fill("Keep on failure");
+    await send.click();
+    await release(false);
+    await expect(input).toHaveValue("Keep on failure");
+    await expect(page.getByRole("alert")).toContainText("Message was not accepted.");
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
 test("Pi worker rejects an unknown model without a network call and leaves the UI usable", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
@@ -274,7 +332,7 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
   }
 });
 
-test("Options stage, cancel, apply, and persist cat settings without persisting chat", async () => {
+test("Options stage, cancel, apply, and persist cat settings alongside saved chat", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
   let electron = await launch(userData);
@@ -328,7 +386,8 @@ test("Options stage, cancel, apply, and persist cat settings without persisting 
     expect(
       await restored.page.evaluate(async () => (await window.computerCat.info()).preferences),
     ).toEqual({ size: "large", animation: false, alwaysOnTop: false });
-    await expect(restored.page.locator(".message")).toHaveCount(0);
+    await expect(restored.page.locator(".message")).toHaveCount(2);
+    await expect(restored.page.locator(".message.user")).toContainText("Hello");
     await expect(restored.pet.locator(".pet-wrap")).not.toHaveClass(/animated/);
     expect(
       await electron.evaluate(({ BrowserWindow }) => {
@@ -564,7 +623,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
       await pet.getByRole("button", { name: "Cat options" }).click();
       await page.getByRole("radio", { name: size, exact: true }).check();
       await page.getByRole("button", { name: "OK", exact: true }).click();
-      await page.getByRole("textbox", { name: "Message Computer Cat" }).fill("Hello");
+      await composeMessage(page, "Hello");
       await page.getByRole("button", { name: "Send message" }).click();
       await expect(pet.getByRole("button", { name: "Stop reply" })).toBeVisible();
       expect(

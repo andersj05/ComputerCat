@@ -52,7 +52,7 @@ Evidence: the [audit verification record](../audits/2026-09-17-agent-memory.md).
 Reviewed: 2026-09-17. Scope: planning or upgrading the Pi integration.
 
 The [research plan](../research-and-build-plan.md) includes future tools and session restoration.
-Current code intentionally disables discovered resources and disk sessions. Read the
+Current code disables discovered resources; app-owned tools and disk sessions are now enabled. Read the
 [capability map](current-state.md) and [adapter](../../src/agent/pi-runtime.ts), then run the
 [isolation tests](../../tests/unit/pi-runtime.test.ts) when changing SDK integration.
 Do not enable default filesystem discovery to make development memory available to the app.
@@ -95,3 +95,23 @@ previous size when shrinking. Use the placement helper for recovery, preference 
 body dragging so repeated position updates cannot accumulate size rounding.
 Evidence: [placement helper](../../src/main/index.ts) and the off-screen/display-change cases in
 [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
+
+## Send acknowledgements and reply completion are separate events
+
+Reviewed: 2026-09-17. Scope: renderer drafts and Electron smoke tests.
+
+Main can broadcast a turn before the send IPC promise settles. Clear only the unchanged draft
+revision on acceptance; comparing its text can erase a newly retyped identical message. A
+controlled delayed response reproduced this loss; [desktop tests](../../tests/smoke/desktop.spec.ts)
+cover retyping, unchanged accepted drafts, and rejected sends.
+
+An absent Stop button immediately after clicking Send does not prove the new reply completed.
+Wait for the new assistant message's completed state, then idle and the send acknowledgement.
+The [chat helper](../../tests/smoke/chat.ts) uses the next message index so a previous reply
+cannot satisfy the assertion. This corrects premature model/context assertions in the packaged
+Windows [Codex tests](../../tests/smoke/codex.spec.ts).
+
+Wait for native dialogs to close before composing, too. Options saves and History opens are
+asynchronous; Playwright's fill action does not check whether a modal obscures the input.
+The same helper waits for no open dialog before filling and counts replies only after a
+history switch completes. See [Playwright actionability](https://playwright.dev/docs/actionability).

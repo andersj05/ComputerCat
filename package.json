@@ -7,7 +7,7 @@
   "type": "module",
   "main": "out/main/index.js",
   "author": "Anders Jensen",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/andersj05/ComputerCat.git"

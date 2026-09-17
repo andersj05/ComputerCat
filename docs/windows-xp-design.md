@@ -8,7 +8,8 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 
 - One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,
   hero headings, or repeated brand introductions.
-- The toolbar contains three working actions: New conversation, Options, and Desktop.
+- The toolbar contains New conversation, History, Options, and Desktop. A compact native
+  model/reasoning row below it changes the current chat without resetting its context.
 - Two plain starter links prepare editable drafts. They do not send anything automatically.
 - Speaker names and text form a plain chat log. Streaming appears in the status bar; Stop stays
   next to the message box and is also available from the cat.
@@ -17,6 +18,7 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
 - The desktop cat shows no idle caption. Click it to chat; drag its body or grip to move it.
   Keep Chat and Options buttons beneath it, with Stop alongside them during a reply.
+  A narrow model button beneath the dock shows the current model and opens its selector.
 - Animate the original artwork with planted boots, gentle breathing, head movement, and blinks.
   Thinking has a distinct pose and status indicator. Pause motion while dragging; disable it
   for reduced motion or when Animate cat is unchecked. Preview staged animation in Options.
@@ -36,8 +38,11 @@ and Disconnect take effect immediately, separately from staged defaults. Closing
 an unfinished sign-in. Authentication stays in the user's browser; the property sheet shows status,
 device codes, and an optional callback-URL fallback, never saved credentials.
 
-New conversation asks before clearing messages or a draft. Default keyboard focus goes to
-Cancel. Return focus to the composer after either dialog closes.
+New conversation retains the old chat in History and asks only before discarding an unsent draft.
+Default keyboard focus goes to Cancel. History is a searchable dialog with dated entries and
+explicit deletion confirmation. Switching chats preserves their drafts for this app run.
+Return focus to the composer after dialogs close. The cat’s model button opens a small dialog
+with the same immediate selectors as the chat window; Connections opens Options on Models.
 
 The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep a stable height.
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
