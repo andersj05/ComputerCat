@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, rmdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
@@ -160,7 +160,9 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await page.screenshot({ path: testInfo.outputPath("connected-models-small.png") });
     await page.getByRole("button", { name: "OK", exact: true }).click();
     const input = page.getByRole("textbox", { name: "Message Computer Cat" });
-    await input.fill("first-context-canary");
+    const fixtureFile = join(userData, "desktop-fixture.txt");
+    await writeFile(fixtureFile, "fixture-file-content");
+    await input.fill(`first-context-canary\nread-fixture:${JSON.stringify(fixtureFile)}`);
     await page.getByRole("button", { name: "Send message" }).click();
     await expect(page.locator(".message.assistant").last()).not.toHaveAttribute(
       "data-state",
@@ -186,17 +188,46 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     const requests = await app.electron.evaluate(
       () => Reflect.get(globalThis, "offlineCodex").requests,
     );
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
+    await expect(page.getByRole("list", { name: "Tool activity" }).first()).toContainText(
+      "read · complete",
+    );
     expect(requests[0]).toMatchObject({
       model: "gpt-5.6-terra",
       reasoning: "high",
-      tools: [],
       authenticated: true,
     });
-    expect(requests[1].model).toBe("gpt-5.6-terra");
-    expect(JSON.stringify(requests[1].input)).toContain("first-context-canary");
+    expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
+      "bash",
+      "edit",
+      "find",
+      "grep",
+      "ls",
+      "powershell",
+      "read",
+      "write",
+    ]);
+    expect(requests[2].model).toBe("gpt-5.6-terra");
+    expect(JSON.stringify(requests[2].input)).toContain("first-context-canary");
+    await page.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-sol");
+    await page.getByLabel("Chat reasoning", { exact: true }).selectOption("medium");
+    await input.fill("Continue after changing models");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
+    const switched = await app.electron.evaluate(() =>
+      Reflect.get(globalThis, "offlineCodex").requests.at(-1),
+    );
+    expect(switched.model).toBe("gpt-5.6-sol");
+    expect(switched.reasoning).toBe("medium");
+    expect(JSON.stringify(switched.input)).toContain("fixture-file-content");
+    await app.pet.getByRole("button", { name: "Choose model" }).click();
+    const picker = page.getByRole("dialog", { name: "Choose model" });
+    await picker.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-terra");
+    await picker.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(app.pet.getByRole("button", { name: "Choose model" })).toContainText(
+      "gpt-5.6-terra",
+    );
     await page.getByRole("button", { name: "New conversation" }).click();
-    await page.getByRole("button", { name: "Start new chat" }).click();
     await expect(page.locator(".statusbar")).toContainText("gpt-5.6-sol");
     await input.fill("trigger-provider-error");
     await page.getByRole("button", { name: "Send message" }).click();
@@ -214,7 +245,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await app.electron.close();
     app = await launch(userData);
     page = app.page;
-    await expect(page.locator(".message")).toHaveCount(0);
+    await expect(page.locator(".message")).toHaveCount(2);
     const restored = await page.evaluate(() => window.computerCat.info());
     expect(restored.models.codex.connected).toBe(true);
     expect(restored.models.defaults).toEqual({
@@ -224,6 +255,20 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     });
     expect(restored.model).toBe("gpt-5.6-sol");
     expect(JSON.stringify(restored)).not.toContain("offline-refresh");
+    await interceptCodex(app.electron);
+    await page.getByRole("button", { name: "History…" }).click();
+    await page.getByRole("button", { name: /first-context-canary/ }).click();
+    await page.getByRole("button", { name: "Open conversation", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "Message Computer Cat" })
+      .fill("Continue the restored chat");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
+    const resumed = await app.electron.evaluate(() =>
+      Reflect.get(globalThis, "offlineCodex").requests.at(-1),
+    );
+    expect(JSON.stringify(resumed.input)).toContain("fixture-file-content");
+    expect(JSON.stringify(resumed.input)).not.toContain("trigger-provider-error");
     await page.getByRole("button", { name: "Options…" }).click();
     await page.getByRole("tab", { name: "Models", exact: true }).click();
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
@@ -233,6 +278,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     });
     await page.getByLabel("Connection:", { exact: true }).selectOption("demo");
     await page.getByRole("button", { name: "OK", exact: true }).click();
+    await page.getByLabel("Chat model", { exact: true }).selectOption("demo");
     await expect(page.locator(".statusbar")).toContainText("Demo — no API calls");
   } finally {
     await app.electron.close();

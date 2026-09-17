@@ -58,7 +58,7 @@ describe("conversation lifecycle", () => {
   });
   it("does not invoke tools after a failed initial save and refuses to discard unsaved history", async () => {
     const { controller, run } = setup();
-    const temporary = join(directory, controller.snapshot().conversationId + ".json.tmp");
+    const temporary = join(directory, `${controller.snapshot().conversationId}.json.tmp`);
     await mkdir(temporary);
     await send(controller, "keep this");
     expect(run).not.toHaveBeenCalled();

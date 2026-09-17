@@ -30,7 +30,7 @@ async function windows(electron: ElectronApplication) {
   const page = electron.windows().find((window) => window.url().includes("view=chat"));
   const pet = electron.windows().find((window) => window.url().includes("view=pet"));
   if (!page || !pet) throw new Error("Companion windows did not open");
-  await expect(page.getByRole("button", { name: "Say hello" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "History…" })).toBeEnabled();
   return { page, pet };
 }
 
@@ -274,7 +274,7 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
   }
 });
 
-test("Options stage, cancel, apply, and persist cat settings without persisting chat", async () => {
+test("Options stage, cancel, apply, and persist cat settings alongside saved chat", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
   let electron = await launch(userData);
@@ -328,7 +328,8 @@ test("Options stage, cancel, apply, and persist cat settings without persisting 
     expect(
       await restored.page.evaluate(async () => (await window.computerCat.info()).preferences),
     ).toEqual({ size: "large", animation: false, alwaysOnTop: false });
-    await expect(restored.page.locator(".message")).toHaveCount(0);
+    await expect(restored.page.locator(".message")).toHaveCount(2);
+    await expect(restored.page.locator(".message.user")).toContainText("Hello");
     await expect(restored.pet.locator(".pet-wrap")).not.toHaveClass(/animated/);
     expect(
       await electron.evaluate(({ BrowserWindow }) => {

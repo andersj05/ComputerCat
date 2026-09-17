@@ -52,7 +52,7 @@ Evidence: the [audit verification record](../audits/2026-09-17-agent-memory.md).
 Reviewed: 2026-09-17. Scope: planning or upgrading the Pi integration.
 
 The [research plan](../research-and-build-plan.md) includes future tools and session restoration.
-Current code intentionally disables discovered resources and disk sessions. Read the
+Current code disables discovered resources; app-owned tools and disk sessions are now enabled. Read the
 [capability map](current-state.md) and [adapter](../../src/agent/pi-runtime.ts), then run the
 [isolation tests](../../tests/unit/pi-runtime.test.ts) when changing SDK integration.
 Do not enable default filesystem discovery to make development memory available to the app.

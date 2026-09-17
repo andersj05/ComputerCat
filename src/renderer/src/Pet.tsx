@@ -8,6 +8,8 @@ export function Pet({
   error,
   openChat,
   openOptions,
+  openModels,
+  modelLabel,
   stop,
 }: {
   snapshot: ChatSnapshot;
@@ -15,6 +17,8 @@ export function Pet({
   error: string;
   openChat: () => void;
   openOptions: () => void;
+  openModels: () => void;
+  modelLabel: string;
   stop: () => void;
 }) {
   const pointer = useRef<number | null>(null);
@@ -115,6 +119,15 @@ export function Pet({
           </button>
         )}
       </div>
+      <button
+        type="button"
+        className="xp-button pet-model"
+        onClick={openModels}
+        aria-label="Choose model"
+        title={`Change model: ${modelLabel}`}
+      >
+        {modelLabel} ▾
+      </button>
     </main>
   );
 }

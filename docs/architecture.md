@@ -59,8 +59,8 @@ No global Codex/Pi credentials, configuration, or resources are imported or chan
 
 `models.json` saves only the default connection, Codex model ID, and reasoning level. Main validates
 Codex selections against the pinned SDK catalogue. That catalogue is not an account entitlement
-check; unsupported models and subscription limits remain provider errors. Existing chats keep
-their active model until New conversation. With an empty chat, applying a default uses it
+check; unsupported models and subscription limits remain provider errors. Changing defaults leaves existing chats on their current model. The direct selector changes
+the active chat while retaining context. With an empty chat, applying a default uses it
 immediately. Explicit environment API-key configuration remains a separate selectable connection;
 it is never an automatic fallback after Codex authentication fails.
 A damaged model preference file falls back to demo, even with API environment variables present.
