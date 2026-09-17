@@ -188,9 +188,9 @@ else {
       });
       if (!smoke) {
         const artwork = app.isPackaged
-          ? join(process.resourcesPath, "computer-cat.png")
-          : join(app.getAppPath(), "assets/computer-cat.png");
-        tray = new Tray(nativeImage.createFromPath(artwork).resize({ width: 24, height: 24 }));
+          ? join(process.resourcesPath, "computer_cat.png")
+          : join(app.getAppPath(), "assets/computer_cat.png");
+        tray = new Tray(nativeImage.createFromPath(artwork).resize({ height: 24 }));
         tray.setToolTip("Computer Cat");
         tray.setContextMenu(
           Menu.buildFromTemplate([

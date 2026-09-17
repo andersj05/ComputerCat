@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import catImage from "../../../assets/computer-cat.png";
+import catImage from "../../../assets/computer_cat.png";
 import type { AppInfo, ChatSnapshot } from "../../shared/contracts";
 
 const prompts = ["Say hello", "What can you do?", "Can you see my screen?"];

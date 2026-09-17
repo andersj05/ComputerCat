@@ -16,7 +16,7 @@ npm run dev
 ```
 
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
-no credentials, and no API calls. The original supplied artwork is in `assets/computer-cat.png`.
+no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
 - Click the cat to open chat. Drag its small dotted handle to move it.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
