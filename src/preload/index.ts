@@ -14,6 +14,13 @@ const api: ComputerCatAPI = {
   stop: () => ipcRenderer.invoke(IPC.stop),
   clear: () => ipcRenderer.invoke(IPC.clear),
   openChat: () => ipcRenderer.invoke(IPC.openChat),
+  openOptions: () => ipcRenderer.invoke(IPC.openOptions),
+  dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),
+  onOptionsRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.optionsRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.optionsRequested, receive);
+  },
   hideChat: () => ipcRenderer.invoke(IPC.hideChat),
   minimizeChat: () => ipcRenderer.invoke(IPC.minimizeChat),
   toggleMaximizeChat: () => ipcRenderer.invoke(IPC.toggleMaximizeChat),

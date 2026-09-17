@@ -81,3 +81,17 @@ ambient-key isolation; [desktop tests](../../tests/smoke/codex.spec.ts) exercise
 The pinned provider compresses SSE request bodies with Zstandard when available. Offline
 network fixtures must decode that format before checking request payloads; a fixture's JSON
 parse failure is not a provider outage. Evidence: the [worker fixture](../../tests/fixtures/codex-worker.mjs).
+
+
+## Windows off-screen recovery must move before resizing
+
+Reviewed: 2026-09-17. Scope: Electron companion windows on Windows with display scaling.
+
+Moving a window far off-screen can change the DIP size reported by getBounds. Combining a
+move back to a display with a resize in setBounds produced an oversized cat extending beyond
+the work area. Move to the destination first, then setBounds with the configured size and clamp
+the actual result only if needed. setSize after the move kept the non-resizable window at its
+previous size when shrinking. Use the placement helper for recovery, preference changes, and
+body dragging so repeated position updates cannot accumulate size rounding.
+Evidence: [placement helper](../../src/main/index.ts) and the off-screen/display-change cases in
+[desktop smoke tests](../../tests/smoke/desktop.spec.ts).

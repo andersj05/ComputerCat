@@ -15,7 +15,11 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 - One status bar reports activity and the current mode. Put details in Options instead of
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
-- The desktop cat shows no idle caption. Its small grip moves it; clicking the cat opens chat.
+- The desktop cat shows no idle caption. Click it to chat; drag its body or grip to move it.
+  Keep Chat and Options buttons beneath it, with Stop alongside them during a reply.
+- Animate the original artwork with planted boots, gentle breathing, head movement, and blinks.
+  Thinking has a distinct pose and status indicator. Pause motion while dragging; disable it
+  for reduced motion or when Animate cat is unchecked. Preview staged animation in Options.
 
 ## Controls and dialogs
 

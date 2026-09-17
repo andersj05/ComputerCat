@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const petDragSchema = z.enum(["start", "move", "end", "cancel"]);
+
 export const reasoningSchema = z.enum(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
 export const modelSettingsSchema = z.strictObject({
   source: z.enum(["demo", "codex", "environment"]),

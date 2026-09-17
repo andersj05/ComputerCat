@@ -84,3 +84,22 @@ Evidence: [model settings](../../src/main/model-settings.ts),
 The [OAuth adapter](../../src/agent/codex-auth.ts) uses the pinned provider's browser/device
 flows and serializes refresh with credential deletion. [Offline tests](../../tests/unit/codex-auth.test.ts)
 intercept the real SDK's device flow and cover cancellation, stale callbacks, and rotated tokens.
+
+
+## D006: Keep the companion reachable without taking keyboard focus
+
+Status: adopted for desktop cat interaction, 2026-09-17.
+
+Always on top uses Electron's screen-saver level with a two-second z-order recovery while the
+pet is visible and the preference is enabled. Show, blur, resume, and unlock also reassert it.
+Use showInactive/moveTop for recovery, never focus. Find cat brings it to the pointer's display.
+The setting remains optional; secure desktops and exclusive fullscreen are outside this scope.
+
+Dragging uses a pet-only phase bridge with main-owned cursor coordinates, a movement threshold,
+work-area constraints, and cancellation. The original artwork gains independent head/body motion
+and blinks rather than whole-image bouncing. Animation remains optional and respects reduced motion.
+
+Evidence: [window lifecycle](../../src/main/index.ts), [drag rules](../../src/main/pet-window.ts),
+[artwork](../../src/renderer/src/PetArtwork.tsx), [movement tests](../../tests/unit/pet-window.test.ts),
+[desktop tests](../../tests/smoke/desktop.spec.ts), and
+[Electron window levels](https://www.electronjs.org/docs/latest/api/browser-window#winsetalwaysontopflag-level-relativelevel).

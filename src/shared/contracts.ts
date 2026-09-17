@@ -5,6 +5,9 @@ export const IPC = {
   stop: "cat:stop",
   clear: "cat:clear",
   openChat: "cat:open-chat",
+  openOptions: "cat:open-options",
+  optionsRequested: "cat:options-requested",
+  dragPet: "cat:drag-pet",
   hideChat: "cat:hide-chat",
   minimizeChat: "cat:minimize-chat",
   toggleMaximizeChat: "cat:toggle-maximize-chat",
@@ -74,6 +77,9 @@ export interface ComputerCatAPI {
   stop(): Promise<void>;
   clear(): Promise<ActionResult>;
   openChat(): Promise<void>;
+  openOptions(): Promise<void>;
+  onOptionsRequested(listener: () => void): () => void;
+  dragPet(phase: "start" | "move" | "end" | "cancel"): Promise<{ moved: boolean }>;
   hideChat(): Promise<void>;
   minimizeChat(): Promise<void>;
   toggleMaximizeChat(): Promise<void>;

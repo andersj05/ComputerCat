@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import catImage from "../../../assets/computer_cat.png";
 import type { ActionResult, AppInfo, PetPreferences } from "../../shared/contracts";
 import { DEFAULT_MODEL_SETTINGS } from "../../shared/models";
 import { ModelOptions } from "./ModelOptions";
+import { PetArtwork } from "./PetArtwork";
 import { WindowCaption } from "./WindowCaption";
 
 const optionTabs = ["cat", "models", "general"] as const;
@@ -218,8 +218,8 @@ export function OptionsDialog({
           >
             <div className="cat-options-layout">
               <div className="cat-preview">
-                <div className="preview-surface">
-                  <img src={catImage} alt="Desktop cat preview" draggable="false" />
+                <div className={`preview-surface ${draft.animation ? "animated" : ""}`}>
+                  <PetArtwork />
                 </div>
                 <button
                   type="button"
@@ -271,7 +271,9 @@ export function OptionsDialog({
                 </fieldset>
               </div>
             </div>
-            <p className="option-note">Drag the grip beneath your cat to move it.</p>
+            <p className="option-note">
+              Click your cat to chat. Drag it to move. Find cat brings it to this screen.
+            </p>
           </div>
           <div
             className="tab-panel"

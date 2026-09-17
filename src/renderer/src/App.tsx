@@ -44,6 +44,9 @@ export function App() {
     let receivedPreferences = false;
     let receivedWindow = false;
     let latestModels: AppInfo["models"] | undefined;
+    const unsubscribeOptions = window.computerCat.onOptionsRequested(() => {
+      if (!isPet) setOptionsOpen(true);
+    });
     const unsubscribeModels = window.computerCat.onModelsChanged((state) => {
       latestModels = state;
       setInfo((current) =>
@@ -83,6 +86,7 @@ export function App() {
       unsubscribePreferences();
       unsubscribeWindow();
       unsubscribeModels();
+      unsubscribeOptions();
     };
   }, [isPet]);
 
@@ -179,6 +183,9 @@ export function App() {
         preferences={preferences}
         error={error}
         openChat={() => void action(() => window.computerCat.openChat(), "Couldn't open chat.")}
+        openOptions={() =>
+          void action(() => window.computerCat.openOptions(), "Couldn't open Options.")
+        }
         stop={stop}
       />
     );
