@@ -62,3 +62,22 @@ Consequences: use the [XP design guide](../windows-xp-design.md) as the maintain
 verify actual Electron windows, keyboard focus, transparent pixels, and save/cancel behavior.
 Evidence: application baseline `f977044`, [renderer](../../src/renderer/src/App.tsx), and
 [desktop tests](../../tests/smoke/desktop.spec.ts).
+
+## D005: Own the Codex connection and keep the saved default separate from the active chat
+
+Status: adopted for subscription integration, 2026-09-17.
+
+Use the pinned Pi provider's Codex OAuth flow with an app-owned encrypted credential file.
+Do not import or mutate global Codex/Pi logins. Electron safeStorage protects credentials;
+unavailable secure storage must fail closed. Refresh tokens stay in the privileged process.
+The renderer receives only connection status and model choices.
+
+Save model defaults separately from pet preferences. Existing conversations keep their active
+model until New conversation; a failed save leaves the old default intact. Credentials and
+conversation text must never enter the model preferences file. Subscription availability is
+determined by the provider and account, not guaranteed by the SDK's model catalogue.
+
+Evidence: [model settings](../../src/main/model-settings.ts),
+[encrypted store](../../src/main/secret-store.ts),
+[persistence tests](../../tests/unit/secret-store.test.ts), and
+[OpenAI authentication guidance](https://learn.chatgpt.com/docs/auth).
