@@ -229,9 +229,6 @@ export function OptionsDialog({
                 <dt>Screen access:</dt>
                 <dd>Off</dd>
               </dl>
-              {info?.mode === "demo" && (
-                <p className="option-note">Sample replies. No API calls.</p>
-              )}
             </fieldset>
             <fieldset>
               <legend>Shortcuts</legend>

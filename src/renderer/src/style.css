@@ -2,7 +2,7 @@
   font-family: Tahoma, sans-serif;
   font-size: 11px;
   color: #000;
-  background: #ece9d8;
+  background: transparent;
   font-synthesis: none;
   --face: #ece9d8;
   --blue: #0054e3;
@@ -484,6 +484,7 @@ textarea::placeholder {
   background: transparent;
 }
 .xp-dialog .titlebar {
+  margin: 0;
   -webkit-app-region: no-drag;
 }
 .app-shell:has(.xp-dialog[open]) > .titlebar {
@@ -538,7 +539,8 @@ textarea::placeholder {
   box-shadow: inset 0 1px #e68b2c;
 }
 .tab-panel {
-  min-height: 237px;
+  height: 260px;
+  overflow-y: auto;
   margin-top: -1px;
   padding: 14px 12px 10px;
   border: 1px solid #919b9c;
@@ -837,7 +839,6 @@ input:disabled {
     height: 105px;
   }
   .tab-panel {
-    min-height: 222px;
     padding-top: 10px;
   }
 }

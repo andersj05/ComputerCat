@@ -274,7 +274,7 @@ export function App() {
                   data-state={message.state}
                 >
                   <span className="message-name">
-                    {message.role === "assistant" ? "Computer Cat" : "You"} says:
+                    {message.role === "assistant" ? "Computer Cat" : "You"}:
                   </span>
                   <p>
                     {message.text ||
