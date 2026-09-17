@@ -1,5 +1,9 @@
 # Computer Cat: research and proposed build plan
 
+This is historical research and a proposed sequence, not the current implementation status.
+See the maintained [current-state snapshot](memory/current-state.md) and [architecture](architecture.md)
+for delivered capabilities and boundaries.
+
 Research date: September 16, 2026. Assumption: Windows is the first target, with other operating systems possible later. This is an architecture recommendation based on official documentation, source files, and release notes. No framework or desktop driver was installed or benchmarked during this research.
 
 Build Computer Cat as its own Electron/TypeScript application, embed Pi through its supported SDK, and initially connect Cua Driver through a small MCP client bridge. Keep the desktop driver replaceable and test Windows-MCP as the fallback. Own the cat interface, screen-context selection, permissions, memory, and integration modules. Consume upstream packages without maintaining a product fork.
