@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type UtilityProcess, utilityProcess } from "electron";
 import { isConfigured, type RuntimeConfig, workerEnvironment } from "../agent/config";
-import { workerEventSchema } from "../agent/protocol";
+import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
 
 export class WorkerRuntime implements AgentRuntime {
@@ -35,6 +35,10 @@ export class WorkerRuntime implements AgentRuntime {
         throw new UserFacingError(
           "A model isn't connected yet. Open Options → Models to choose a connection.",
         );
+      const parsed = workerConfigSchema.safeParse(config);
+      if (!parsed.success)
+        throw new UserFacingError("The model configuration is invalid. Check Options → Models.");
+      config = parsed.data;
     } finally {
       this.preparing = false;
     }
@@ -59,11 +63,14 @@ export class WorkerRuntime implements AgentRuntime {
     const id = randomUUID();
     await new Promise<void>((resolve, reject) => {
       let stopTimer: ReturnType<typeof setTimeout> | undefined;
-      const timeout = setTimeout(() => {
-        this.faulted = true;
-        child.kill();
-        finish(new UserFacingError("The model took too long. Start a new chat to reconnect."));
-      }, 120_000);
+      const timeout = setTimeout(
+        () => {
+          this.faulted = true;
+          child.kill();
+          finish(new UserFacingError("The model took too long. Start a new chat to reconnect."));
+        },
+        config.provider === "openai-codex" ? 600_000 : 120_000,
+      );
       const finish = (error?: Error) => {
         clearTimeout(timeout);
         clearTimeout(stopTimer);

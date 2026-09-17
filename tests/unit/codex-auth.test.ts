@@ -84,6 +84,21 @@ describe("Codex OAuth connection", () => {
     expect(saved()).toContain(credential.refresh);
   });
 
+  it("keeps a rotated refresh token if Stop arrives during its persistence", async () => {
+    const { auth, storage, saved, oauth } = setup(JSON.stringify({ ...credential, expires: 1 }));
+    await auth.load();
+    const abort = new AbortController();
+    const persist = storage.write.getMockImplementation();
+    storage.write.mockImplementationOnce(async (value) => {
+      await persist?.(value);
+      abort.abort();
+    });
+    await expect(auth.accessToken(abort.signal)).rejects.toThrow();
+    await vi.waitFor(() => expect(saved()).toBe(JSON.stringify(credential)));
+    expect(await auth.accessToken(new AbortController().signal)).toBe(credential.access);
+    expect(oauth.refresh).toHaveBeenCalledOnce();
+  });
+
   it("rejects insecure storage, corrupt credentials, and failed login persistence", async () => {
     const { auth, storage } = setup("corrupt");
     await auth.load();

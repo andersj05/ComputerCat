@@ -46,4 +46,17 @@ describe("saved default model", () => {
     expect(JSON.stringify(result)).not.toContain(directory);
     expect(store.snapshot()).toEqual(DEFAULT_MODEL_SETTINGS);
   });
+
+  it("honors environment setup on first launch but uses demo for a damaged saved file", async () => {
+    const initial = { ...DEFAULT_MODEL_SETTINGS, source: "environment" as const };
+    const first = new ModelSettingsStore(path, initial);
+    await first.load();
+    expect(first.snapshot().source).toBe("environment");
+    for (const contents of ["broken json", JSON.stringify({ source: "invalid" })]) {
+      await writeFile(path, contents);
+      const restored = new ModelSettingsStore(path, initial);
+      await restored.load();
+      expect(restored.snapshot().source).toBe("demo");
+    }
+  });
 });

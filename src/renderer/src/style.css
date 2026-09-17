@@ -729,6 +729,12 @@ input:disabled {
   background: #c9c7ba;
   border-radius: 50%;
 }
+.account-connected .connection-status {
+  margin-bottom: 0;
+}
+.connection-status .xp-button {
+  margin-left: auto;
+}
 .connection-light.connected {
   border-color: #277322;
   background: #49ad35;
@@ -753,13 +759,9 @@ input:disabled {
 .text-button:disabled {
   color: var(--muted);
 }
-.connection-message,
 .connection-error {
   margin: 8px 0 0;
   line-height: 1.4;
-}
-.connection-message {
-  color: #325b29;
 }
 .connection-error {
   color: #a12a12;

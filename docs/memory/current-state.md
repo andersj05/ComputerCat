@@ -1,8 +1,7 @@
 # Current project state
 
 Reviewed: 2026-09-17, including the Codex subscription integration.
-This is a capability map, not a live branch, issue tracker, or record of today's test results.
-Check Git and the relevant code when resuming; update this snapshot when capabilities change.
+Check Git and relevant code when resuming; this map does not establish checkout or test results.
 
 ## What exists
 
@@ -23,9 +22,8 @@ SDK behind an application-owned runtime interface. Use the Node version in
 User-facing behavior is documented in [README](../../README.md) and
 [XP design](../windows-xp-design.md). Verify desktop behavior with
 [Electron smoke tests](../../tests/smoke/desktop.spec.ts).
-The [Codex smoke tests](../../tests/smoke/codex.spec.ts) run real OAuth and worker code with
-intercepted network responses, including encrypted persistence and token refresh. They do not
-establish a particular account's live model entitlement or consume subscription usage.
+[Codex smoke tests](../../tests/smoke/codex.spec.ts) intercept OAuth and model traffic; they
+consume no subscription usage and cannot establish live account entitlement.
 
 ## Persistence boundaries
 
@@ -66,5 +64,4 @@ conversations, and selected facts; provide inspection/deletion and retention con
 users/sessions; define migrations and corruption recovery; and test context selection and reset.
 Simply replacing Pi's in-memory session manager would not deliver those behaviors.
 
-Active work and priorities come from the user's task, Git, and the relevant
-[handoff](handoffs/README.md). This snapshot does not assign a next feature or reserve files.
+Find unfinished work in the relevant [handoff](handoffs/README.md) and Git.

@@ -61,6 +61,11 @@ check; unsupported models and subscription limits remain provider errors. Existi
 their active model until New conversation. With an empty chat, applying a default uses it
 immediately. Explicit environment API-key configuration remains a separate selectable connection;
 it is never an automatic fallback after Codex authentication fails.
+A damaged model preference file falls back to demo, even with API environment variables present.
+Missing preferences may inherit explicit environment setup on first launch. Stopping a turn
+preserves any refresh token already rotated by the provider; logout still serializes deletion.
+Codex replies have a ten-minute ceiling for longer reasoning. Stop retains its two-second
+forced-worker shutdown bound.
 
 Only one message is processed at a time. Request IDs correlate streamed events. Stop cancels
 the active turn; closing the app terminates the worker. A failed or unresponsive worker must

@@ -68,12 +68,14 @@ class CodexCredentials implements CredentialStore {
     return this.enqueue(async () => {
       if (provider !== CODEX_PROVIDER) throw new Error("Unexpected credential provider.");
       options?.signal?.throwIfAborted();
+      const refreshing = this.value !== undefined;
       const next = await fn(structuredClone(this.value));
-      options?.signal?.throwIfAborted();
+      // Preserve a completed token rotation even if its requesting turn was stopped.
+      if (!refreshing) options?.signal?.throwIfAborted();
       if (next) {
         const validated = credentialSchema.parse(next);
         await this.storage.write(JSON.stringify(validated));
-        if (options?.signal?.aborted) {
+        if (!refreshing && options?.signal?.aborted) {
           await this.storage.write(this.value ? JSON.stringify(this.value) : undefined);
           options.signal.throwIfAborted();
         }
@@ -338,6 +340,10 @@ export class CodexAuth {
       });
       signal.throwIfAborted();
       if (!resolved?.auth.apiKey) throw new Error("No subscription credential.");
+      if (this.message) {
+        this.message = null;
+        this.publish();
+      }
       return resolved.auth.apiKey;
     } catch {
       signal.throwIfAborted();

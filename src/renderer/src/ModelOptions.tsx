@@ -39,7 +39,10 @@ export function ModelOptions({
 
   return (
     <div className="model-options">
-      <fieldset disabled={disabled || acting}>
+      <fieldset
+        disabled={disabled || acting}
+        className={connection?.connected ? "account-connected" : undefined}
+      >
         <legend>Codex subscription</legend>
         <div className="connection-status">
           <span
@@ -53,6 +56,16 @@ export function ModelOptions({
                 ? "Connected to ChatGPT"
                 : "Not connected"}
           </span>
+          {connection?.connected && !login && (
+            <button
+              type="button"
+              className="xp-button"
+              disabled={busy}
+              onClick={() => void action(() => window.computerCat.codexDisconnect())}
+            >
+              Disconnect
+            </button>
+          )}
         </div>
         {login ? (
           <>
@@ -125,19 +138,7 @@ export function ModelOptions({
               </details>
             )}
           </>
-        ) : connection?.connected ? (
-          <div className="connection-actions">
-            <span className="option-note">Uses your plan's Codex allowance.</span>
-            <button
-              type="button"
-              className="xp-button"
-              disabled={busy}
-              onClick={() => void action(() => window.computerCat.codexDisconnect())}
-            >
-              Disconnect
-            </button>
-          </div>
-        ) : (
+        ) : connection?.connected ? null : (
           <div className="connection-actions">
             <button
               type="button"
@@ -256,7 +257,7 @@ export function ModelOptions({
           : "Apply saves the default. Existing chats keep their current model until New conversation."}
       </p>
       {connection?.message && (
-        <p className="connection-message" role="status">
+        <p className="connection-error" role="alert">
           {connection.message}
         </p>
       )}

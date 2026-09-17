@@ -26,6 +26,32 @@ afterEach(() => {
 });
 
 describe("worker lifecycle", () => {
+  it("rejects malformed configuration before spawning or transmitting to a worker", async () => {
+    const runtime = new WorkerRuntime("worker.js", "/test", async () => ({
+      ...config,
+      model: "x".repeat(121),
+    }));
+    await expect(runtime.run("hi", new AbortController().signal, () => {})).rejects.toThrow(
+      "invalid",
+    );
+    expect(fork).not.toHaveBeenCalled();
+  });
+
+  it("allows longer Codex reasoning while retaining a bounded reply timeout", async () => {
+    vi.useFakeTimers();
+    const child = new TestWorker();
+    fork.mockReturnValue(child);
+    const runtime = new WorkerRuntime("worker.js", "/test", resolveConfig);
+    const run = runtime.run("hi", new AbortController().signal, () => {});
+    const settled = expect(run).rejects.toThrow("took too long");
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(120_001);
+    expect(child.kill).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(480_000);
+    await settled;
+    expect(child.kill).toHaveBeenCalledOnce();
+    runtime.dispose();
+  });
   it("detects a crash between turns and asks for a fresh conversation", async () => {
     const child = new TestWorker();
     fork.mockReturnValue(child);

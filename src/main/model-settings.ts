@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ActionResult } from "../shared/contracts";
-import type { ModelSettings } from "../shared/models";
+import { DEFAULT_MODEL_SETTINGS, type ModelSettings } from "../shared/models";
 import { modelSettingsSchema } from "../shared/validation";
 
 export class ModelSettingsStore {
@@ -18,9 +18,12 @@ export class ModelSettingsStore {
   async load(): Promise<void> {
     try {
       const parsed = modelSettingsSchema.safeParse(JSON.parse(await readFile(this.path, "utf8")));
-      if (parsed.success) this.value = parsed.data;
-    } catch {
-      // Missing/corrupt preferences cannot introduce a new connection.
+      this.value = parsed.success ? parsed.data : { ...DEFAULT_MODEL_SETTINGS };
+    } catch (error) {
+      // Only a first launch may inherit the explicit environment connection. Damaged
+      // saved preferences must never silently switch subscription users to API billing.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+        this.value = { ...DEFAULT_MODEL_SETTINGS };
     }
   }
 

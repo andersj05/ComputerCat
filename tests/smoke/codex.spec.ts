@@ -147,6 +147,17 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
     await page.screenshot({ path: testInfo.outputPath("connected-models.png") });
+    await app.electron.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((window) => window.webContents.getURL().includes("view=chat"))
+        ?.setSize(500, 420),
+    );
+    await expect(page.getByLabel("Reasoning:", { exact: true })).toBeInViewport();
+    const panel = page.getByRole("tabpanel", { name: "Models", exact: true });
+    expect(await panel.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
+      true,
+    );
+    await page.screenshot({ path: testInfo.outputPath("connected-models-small.png") });
     await page.getByRole("button", { name: "OK", exact: true }).click();
     const input = page.getByRole("textbox", { name: "Message Computer Cat" });
     await input.fill("first-context-canary");
