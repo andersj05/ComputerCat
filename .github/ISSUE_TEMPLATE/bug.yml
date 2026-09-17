@@ -1,0 +1,17 @@
+name: Bug report
+description: Report an unexpected behavior in Computer Cat.
+labels: [bug]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Include the expected behavior and steps to reproduce. Do not include API keys or private screenshots.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version and Windows version
+    validations:
+      required: true

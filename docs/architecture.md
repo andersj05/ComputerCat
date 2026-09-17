@@ -29,7 +29,7 @@ as plain text. The app never imports extensions or instructions discovered in ar
 
 The Pi worker owns a session for the current app run. Its resource loader is explicitly empty,
 its tool allowlist is empty, and session state is in memory. Configuration comes from explicit
-environment variables, with credentials held only in the worker environment. The app does not
+environment variables; main passes the selected credential to the worker, never over renderer IPC. The app does not
 reuse a global Pi login or scan the user's environment for unrelated providers.
 
 Only one message is processed at a time. Request IDs correlate streamed events. Stop cancels
@@ -40,4 +40,3 @@ Future computer and API tools belong behind a broker that checks scope and autho
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.
-
