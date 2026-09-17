@@ -1,0 +1,46 @@
+name: Draft Windows release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-windows
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run package:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - run: npx playwright test
+        env:
+          COMPUTERCAT_PACKAGED_EXECUTABLE: release/win-unpacked/Computer Cat.exe
+      - name: Create a draft release for review
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $installer = Get-ChildItem -LiteralPath release -Filter '*-setup.exe'
+          if ($installer.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
+          'Unsigned Windows preview. Windows may display a SmartScreen warning. Model credentials are not included.' | Set-Content -LiteralPath release-notes.txt
+          gh release create "v$version" $installer.FullName --target $env:RELEASE_SHA --draft --title "Computer Cat $version" --notes-file release-notes.txt
