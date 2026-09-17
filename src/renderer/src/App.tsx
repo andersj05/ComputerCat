@@ -1,33 +1,66 @@
 import { useEffect, useRef, useState } from "react";
-import catImage from "../../../assets/computer-cat.png";
-import type { AppInfo, ChatSnapshot } from "../../shared/contracts";
+import catImage from "../../../assets/computer_cat.png";
+import {
+  type AppInfo,
+  type ChatSnapshot,
+  DEFAULT_PREFERENCES,
+  type PetPreferences,
+} from "../../shared/contracts";
+import { Icon } from "./Icon";
+import { OptionsDialog } from "./OptionsDialog";
+import { Pet } from "./Pet";
+import { WindowCaption } from "./WindowCaption";
 
-const prompts = ["Say hello", "What can you do?", "Can you see my screen?"];
+const prompts = [
+  { label: "Say hello", text: "Hey, Computer Cat. Nice to meet you!" },
+  { label: "What can you do?", text: "What can you help me with?" },
+];
 
 export function App() {
   const isPet = new URLSearchParams(window.location.search).get("view") === "pet";
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
+  const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const [settings, setSettings] = useState(false);
   const [sending, setSending] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
+  const [maximized, setMaximized] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
+  const end = useRef<HTMLDivElement>(null);
+  const scroll = useRef<HTMLElement>(null);
+  const followReply = useRef(true);
+  const pendingSend = useRef(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const cancelClear = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     document.body.classList.toggle("pet-body", isPet);
     let active = true;
     let received = false;
+    let receivedPreferences = false;
+    let receivedWindow = false;
     const unsubscribe = window.computerCat.onChanged((state) => {
       received = true;
       setSnapshot(state);
+    });
+    const unsubscribePreferences = window.computerCat.onPreferencesChanged((state) => {
+      receivedPreferences = true;
+      setPreferences(state);
+    });
+    const unsubscribeWindow = window.computerCat.onWindowChanged((state) => {
+      receivedWindow = true;
+      setMaximized(state);
     });
     void Promise.all([window.computerCat.info(), window.computerCat.snapshot()])
       .then(([appInfo, state]) => {
         if (!active) return;
         setInfo(appInfo);
         if (!received) setSnapshot(state);
+        if (!receivedPreferences) setPreferences(appInfo.preferences);
+        if (!receivedWindow) setMaximized(appInfo.maximized);
       })
       .catch(() => {
         if (active) setError("Couldn't connect to Computer Cat. Please restart the app.");
@@ -35,320 +68,345 @@ export function App() {
     return () => {
       active = false;
       unsubscribe();
+      unsubscribePreferences();
+      unsubscribeWindow();
     };
   }, [isPet]);
 
   const messageCount = snapshot.messages.length;
   const lastText = snapshot.messages.at(-1)?.text;
   useEffect(() => {
-    if (messageCount > 0 || lastText) end.current?.scrollIntoView({ block: "end" });
+    if ((messageCount > 0 || lastText) && followReply.current)
+      end.current?.scrollIntoView({ block: "end" });
   }, [messageCount, lastText]);
+  useEffect(() => {
+    if (confirmClear) {
+      dialog.current?.showModal();
+      cancelClear.current?.focus();
+    } else {
+      dialog.current?.close();
+      if (!isPet && !optionsOpen) input.current?.focus();
+    }
+  }, [confirmClear, optionsOpen, isPet]);
 
-  async function send(message = text) {
-    if (!message.trim() || snapshot.busy || sending) return;
+  async function action(run: () => Promise<void>, failure: string) {
+    try {
+      await run();
+    } catch {
+      setError(failure);
+    }
+  }
+
+  async function send() {
+    if (!text.trim() || snapshot.busy || pendingSend.current || clearing || !info) return;
+    const draft = text;
+    pendingSend.current = true;
     setSending(true);
     setError("");
+    followReply.current = true;
     try {
-      const result = await window.computerCat.send({ id: crypto.randomUUID(), text: message });
-      if (result.ok) setText("");
+      const result = await window.computerCat.send({ id: crypto.randomUUID(), text: draft });
+      if (result.ok) setText((current) => (current === draft ? "" : current));
       else setError(result.message);
     } catch {
-      setError("Couldn't send that message. Please try again.");
+      setError("Couldn't send your message. Try again.");
     } finally {
+      pendingSend.current = false;
       setSending(false);
       input.current?.focus();
     }
   }
 
   async function clear() {
-    const result = await window.computerCat.clear();
-    if (!result.ok) setError(result.message);
+    if (clearing) return;
+    setClearing(true);
+    try {
+      const result = await window.computerCat.clear();
+      if (!result.ok) setError(result.message);
+      else {
+        setError("");
+        setText("");
+        followReply.current = true;
+      }
+    } catch {
+      setError("Couldn't start a new conversation. Try again.");
+    } finally {
+      setClearing(false);
+      setConfirmClear(false);
+    }
+  }
+
+  function newChat() {
+    if (snapshot.busy || sending || clearing || !info) return;
+    if (snapshot.messages.length || text.trim()) setConfirmClear(true);
     else {
       setError("");
-      setSettings(false);
+      input.current?.focus();
     }
-    input.current?.focus();
   }
+
+  const stop = () =>
+    void action(() => window.computerCat.stop(), "Couldn't stop the reply. Try again.");
+  const desktop = () =>
+    void action(() => window.computerCat.hideChat(), "Couldn't hide the chat window.");
+  const ready = Boolean(info);
+  const working = snapshot.busy || sending;
+  const modeLabel = !info
+    ? "Connecting…"
+    : info.mode === "demo"
+      ? "Demo — no API calls"
+      : info.configured
+        ? (info.model ?? "Configured model")
+        : "Model setup needed";
 
   if (isPet)
     return (
-      <div className="pet-wrap">
-        <div className="pet-handle" title="Drag to move your cat">
-          · · ·
-        </div>
-        <button
-          type="button"
-          className={`pet-button ${snapshot.busy ? "working" : ""}`}
-          onClick={() => void window.computerCat.openChat()}
-          aria-label="Open Computer Cat chat"
-        >
-          <img src={catImage} alt="Computer Cat in a cowboy hat" draggable="false" />
-          <span className="pet-status">{snapshot.busy ? "Thinking…" : "Hey, you."}</span>
-        </button>
-        {snapshot.busy && (
-          <button type="button" className="pet-stop" onClick={() => void window.computerCat.stop()}>
-            Stop
-          </button>
-        )}
-      </div>
+      <Pet
+        snapshot={snapshot}
+        preferences={preferences}
+        error={error}
+        openChat={() => void action(() => window.computerCat.openChat(), "Couldn't open chat.")}
+        stop={stop}
+      />
     );
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            cc<span>✦</span>
-          </span>
-          <div>
-            Computer Cat<small>YOUR DESKTOP COMPANION</small>
-          </div>
-        </div>
+    <div className={`app-shell ${maximized ? "maximized" : ""}`}>
+      <WindowCaption
+        title="Computer Cat"
+        maximized={maximized}
+        onClose={desktop}
+        onMinimize={() =>
+          void action(() => window.computerCat.minimizeChat(), "Couldn't minimize the window.")
+        }
+        onMaximize={() =>
+          void action(() => window.computerCat.toggleMaximizeChat(), "Couldn't resize the window.")
+        }
+      />
+      <div className="toolbar">
         <button
           type="button"
-          className="new-chat"
-          onClick={() => void clear()}
-          disabled={snapshot.busy}
+          className="toolbar-button"
+          onClick={newChat}
+          disabled={working || clearing || !ready}
         >
-          ＋ <span>New conversation</span>
+          <Icon name="new" />
+          New conversation
         </button>
-        <div className="nav-label">YOUR SPACE</div>
+        <span className="toolbar-separator" aria-hidden="true" />
         <button
           type="button"
-          className={`nav-item ${!settings ? "selected" : ""}`}
-          onClick={() => setSettings(false)}
+          className="toolbar-button"
+          onClick={() => setOptionsOpen(true)}
+          disabled={!ready}
         >
-          <span>◌</span> Conversation
+          <Icon name="options" />
+          Options…
         </button>
         <button
           type="button"
-          className={`nav-item ${settings ? "selected" : ""}`}
-          onClick={() => setSettings(true)}
+          className="toolbar-button desktop-button"
+          onClick={desktop}
+          title="Hide chat and keep the cat on your desktop"
         >
-          <span>⚙</span> Preferences
+          <Icon name="desktop" />
+          Desktop
         </button>
-        <div className="sidebar-note">
-          <span className="tiny-star">✦</span>
-          <p>
-            A little company.
-            <br />A little help.
-          </p>
-          <span>Right here, when you need me.</span>
-        </div>
-        <div className="connection">
-          <span className="status-dot" />
-          <div>
-            {info?.mode === "pi" ? "Pi mode" : "Local demo"}
-            <small>{info?.mode === "pi" ? info.model : "No API calls"}</small>
-          </div>
-          <span className="version">v{info?.version ?? "0.1.0"}</span>
-        </div>
-      </aside>
-      <main className="main-panel">
-        <header className="topbar">
-          <div>
-            <span className="eyebrow">COMPUTER CAT</span>
-            <strong>{settings ? "Make yourself at home" : "A good place to start"}</strong>
-          </div>
+      </div>
+      {error && (
+        <div className="error-banner" role="alert">
+          <Icon name="help" />
+          <span>{error}</span>
           <button
             type="button"
-            className="quiet-button"
-            onClick={() => void window.computerCat.hideChat()}
-            title="Keep the cat on your desktop"
+            className="xp-button"
+            aria-label="Dismiss error"
+            onClick={() => setError("")}
           >
-            Back to desktop ↗
+            Dismiss
           </button>
-        </header>
-        {settings ? (
-          <section className="preferences">
-            <span className="eyebrow">THE LITTLE DETAILS</span>
-            <h1>Your cat, your space.</h1>
-            <p className="muted">A simple start. More ways to make this yours are on the way.</p>
-            <div className="preference-row">
-              <div>
-                <strong>Conversation mode</strong>
-                <p>
-                  {info?.mode === "pi"
-                    ? `${info.provider} · ${info.model}`
-                    : "A local demo with sample replies. No model is connected."}
-                </p>
+        </div>
+      )}
+      <main className="chat-content">
+        <section
+          className="conversation"
+          aria-label="Conversation"
+          ref={scroll}
+          onScroll={() => {
+            const element = scroll.current;
+            if (element)
+              followReply.current =
+                element.scrollHeight - element.scrollTop - element.clientHeight < 70;
+          }}
+        >
+          {messageCount === 0 ? (
+            <div className="welcome">
+              <img src={catImage} alt="Computer Cat" draggable="false" />
+              <p>What can I help you with?</p>
+              <div className="starter-links">
+                {prompts.map((prompt) => (
+                  <button
+                    key={prompt.label}
+                    type="button"
+                    disabled={!ready || working}
+                    onClick={() => {
+                      setText(prompt.text);
+                      input.current?.focus();
+                    }}
+                  >
+                    {prompt.label}
+                  </button>
+                ))}
               </div>
-              <span className="pill">{info?.mode === "pi" ? "Pi" : "Demo"}</span>
             </div>
-            <div className="preference-row">
-              <div>
-                <strong>Bring me back</strong>
-                <p>Open your conversation from anywhere.</p>
-              </div>
-              <kbd>{info?.shortcut ?? "Ctrl+Shift+Space"}</kbd>
-            </div>
-            <div className="preference-row">
-              <div>
-                <strong>Screen & app access</strong>
-                <p>Computer tools aren't connected in this first version.</p>
-              </div>
-              <span className="pill neutral">Off</span>
-            </div>
-            <div className="preference-row">
-              <div>
-                <strong>Conversation history</strong>
-                <p>Kept for this app session. New conversation clears it.</p>
-              </div>
-              <button
-                type="button"
-                className="quiet-button"
-                disabled={snapshot.busy}
-                onClick={() => void clear()}
-              >
-                Clear chat
-              </button>
-            </div>
-            <button
-              type="button"
-              className="quit-button"
-              onClick={() => void window.computerCat.quit()}
+          ) : (
+            <div
+              className="messages"
+              role="log"
+              aria-label="Chat messages"
+              aria-live="polite"
+              aria-relevant="additions"
             >
-              Quit Computer Cat
-            </button>
-          </section>
-        ) : (
-          <>
-            <section className="conversation" aria-label="Conversation">
-              {snapshot.messages.length === 0 ? (
-                <div className="welcome">
-                  <div className="portrait-wrap">
-                    <span className="portrait-spark spark-one">✦</span>
-                    <img src={catImage} alt="Your Computer Cat, wearing a tiny cowboy hat" />
-                    <span className="portrait-spark spark-two">✧</span>
-                    <span className="portrait-label">small cat. big plans.</span>
-                  </div>
-                  <span className="eyebrow">NICE TO MEET YOU</span>
-                  <h1>
-                    Hey, I'm your
-                    <br />
-                    <em>Computer Cat.</em>
-                  </h1>
-                  <p>Pull up a chair. I'm here to lend a paw.</p>
-                  <div className="suggestions">
-                    {prompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        onClick={() => void send(prompt)}
-                        disabled={sending}
-                      >
-                        {prompt}
-                        <span>↗</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="messages">
-                  {snapshot.messages.map((message) => (
-                    <article
-                      key={message.id}
-                      className={`message ${message.role}`}
-                      data-state={message.state}
-                    >
-                      <div className="message-name">
-                        {message.role === "assistant" ? (
-                          <>
-                            <img src={catImage} alt="" />
-                            Computer Cat
-                          </>
-                        ) : (
-                          "You"
-                        )}
-                        {message.state === "streaming" && <span className="thinking-dot" />}
-                      </div>
-                      <p>
-                        {message.text ||
-                          (message.state === "streaming"
-                            ? "Thinking…"
-                            : message.state === "stopped"
-                              ? "Stopped."
-                              : "No reply received.")}
-                      </p>
-                      {message.state === "stopped" && message.text && (
-                        <small className="muted">Stopped</small>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-              <div ref={end} />
-            </section>
-            <div className="composer-area">
-              {error && (
-                <p role="alert" className="error-message">
-                  {error}
-                </p>
-              )}
-              <form
-                className="composer"
-                onSubmit={(event) => {
+              {snapshot.messages.map((message) => (
+                <article
+                  key={message.id}
+                  className={`message ${message.role}`}
+                  data-state={message.state}
+                >
+                  <span className="message-name">
+                    {message.role === "assistant" ? "Computer Cat" : "You"}:
+                  </span>
+                  <p>
+                    {message.text ||
+                      (message.state === "streaming"
+                        ? "…"
+                        : message.state === "stopped"
+                          ? "Reply stopped."
+                          : "No reply received. Try again.")}
+                  </p>
+                  {message.state === "stopped" && message.text && (
+                    <small className="message-note">Reply stopped</small>
+                  )}
+                  {message.state === "error" && (
+                    <small className="message-note danger">
+                      Reply interrupted. Try sending again.
+                    </small>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+          <div ref={end} />
+        </section>
+        <form
+          className="composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send();
+          }}
+        >
+          <div className="input-area">
+            <label className="sr-only" htmlFor="message-input">
+              Message Computer Cat
+            </label>
+            <textarea
+              id="message-input"
+              ref={input}
+              placeholder="Type a message…"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              maxLength={6000}
+              rows={3}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                   event.preventDefault();
                   void send();
-                }}
-              >
-                <textarea
-                  ref={input}
-                  aria-label="Message Computer Cat"
-                  placeholder="What's on your mind?"
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  maxLength={6000}
-                  rows={2}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault();
-                      void send();
-                    }
-                  }}
-                />
-                <div className="composer-tools">
-                  <span>
-                    <span className="status-dot" />
-                    {snapshot.busy ? "Working on a reply" : "Here when you need me"}
-                  </span>
-                  {snapshot.busy ? (
-                    <button
-                      type="button"
-                      className="send-button stop-button"
-                      onClick={() => void window.computerCat.stop()}
-                      aria-label="Stop reply"
-                    >
-                      ■
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      className="send-button"
-                      disabled={!text.trim() || sending}
-                      aria-label="Send message"
-                    >
-                      ↑
-                    </button>
-                  )}
-                </div>
-              </form>
-              <div className="composer-footer">
-                <span>
-                  {info?.mode === "pi"
-                    ? "Powered by Pi · Conversation stays in this session"
-                    : "DEMO MODE · Sample replies, no API calls"}
-                </span>
-                <span>Enter to send · Shift+Enter for a new line</span>
-              </div>
+                }
+              }}
+            />
+            <div className="input-hint">
+              <span>Enter to send · Shift+Enter for a new line</span>
+              {text.length > 5500 && <span>{text.length.toLocaleString()} / 6,000</span>}
             </div>
-          </>
-        )}
+          </div>
+          {snapshot.busy ? (
+            <button
+              type="button"
+              className="xp-button send-button"
+              onClick={stop}
+              aria-label="Stop reply"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="xp-button default-button send-button"
+              disabled={!text.trim() || sending || clearing || !ready}
+              aria-label="Send message"
+            >
+              Send
+            </button>
+          )}
+        </form>
       </main>
+      <footer className="statusbar">
+        <span role="status">{working ? "Computer Cat is typing…" : "Ready"}</span>
+        <span title={modeLabel}>{modeLabel}</span>
+        <span className="statusbar-grip" aria-hidden="true" />
+      </footer>
+      {optionsOpen && (
+        <OptionsDialog
+          info={info}
+          preferences={preferences}
+          onApply={(next) => window.computerCat.updatePreferences(next)}
+          onClose={() => setOptionsOpen(false)}
+          onShowPet={() => window.computerCat.showPet()}
+          onQuit={() => window.computerCat.quit()}
+        />
+      )}
+      <dialog
+        className="xp-dialog clear-dialog"
+        ref={dialog}
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!clearing) setConfirmClear(false);
+        }}
+        aria-labelledby="clear-title"
+        aria-describedby="clear-description"
+      >
+        <WindowCaption
+          title="New conversation"
+          titleId="clear-title"
+          onClose={() => setConfirmClear(false)}
+          disabled={clearing}
+        />
+        <div className="dialog-content">
+          <span className="question-icon" aria-hidden="true">
+            ?
+          </span>
+          <p id="clear-description">Clear the current messages and draft?</p>
+        </div>
+        <div className="dialog-actions">
+          <button
+            type="button"
+            className="xp-button"
+            ref={cancelClear}
+            onClick={() => setConfirmClear(false)}
+            disabled={clearing}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="xp-button"
+            disabled={clearing}
+            onClick={() => void clear()}
+          >
+            {clearing ? "Clearing…" : "Start new chat"}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }

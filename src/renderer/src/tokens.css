@@ -1,8 +1,21 @@
 :root {
-  --paper: #fbf8f2;
-  --oat: #f2ece1;
-  --ink: #40372e;
-  --muted: #8b8072;
-  --rust: #9a5d40;
-  --line: #e4dcd0;
+  color-scheme: light;
+  --canvas: #fffefa;
+  --chrome: #ece9d8;
+  --ink: #243754;
+  --muted: #62718a;
+  --blue: #245edb;
+  --deep-blue: #174ca7;
+  --frame: #1760d8;
+  --line: #d8dfeb;
+  --green: #3e852e;
+  --title-gradient: linear-gradient(
+    180deg,
+    #4196f8 0%,
+    #1667e8 12%,
+    #0853cc 52%,
+    #1262dc 91%,
+    #0647b6 100%
+  );
+  --button-gradient: linear-gradient(180deg, #ffffff 0%, #f8f8f2 48%, #ececde 100%);
 }
