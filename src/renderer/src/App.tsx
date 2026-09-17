@@ -6,40 +6,14 @@ import {
   DEFAULT_PREFERENCES,
   type PetPreferences,
 } from "../../shared/contracts";
-import { CatScene } from "./CatScene";
-import { CompanionSettings } from "./CompanionSettings";
-import { Icon, type IconName } from "./Icon";
+import { Icon } from "./Icon";
+import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
-import { Settings } from "./Settings";
+import { WindowCaption } from "./WindowCaption";
 
-type View = "chat" | "cat" | "settings";
-const navigation: { view: View; icon: IconName; label: string }[] = [
-  { view: "chat", icon: "chat", label: "Chat" },
-  { view: "cat", icon: "cat", label: "My cat" },
-  { view: "settings", icon: "settings", label: "Settings" },
-];
-const prompts: { icon: IconName; color: string; title: string; detail: string; text: string }[] = [
-  {
-    icon: "folder",
-    color: "amber",
-    title: "Make a plan",
-    detail: "One little step at a time",
-    text: "Help me break a big task into a simple plan. Ask me what I'm working on first.",
-  },
-  {
-    icon: "spark",
-    color: "purple",
-    title: "Think it through",
-    detail: "Find a fresh perspective",
-    text: "I'd like to think through an idea. Can you help me explore it?",
-  },
-  {
-    icon: "chat",
-    color: "green",
-    title: "Say hello",
-    detail: "Meet your new sidekick",
-    text: "Hey, Computer Cat. Nice to meet you!",
-  },
+const prompts = [
+  { label: "Say hello", text: "Hey, Computer Cat. Nice to meet you!" },
+  { label: "What can you do?", text: "What can you help me with?" },
 ];
 
 export function App() {
@@ -47,15 +21,13 @@ export function App() {
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
   const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
-  const [view, setView] = useState<View>("chat");
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [maximized, setMaximized] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [notice, setNotice] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const scroll = useRef<HTMLElement>(null);
@@ -63,7 +35,6 @@ export function App() {
   const pendingSend = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const cancelClear = useRef<HTMLButtonElement>(null);
-  const focusAfterClear = useRef(false);
 
   useEffect(() => {
     document.body.classList.toggle("pet-body", isPet);
@@ -105,29 +76,18 @@ export function App() {
   const messageCount = snapshot.messages.length;
   const lastText = snapshot.messages.at(-1)?.text;
   useEffect(() => {
-    if ((messageCount > 0 || lastText) && followReply.current && view === "chat")
+    if ((messageCount > 0 || lastText) && followReply.current)
       end.current?.scrollIntoView({ block: "end" });
-  }, [messageCount, lastText, view]);
-  useEffect(() => {
-    if (view === "chat" && !isPet) input.current?.focus();
-  }, [view, isPet]);
+  }, [messageCount, lastText]);
   useEffect(() => {
     if (confirmClear) {
       dialog.current?.showModal();
       cancelClear.current?.focus();
     } else {
       dialog.current?.close();
-      if (focusAfterClear.current) {
-        input.current?.focus();
-        focusAfterClear.current = false;
-      }
+      if (!isPet && !optionsOpen) input.current?.focus();
     }
-  }, [confirmClear]);
-  useEffect(() => {
-    if (!notice) return;
-    const timeout = window.setTimeout(() => setNotice(""), 3500);
-    return () => window.clearTimeout(timeout);
-  }, [notice]);
+  }, [confirmClear, optionsOpen, isPet]);
 
   async function action(run: () => Promise<void>, failure: string) {
     try {
@@ -149,7 +109,7 @@ export function App() {
       if (result.ok) setText((current) => (current === draft ? "" : current));
       else setError(result.message);
     } catch {
-      setError("Couldn't send that message. Your draft is still here. Please try again.");
+      setError("Couldn't send your message. Try again.");
     } finally {
       pendingSend.current = false;
       setSending(false);
@@ -158,6 +118,7 @@ export function App() {
   }
 
   async function clear() {
+    if (clearing) return;
     setClearing(true);
     try {
       const result = await window.computerCat.clear();
@@ -165,64 +126,38 @@ export function App() {
       else {
         setError("");
         setText("");
-        setView("chat");
         followReply.current = true;
-        focusAfterClear.current = true;
       }
     } catch {
-      setError("Couldn't start a new chat. Please try again.");
+      setError("Couldn't start a new conversation. Try again.");
     } finally {
       setClearing(false);
       setConfirmClear(false);
-      input.current?.focus();
     }
   }
 
   function newChat() {
-    if (snapshot.busy || sending || clearing) return;
+    if (snapshot.busy || sending || clearing || !info) return;
     if (snapshot.messages.length || text.trim()) setConfirmClear(true);
     else {
       setError("");
-      setView("chat");
       input.current?.focus();
     }
   }
 
-  async function updatePreferences(patch: Partial<PetPreferences>) {
-    const previous = preferences;
-    setPreferences({ ...previous, ...patch });
-    setSaving(true);
-    setError("");
-    try {
-      const result = await window.computerCat.updatePreferences(patch);
-      if (!result.ok) {
-        setPreferences(previous);
-        setError(result.message);
-      }
-    } catch {
-      setPreferences(previous);
-      setError("Couldn't update your cat. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const stop = () =>
-    void action(() => window.computerCat.stop(), "Couldn't stop the reply. Please try again.");
+    void action(() => window.computerCat.stop(), "Couldn't stop the reply. Try again.");
   const desktop = () =>
-    void action(
-      () => window.computerCat.hideChat(),
-      "Couldn't return to the desktop. Please try again.",
-    );
+    void action(() => window.computerCat.hideChat(), "Couldn't hide the chat window.");
   const ready = Boolean(info);
+  const working = snapshot.busy || sending;
   const modeLabel = !info
     ? "Connecting…"
     : info.mode === "demo"
-      ? "Local demo"
+      ? "Demo — no API calls"
       : info.configured
-        ? "Model configured"
+        ? (info.model ?? "Configured model")
         : "Model setup needed";
-  const working = snapshot.busy || sending;
 
   if (isPet)
     return (
@@ -237,427 +172,220 @@ export function App() {
 
   return (
     <div className={`app-shell ${maximized ? "maximized" : ""}`}>
-      <header className="titlebar">
-        <div className="window-title">
-          <img src={catImage} alt="" />
-          <span>Computer Cat</span>
-          <span className="titlebar-tagline">your desktop companion</span>
-        </div>
-        <div className="window-controls">
-          <button
-            type="button"
-            aria-label="Minimize window"
-            title="Minimize"
-            onClick={() =>
-              void action(() => window.computerCat.minimizeChat(), "Couldn't minimize the window.")
-            }
-          >
-            <span className="minimize-glyph" />
-          </button>
-          <button
-            type="button"
-            aria-label={maximized ? "Restore window" : "Maximize window"}
-            title={maximized ? "Restore" : "Maximize"}
-            onClick={() =>
-              void action(
-                () => window.computerCat.toggleMaximizeChat(),
-                "Couldn't resize the window.",
-              )
-            }
-          >
-            <span className={maximized ? "restore-glyph" : "maximize-glyph"} />
-          </button>
-          <button
-            type="button"
-            className="close-control"
-            aria-label="Close chat to desktop"
-            title="Close chat · your cat stays on the desktop"
-            onClick={desktop}
-          >
-            <span className="close-glyph" />
-          </button>
-        </div>
-      </header>
-      <div className="workspace">
-        <aside className="sidebar" aria-label="Main navigation">
-          <div className="brand">
-            <span className="brand-icon">
-              <Icon name="cat" />
-            </span>
-            <div>
-              <strong>Computer Cat</strong>
-              <span>A little desktop magic.</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="xp-button new-chat"
-            onClick={newChat}
-            disabled={working || clearing || !ready}
-          >
-            <Icon name="plus" />
-            New conversation
-          </button>
-          <span className="nav-label">YOUR SPACE</span>
-          <nav>
-            {navigation.map((item) => (
-              <button
-                type="button"
-                key={item.view}
-                className={`nav-item ${view === item.view ? "selected" : ""}`}
-                aria-current={view === item.view ? "page" : undefined}
-                onClick={() => setView(item.view)}
-              >
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-                {view === item.view && <span className="nav-current" />}
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-companion">
-            <CatScene compact animation={preferences.animation} />
-            <strong>Good company, anywhere.</strong>
-            <p>Your cat is a click away.</p>
-            <button type="button" className="text-button" onClick={desktop}>
-              Hang out on desktop
-              <Icon name="arrow" />
-            </button>
-          </div>
-          <button
-            type="button"
-            className="connection"
-            onClick={() => setView("settings")}
-            title="View connection details"
-          >
-            <span
-              className={`status-dot ${info?.mode === "pi" && !info.configured ? "amber" : ""}`}
-            />
-            <span>
-              <strong>{modeLabel}</strong>
-              <small>
-                {info?.mode === "pi"
-                  ? (info.model ?? "Open settings for details")
-                  : "A safe place to try things"}
-              </small>
-            </span>
-            <Icon name="help" />
-          </button>
-        </aside>
-        <main className="main-panel">
-          <header className="toolbar">
-            <div className="location">
-              <span className="toolbar-icon">
-                <Icon name={view === "chat" ? "chat" : view === "cat" ? "cat" : "settings"} />
-              </span>
-              <div>
-                <strong>
-                  {view === "chat"
-                    ? "Chat with Computer Cat"
-                    : view === "cat"
-                      ? "My desktop companion"
-                      : "Settings"}
-                </strong>
-                <span>
-                  {view === "chat"
-                    ? "A friendly place to figure things out."
-                    : view === "cat"
-                      ? "Small cat. Your kind of company."
-                      : "Make the little details yours."}
-                </span>
-              </div>
-            </div>
-            <button type="button" className="xp-button desktop-button" onClick={desktop}>
-              <Icon name="desktop" />
-              <span>Desktop mode</span>
-            </button>
-          </header>
-          {error && (
-            <div className="error-banner" role="alert">
-              <Icon name="help" />
-              <span>{error}</span>
-              <button
-                type="button"
-                className="text-button"
-                aria-label="Dismiss error"
-                onClick={() => setError("")}
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-          {view === "cat" ? (
-            <CompanionSettings
-              preferences={preferences}
-              saving={saving || !ready}
-              update={(patch) => void updatePreferences(patch)}
-              showPet={() =>
-                void action(async () => {
-                  await window.computerCat.showPet();
-                  setNotice("Your cat is on the desktop. Say hello!");
-                }, "Couldn't show your cat. Please try again.")
-              }
-              desktop={desktop}
-            />
-          ) : view === "settings" ? (
-            <Settings
-              info={info}
-              busy={working || clearing || !ready}
-              clear={newChat}
-              quit={() =>
-                void action(
-                  () => window.computerCat.quit(),
-                  "Couldn't quit Computer Cat. Please try again.",
-                )
-              }
-            />
-          ) : (
-            <>
-              <section
-                className="conversation"
-                aria-label="Conversation"
-                ref={scroll}
-                onScroll={() => {
-                  const element = scroll.current;
-                  if (element)
-                    followReply.current =
-                      element.scrollHeight - element.scrollTop - element.clientHeight < 70;
-                }}
-              >
-                {messageCount === 0 ? (
-                  <div className="welcome">
-                    <div className="welcome-hero">
-                      <div className="welcome-copy">
-                        <span className="eyebrow">
-                          <span className="pixel-spark">✦</span>HELLO, FRIEND
-                        </span>
-                        <h1>
-                          A little company.
-                          <br />
-                          <span>A little help.</span>
-                        </h1>
-                        <p>
-                          Big ideas, small questions, or just a hello.
-                          <br />
-                          Life at your desk is better with a cat.
-                        </p>
-                      </div>
-                      <CatScene animation={preferences.animation} />
-                    </div>
-                    <div className="welcome-actions">
-                      <div className="section-heading">
-                        <h2>Where shall we start?</h2>
-                        <span>Pick an idea. Make it yours.</span>
-                      </div>
-                      <div className="suggestions">
-                        {prompts.map((prompt) => (
-                          <button
-                            key={prompt.title}
-                            type="button"
-                            className="prompt-card"
-                            disabled={!ready || working}
-                            onClick={() => {
-                              setText(prompt.text);
-                              input.current?.focus();
-                            }}
-                          >
-                            <span className={`feature-icon ${prompt.color}`}>
-                              <Icon name={prompt.icon} />
-                            </span>
-                            <strong>{prompt.title}</strong>
-                            <span>{prompt.detail}</span>
-                            <Icon name="arrow" className="prompt-arrow" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="welcome-tip">
-                      <Icon name="desktop" />
-                      {info?.mode === "pi"
-                        ? "Your cat can keep you company while you work. Try Desktop mode."
-                        : "You're in demo mode. Try a chat with sample replies, free of API calls."}
-                    </p>
-                  </div>
-                ) : (
-                  <div
-                    className="messages"
-                    role="log"
-                    aria-label="Chat messages"
-                    aria-live="polite"
-                    aria-relevant="additions"
-                  >
-                    <div className="conversation-start">
-                      <span />A little conversation starts here
-                      <span />
-                    </div>
-                    {snapshot.messages.map((message) => (
-                      <article
-                        key={message.id}
-                        className={`message ${message.role}`}
-                        data-state={message.state}
-                      >
-                        <div className="message-avatar">
-                          {message.role === "assistant" ? (
-                            <img src={catImage} alt="" />
-                          ) : (
-                            <span>You</span>
-                          )}
-                        </div>
-                        <div className="message-content">
-                          <div className="message-name">
-                            {message.role === "assistant" ? "Computer Cat" : "You"}
-                            {message.role === "assistant" && info?.mode === "demo" && (
-                              <span className="message-mode">DEMO</span>
-                            )}
-                            {message.state === "streaming" && (
-                              <span className="thinking-dots" role="img" aria-label="Thinking">
-                                <i />
-                                <i />
-                                <i />
-                              </span>
-                            )}
-                          </div>
-                          <div className="message-bubble">
-                            <p>
-                              {message.text ||
-                                (message.state === "streaming"
-                                  ? "Let me think about that…"
-                                  : message.state === "stopped"
-                                    ? "Reply stopped. We can pick up whenever you're ready."
-                                    : "No reply received. Please try again.")}
-                            </p>
-                          </div>
-                          {message.state === "stopped" && message.text && (
-                            <small className="message-note">Reply stopped</small>
-                          )}
-                          {message.state === "error" && (
-                            <small className="message-note danger">
-                              Reply interrupted · You can try sending again.
-                            </small>
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-                <div ref={end} />
-              </section>
-              <div className="composer-area">
-                <form
-                  className="composer"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void send();
-                  }}
-                >
-                  <label className="sr-only" htmlFor="message-input">
-                    Message Computer Cat
-                  </label>
-                  <textarea
-                    id="message-input"
-                    ref={input}
-                    placeholder="What's on your mind?"
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    maxLength={6000}
-                    rows={2}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        !event.shiftKey &&
-                        !event.nativeEvent.isComposing
-                      ) {
-                        event.preventDefault();
-                        void send();
-                      }
-                    }}
-                  />
-                  <div className="composer-tools">
-                    <span>
-                      <Icon name="chat" />
-                      {working ? "Your cat is thinking…" : "A question. An idea. Anything."}
-                    </span>
-                    <div className="composer-actions">
-                      {text.length > 5500 && (
-                        <span className="character-count">
-                          {text.length.toLocaleString()} / 6,000
-                        </span>
-                      )}
-                      {snapshot.busy ? (
-                        <button
-                          type="button"
-                          className="xp-button stop-button"
-                          onClick={stop}
-                          aria-label="Stop reply"
-                        >
-                          <Icon name="stop" />
-                          Stop
-                        </button>
-                      ) : (
-                        <button
-                          type="submit"
-                          className="xp-button primary send-button"
-                          disabled={!text.trim() || sending || clearing || !ready}
-                          aria-label="Send message"
-                        >
-                          Send
-                          <Icon name="arrow" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </form>
-                <div className="composer-footer">
-                  <span>
-                    <span
-                      className={`status-dot ${info?.mode === "pi" && !info.configured ? "amber" : ""}`}
-                    />
-                    {modeLabel}
-                    {info?.mode === "demo" && <span> · No API calls</span>}
-                  </span>
-                  <span>
-                    <kbd>Enter</kbd> to send <span className="footer-divider">·</span>{" "}
-                    <kbd>Shift + Enter</kbd> for a new line
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </main>
+      <WindowCaption
+        title="Computer Cat"
+        maximized={maximized}
+        onClose={desktop}
+        onMinimize={() =>
+          void action(() => window.computerCat.minimizeChat(), "Couldn't minimize the window.")
+        }
+        onMaximize={() =>
+          void action(() => window.computerCat.toggleMaximizeChat(), "Couldn't resize the window.")
+        }
+      />
+      <div className="toolbar">
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={newChat}
+          disabled={working || clearing || !ready}
+        >
+          <Icon name="new" />
+          New conversation
+        </button>
+        <span className="toolbar-separator" aria-hidden="true" />
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => setOptionsOpen(true)}
+          disabled={!ready}
+        >
+          <Icon name="options" />
+          Options…
+        </button>
+        <button
+          type="button"
+          className="toolbar-button desktop-button"
+          onClick={desktop}
+          title="Hide chat and keep the cat on your desktop"
+        >
+          <Icon name="desktop" />
+          Desktop
+        </button>
       </div>
+      {error && (
+        <div className="error-banner" role="alert">
+          <Icon name="help" />
+          <span>{error}</span>
+          <button
+            type="button"
+            className="xp-button"
+            aria-label="Dismiss error"
+            onClick={() => setError("")}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      <main className="chat-content">
+        <section
+          className="conversation"
+          aria-label="Conversation"
+          ref={scroll}
+          onScroll={() => {
+            const element = scroll.current;
+            if (element)
+              followReply.current =
+                element.scrollHeight - element.scrollTop - element.clientHeight < 70;
+          }}
+        >
+          {messageCount === 0 ? (
+            <div className="welcome">
+              <img src={catImage} alt="Computer Cat" draggable="false" />
+              <p>What can I help you with?</p>
+              <div className="starter-links">
+                {prompts.map((prompt) => (
+                  <button
+                    key={prompt.label}
+                    type="button"
+                    disabled={!ready || working}
+                    onClick={() => {
+                      setText(prompt.text);
+                      input.current?.focus();
+                    }}
+                  >
+                    {prompt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="messages"
+              role="log"
+              aria-label="Chat messages"
+              aria-live="polite"
+              aria-relevant="additions"
+            >
+              {snapshot.messages.map((message) => (
+                <article
+                  key={message.id}
+                  className={`message ${message.role}`}
+                  data-state={message.state}
+                >
+                  <span className="message-name">
+                    {message.role === "assistant" ? "Computer Cat" : "You"} says:
+                  </span>
+                  <p>
+                    {message.text ||
+                      (message.state === "streaming"
+                        ? "…"
+                        : message.state === "stopped"
+                          ? "Reply stopped."
+                          : "No reply received. Try again.")}
+                  </p>
+                  {message.state === "stopped" && message.text && (
+                    <small className="message-note">Reply stopped</small>
+                  )}
+                  {message.state === "error" && (
+                    <small className="message-note danger">
+                      Reply interrupted. Try sending again.
+                    </small>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+          <div ref={end} />
+        </section>
+        <form
+          className="composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send();
+          }}
+        >
+          <div className="input-area">
+            <label className="sr-only" htmlFor="message-input">
+              Message Computer Cat
+            </label>
+            <textarea
+              id="message-input"
+              ref={input}
+              placeholder="Type a message…"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              maxLength={6000}
+              rows={3}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  void send();
+                }
+              }}
+            />
+            <div className="input-hint">
+              <span>Enter to send · Shift+Enter for a new line</span>
+              {text.length > 5500 && <span>{text.length.toLocaleString()} / 6,000</span>}
+            </div>
+          </div>
+          {snapshot.busy ? (
+            <button
+              type="button"
+              className="xp-button send-button"
+              onClick={stop}
+              aria-label="Stop reply"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="xp-button default-button send-button"
+              disabled={!text.trim() || sending || clearing || !ready}
+              aria-label="Send message"
+            >
+              Send
+            </button>
+          )}
+        </form>
+      </main>
       <footer className="statusbar">
-        <span role="status">
-          <span className="status-dot" />
-          {notice ||
-            (working ? "Thinking… you can stop a reply at any time." : "Ready when you are.")}
-        </span>
-        <span>
-          Made for a friendlier desktop
-          <span className="statusbar-grip" aria-hidden="true">
-            ◢
-          </span>
-        </span>
+        <span role="status">{working ? "Computer Cat is typing…" : "Ready"}</span>
+        <span title={modeLabel}>{modeLabel}</span>
+        <span className="statusbar-grip" aria-hidden="true" />
       </footer>
+      {optionsOpen && (
+        <OptionsDialog
+          info={info}
+          preferences={preferences}
+          onApply={(next) => window.computerCat.updatePreferences(next)}
+          onClose={() => setOptionsOpen(false)}
+          onShowPet={() => window.computerCat.showPet()}
+          onQuit={() => window.computerCat.quit()}
+        />
+      )}
       <dialog
-        className="xp-dialog"
+        className="xp-dialog clear-dialog"
         ref={dialog}
-        onCancel={() => setConfirmClear(false)}
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!clearing) setConfirmClear(false);
+        }}
         aria-labelledby="clear-title"
         aria-describedby="clear-description"
       >
-        <div className="dialog-titlebar">
-          <Icon name="chat" />
-          New conversation
-        </div>
+        <WindowCaption
+          title="New conversation"
+          titleId="clear-title"
+          onClose={() => setConfirmClear(false)}
+          disabled={clearing}
+        />
         <div className="dialog-content">
-          <span className="feature-icon amber">
-            <Icon name="help" />
+          <span className="question-icon" aria-hidden="true">
+            ?
           </span>
-          <div>
-            <h2 id="clear-title">Start a fresh conversation?</h2>
-            <p id="clear-description">
-              This clears your current chat and draft. Your cat settings stay saved.
-            </p>
-          </div>
+          <p id="clear-description">Clear the current messages and draft?</p>
         </div>
         <div className="dialog-actions">
           <button
@@ -667,15 +395,15 @@ export function App() {
             onClick={() => setConfirmClear(false)}
             disabled={clearing}
           >
-            Keep chatting
+            Cancel
           </button>
           <button
             type="button"
-            className="xp-button primary"
+            className="xp-button"
             disabled={clearing}
             onClick={() => void clear()}
           >
-            {clearing ? "Starting…" : "Start new chat"}
+            {clearing ? "Clearing…" : "Start new chat"}
           </button>
         </div>
       </dialog>

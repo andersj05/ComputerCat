@@ -83,16 +83,16 @@ async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   const area = screen.getPrimaryDisplay().workArea;
   const petSize = petSizes[preferences.snapshot().size];
   const window = new BrowserWindow({
-    width: isPet ? petSize.width : 1080,
-    height: isPet ? petSize.height : 800,
+    width: isPet ? petSize.width : 720,
+    height: isPet ? petSize.height : 560,
     ...(isPet
       ? {
           x: area.x + area.width - petSize.width - 24,
           y: area.y + area.height - petSize.height - 16,
         }
       : {}),
-    minWidth: isPet ? 148 : 720,
-    minHeight: isPet ? 244 : 580,
+    minWidth: isPet ? 148 : 500,
+    minHeight: isPet ? 244 : 420,
     title: isPet ? "Computer Cat companion" : "Computer Cat",
     frame: false,
     transparent: isPet,

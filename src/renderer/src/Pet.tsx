@@ -1,6 +1,5 @@
 import catImage from "../../../assets/computer_cat.png";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
-import { Icon } from "./Icon";
 
 export function Pet({
   snapshot,
@@ -17,40 +16,39 @@ export function Pet({
 }) {
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
   const status = error
-    ? "Let's try again."
+    ? "Couldn't open chat."
     : snapshot.busy
-      ? "Thinking of a reply…"
+      ? "Thinking…"
       : lastReply?.state === "error"
-        ? "Let's try that again."
-        : lastReply?.state === "stopped"
-          ? "Here when you're ready."
-          : lastReply
-            ? "Ready when you are."
-            : "Need a little help?";
+        ? "Reply interrupted."
+        : "";
   return (
     <main
       className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""}`}
     >
-      <div className="pet-bubble" role="status">
-        {status}
+      <div className="pet-status-slot" role="status">
+        {status && <span className="pet-bubble">{status}</span>}
       </div>
       <button
         type="button"
         className="pet-button"
         onClick={openChat}
         aria-label="Open Computer Cat chat"
-        title="Click to chat"
+        title="Open chat"
       >
-        <img src={catImage} alt="Your pixel cat in a little cowboy hat" draggable="false" />
+        <img src={catImage} alt="Computer Cat" draggable="false" />
       </button>
       <div className="pet-dock">
         <div className="pet-handle" title="Drag to move your cat">
-          <span aria-hidden="true">⠿</span>
-          <span>drag me</span>
+          <span aria-hidden="true" />
         </div>
         {snapshot.busy && (
-          <button type="button" className="pet-stop" onClick={stop} aria-label="Stop reply">
-            <Icon name="stop" />
+          <button
+            type="button"
+            className="xp-button pet-stop"
+            onClick={stop}
+            aria-label="Stop reply"
+          >
             Stop
           </button>
         )}
