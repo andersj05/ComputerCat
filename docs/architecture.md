@@ -32,7 +32,9 @@ navigation, new windows, and browser permission requests are denied. Model outpu
 as plain text. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its tool allowlist is empty, and session state is in memory. Main resolves the selected connection
+its explicit allowlist contains all eight built-in Pi tools, and session state is in memory.
+The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
+permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
 environment contains no provider credentials. Model identity and reasoning remain fixed within
 that worker, while the access token can rotate without replacing the conversation.
@@ -71,7 +73,10 @@ Only one message is processed at a time. Request IDs correlate streamed events. 
 the active turn; closing the app terminates the worker. A failed or unresponsive worker must
 leave the UI usable, and cancellation must not append output from an old turn to a new one.
 
-Future computer and API tools belong behind a broker that checks scope and authorization.
+The user explicitly enabled the complete built-in Pi file and shell tool set on 2026-09-17.
+These tools have local user privileges, with no per-command approval broker. The system prompt
+requires authorization for otherwise unrequested destructive actions; it is not an OS sandbox.
+Future screen-control and external API tools need their own scope and authorization design.
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.

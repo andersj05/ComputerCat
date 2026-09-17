@@ -3,6 +3,7 @@ import { type UtilityProcess, utilityProcess } from "electron";
 import { isConfigured, type RuntimeConfig, workerEnvironment } from "../agent/config";
 import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
+import type { ToolActivity } from "../shared/tools";
 
 export class WorkerRuntime implements AgentRuntime {
   private child: UtilityProcess | undefined;
@@ -17,7 +18,12 @@ export class WorkerRuntime implements AgentRuntime {
     private readonly resolveConfig: (signal: AbortSignal) => Promise<RuntimeConfig>,
   ) {}
 
-  async run(prompt: string, signal: AbortSignal, onDelta: (text: string) => void): Promise<void> {
+  async run(
+    prompt: string,
+    signal: AbortSignal,
+    onDelta: (text: string) => void,
+    onTool?: (activity: ToolActivity) => void,
+  ): Promise<void> {
     signal.throwIfAborted();
     if (this.finish || this.preparing) throw new UserFacingError("A reply is already in progress.");
     if (this.faulted)
@@ -87,6 +93,7 @@ export class WorkerRuntime implements AgentRuntime {
         if (!parsed.success || parsed.data.id !== id) return;
         const event = parsed.data;
         if (event.type === "delta" && !signal.aborted) onDelta(event.text);
+        if (event.type === "tool" && !signal.aborted) onTool?.(event.activity);
         if (event.type === "done") finish();
         if (event.type === "error") finish(new UserFacingError(event.message));
       };

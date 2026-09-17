@@ -36,9 +36,16 @@ port.on("message", async ({ data }) => {
     runtime ??= await createPiRuntime(config, process.cwd(), models);
     sessionKey = key;
     current.abort.signal.throwIfAborted();
-    await runtime.run(request.prompt, current.abort.signal, (text) => {
-      send({ type: "delta", id: request.id, text });
-    });
+    await runtime.run(
+      request.prompt,
+      current.abort.signal,
+      (text) => {
+        send({ type: "delta", id: request.id, text });
+      },
+      (activity) => {
+        send({ type: "tool", id: request.id, activity });
+      },
+    );
     send({ type: "done", id: request.id });
   } catch (error) {
     if (current.abort.signal.aborted) send({ type: "done", id: request.id });

@@ -56,15 +56,27 @@ export class ChatController {
     this.publish();
     void (async () => {
       try {
-        await this.runtime.run(text, abort.signal, (delta) => {
-          if (abort.signal.aborted || this.disposed) return;
-          if (reply.text.length + delta.length > 65536) {
-            abort.abort();
-            return;
-          }
-          reply.text += delta;
-          this.publish();
-        });
+        await this.runtime.run(
+          text,
+          abort.signal,
+          (delta) => {
+            if (abort.signal.aborted || this.disposed) return;
+            if (reply.text.length + delta.length > 65536) {
+              abort.abort();
+              return;
+            }
+            reply.text += delta;
+            this.publish();
+          },
+          (activity) => {
+            if (abort.signal.aborted || this.disposed) return;
+            reply.tools ??= [];
+            const existing = reply.tools.find((tool) => tool.id === activity.id);
+            if (existing) Object.assign(existing, activity);
+            else if (reply.tools.length < 200) reply.tools.push(activity);
+            this.publish();
+          },
+        );
         reply.state = abort.signal.aborted ? "stopped" : "complete";
       } catch (error) {
         reply.state = abort.signal.aborted ? "stopped" : "error";
@@ -74,6 +86,9 @@ export class ChatController {
               ? error.message
               : "Something interrupted this reply. Please try again.";
       } finally {
+        for (const tool of reply.tools ?? []) {
+          if (tool.state === "running") tool.state = "stopped";
+        }
         this.state.busy = false;
         this.active = undefined;
         this.publish();

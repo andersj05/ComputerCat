@@ -38,7 +38,9 @@ consume no subscription usage and cannot establish live account entitlement.
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |
 
 The Pi resource loader returns no discovered agent files, extensions, skills, or prompts;
-the tool allowlist is empty. Developer memory must not be loaded into the desktop agent.
+all eight built-in Pi tools are enabled (read, write, edit, ls, find, grep, Bash, PowerShell).
+The worker starts in the OS Desktop folder and reports tool activity in chat. Local tools run
+with the user’s OS permissions, as explicitly requested; the worker is not an OS sandbox. Developer memory must not be loaded into the desktop agent.
 See [architecture](../architecture.md) and [Pi isolation tests](../../tests/unit/pi-runtime.test.ts).
 
 ## Find the implementation
@@ -60,9 +62,7 @@ restoration, voice, credential settings for other providers, code signing, and a
 future work. The [research plan](../research-and-build-plan.md) discusses these; it is not a
 completion checklist. A worker process isolates crashes but is not an OS security sandbox.
 
-Future user memory needs an explicit product/storage design: distinguish preferences, retained
-conversations, and selected facts; provide inspection/deletion and retention controls; isolate
-users/sessions; define migrations and corruption recovery; and test context selection and reset.
-Simply replacing Pi's in-memory session manager would not deliver those behaviors.
+Future user memory needs a storage design with inspection/deletion, retention, migrations,
+corruption recovery, and tests for context selection. Conversation history is a separate feature.
 
 Find unfinished work in the relevant [handoff](handoffs/README.md) and Git.

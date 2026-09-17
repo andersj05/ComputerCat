@@ -75,7 +75,10 @@ through `COMPUTERCAT_PROVIDER`, `COMPUTERCAT_MODEL`, and `COMPUTERCAT_API_KEY`.
 `VITE_*` variable, a screenshot, or a GitHub issue.
 
 Only the explicitly selected credential is passed to the Pi worker. Global Pi logins,
-extensions, project instruction discovery, and built-in shell/file tools are not loaded.
+extensions and project instruction discovery are not loaded. All eight built-in Pi file/search
+and shell tools are enabled, with the Desktop as the working folder. Tools run with your OS
+permissions; PowerShell is available on Windows, and Bash needs an installed Bash executable.
+Tool activity appears in chat.
 The packaged app currently accepts the same process environment variables; a secure credential
 settings UI for other providers is a future feature. If a saved model default already exists,
 choose **Environment API key** in Options → Models and apply it. Model requests use the configured

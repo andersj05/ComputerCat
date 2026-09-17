@@ -225,7 +225,7 @@ else {
         codex,
         config,
         (resolveConfig) =>
-          new WorkerRuntime(join(here, "agent-worker.js"), app.getPath("userData"), resolveConfig),
+          new WorkerRuntime(join(here, "agent-worker.js"), app.getPath("desktop"), resolveConfig),
         publishModels,
       );
       session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>

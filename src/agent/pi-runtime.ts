@@ -8,6 +8,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { PI_TOOL_NAMES } from "../shared/tools";
 import type { RuntimeConfig } from "./config";
 import { type AgentRuntime, SYSTEM_PROMPT, UserFacingError } from "./runtime";
 
@@ -68,23 +69,36 @@ export async function createPiRuntime(
     modelRuntime: models,
     model,
     ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
-    tools: [],
-    noTools: "all",
+    tools: [...PI_TOOL_NAMES],
     resourceLoader: isolatedResources(),
     sessionManager: SessionManager.inMemory(cwd),
     settingsManager: SettingsManager.inMemory({
       retry: { enabled: false },
-      // This conversation-only integration needs no background WebSocket connection cache.
+      // Use SSE without a background WebSocket connection cache.
       ...(config.provider === "openai-codex" ? { transport: "sse" as const } : {}),
     }),
   });
 
   return {
-    async run(prompt, signal, onDelta) {
+    async run(prompt, signal, onDelta, onTool) {
       signal.throwIfAborted();
       let providerFailed = false;
       const unsubscribe = session.subscribe((event) => {
         if (signal.aborted) return;
+        if (event.type === "tool_execution_start" || event.type === "tool_execution_end") {
+          const name = PI_TOOL_NAMES.find((name) => name === event.toolName);
+          if (name)
+            onTool?.({
+              id: event.toolCallId,
+              name,
+              state:
+                event.type === "tool_execution_start"
+                  ? "running"
+                  : event.isError
+                    ? "error"
+                    : "complete",
+            });
+        }
         if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
           onDelta(event.assistantMessageEvent.delta);
         }

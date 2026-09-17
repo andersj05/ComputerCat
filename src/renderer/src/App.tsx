@@ -304,6 +304,15 @@ export function App() {
                           ? "Reply stopped."
                           : "No reply received. Try again.")}
                   </p>
+                  {message.tools?.length ? (
+                    <ul className="tool-activity" aria-label="Tool activity">
+                      {message.tools.map((tool) => (
+                        <li key={tool.id}>
+                          {tool.name} · {tool.state}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {message.state === "stopped" && message.text && (
                     <small className="message-note">Reply stopped</small>
                   )}

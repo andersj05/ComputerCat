@@ -1,10 +1,11 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workerEnvironment } from "../../src/agent/config";
 import { createModelRuntime, createPiRuntime } from "../../src/agent/pi-runtime";
+import { PI_TOOL_NAMES } from "../../src/shared/tools";
 
 const fixtureDirectories: string[] = [];
 afterEach(async () => {
@@ -25,7 +26,7 @@ describe("Pi integration without network or credentials", () => {
     expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("rotated-access-token");
     expect(models.getRegisteredNativeProvider("openai-codex")?.auth.oauth).toBeUndefined();
   });
-  it("runs the real SDK with a local provider and no tools or discovered context", async () => {
+  it("exposes all built-in tools without discovering developer context", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
     const directory = await mkdtemp(join(tmpdir(), "computercat-pi-context-"));
     fixtureDirectories.push(directory);
@@ -38,7 +39,7 @@ describe("Pi integration without network or credentials", () => {
     models.registerNativeProvider(provider.provider);
     provider.setResponses([
       (context) => {
-        expect(context.tools ?? []).toHaveLength(0);
+        expect(context.tools?.map((tool) => tool.name).sort()).toEqual([...PI_TOOL_NAMES].sort());
         expect(context.systemPrompt).toContain("You are Computer Cat");
         expect(context.systemPrompt).not.toContain("GitHub authentication");
         expect(JSON.stringify(context)).not.toContain(canary);
@@ -57,6 +58,49 @@ describe("Pi integration without network or credentials", () => {
       });
       expect(response).toBe("Hello from the real Pi loop.");
       expect(provider.state.callCount).toBe(1);
+    } finally {
+      runtime.dispose();
+    }
+  });
+
+  it("executes file tools through the real Pi loop and reports activity", async () => {
+    vi.stubEnv("PI_OFFLINE", "1");
+    const directory = await mkdtemp(join(tmpdir(), "computercat-pi-tools-"));
+    fixtureDirectories.push(directory);
+    const models = await createModelRuntime();
+    const provider = fauxProvider({ provider: "cat-tools", models: [{ id: "offline" }] });
+    models.registerNativeProvider(provider.provider);
+    provider.setResponses([
+      fauxAssistantMessage(fauxToolCall("write", { path: "note.txt", content: "fixture one" }), {
+        stopReason: "toolUse",
+      }),
+      fauxAssistantMessage(
+        fauxToolCall("edit", { path: "note.txt", oldText: "one", newText: "two" }),
+        { stopReason: "toolUse" },
+      ),
+      fauxAssistantMessage(fauxToolCall("read", { path: "note.txt" }), { stopReason: "toolUse" }),
+      (context) => {
+        expect(JSON.stringify(context.messages)).toContain("fixture two");
+        return fauxAssistantMessage("Read and updated the fixture.");
+      },
+    ]);
+    const runtime = await createPiRuntime(
+      { provider: "cat-tools", model: "offline", apiKey: "" },
+      directory,
+      models,
+    );
+    const activity = vi.fn();
+    try {
+      await runtime.run("Update the fixture", new AbortController().signal, () => {}, activity);
+      expect(await readFile(join(directory, "note.txt"), "utf8")).toBe("fixture two");
+      expect(activity.mock.calls.map(([tool]) => [tool.name, tool.state])).toEqual([
+        ["write", "running"],
+        ["write", "complete"],
+        ["edit", "running"],
+        ["edit", "complete"],
+        ["read", "running"],
+        ["read", "complete"],
+      ]);
     } finally {
       runtime.dispose();
     }

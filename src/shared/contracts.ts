@@ -36,6 +36,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   state: "complete" | "streaming" | "stopped" | "error";
+  tools?: import("./tools").ToolActivity[] | undefined;
 }
 
 export interface ChatSnapshot {
