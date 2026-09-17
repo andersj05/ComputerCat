@@ -1,13 +1,28 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workerEnvironment } from "../../src/agent/config";
 import { createModelRuntime, createPiRuntime } from "../../src/agent/pi-runtime";
 
-afterEach(() => vi.unstubAllEnvs());
+const fixtureDirectories: string[] = [];
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  for (const directory of fixtureDirectories.splice(0)) {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 describe("Pi integration without network or credentials", () => {
   it("runs the real SDK with a local provider and no tools or discovered context", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
+    const directory = await mkdtemp(join(tmpdir(), "computercat-pi-context-"));
+    fixtureDirectories.push(directory);
+    const canary = "developer-memory-canary-must-not-reach-the-model";
+    for (const filename of ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "MEMORY.md"]) {
+      await writeFile(join(directory, filename), canary, "utf8");
+    }
     const models = await createModelRuntime();
     const provider = fauxProvider({ provider: "cat-test", models: [{ id: "offline" }] });
     models.registerNativeProvider(provider.provider);
@@ -16,12 +31,13 @@ describe("Pi integration without network or credentials", () => {
         expect(context.tools ?? []).toHaveLength(0);
         expect(context.systemPrompt).toContain("You are Computer Cat");
         expect(context.systemPrompt).not.toContain("GitHub authentication");
+        expect(JSON.stringify(context)).not.toContain(canary);
         return fauxAssistantMessage("Hello from the real Pi loop.");
       },
     ]);
     const runtime = await createPiRuntime(
       { provider: "cat-test", model: "offline", apiKey: "" },
-      process.cwd(),
+      directory,
       models,
     );
     let response = "";
@@ -33,6 +49,41 @@ describe("Pi integration without network or credentials", () => {
       expect(provider.state.callCount).toBe(1);
     } finally {
       runtime.dispose();
+    }
+  });
+
+  it("retains context within a runtime but starts a replacement runtime with a fresh session", async () => {
+    vi.stubEnv("PI_OFFLINE", "1");
+    const models = await createModelRuntime();
+    const provider = fauxProvider({ provider: "cat-memory-test", models: [{ id: "offline" }] });
+    models.registerNativeProvider(provider.provider);
+    provider.setResponses([
+      fauxAssistantMessage("first-runtime-reply-canary"),
+      (context) => {
+        expect(JSON.stringify(context.messages)).toContain("first-runtime-prompt-canary");
+        expect(JSON.stringify(context.messages)).toContain("first-runtime-reply-canary");
+        return fauxAssistantMessage("The same session retains context.");
+      },
+      (context) => {
+        expect(JSON.stringify(context.messages)).not.toContain("first-runtime-");
+        expect(JSON.stringify(context.messages)).toContain("replacement-runtime-prompt");
+        return fauxAssistantMessage("The replacement session is fresh.");
+      },
+    ]);
+    const config = { provider: "cat-memory-test", model: "offline", apiKey: "" };
+    const first = await createPiRuntime(config, process.cwd(), models);
+    try {
+      await first.run("first-runtime-prompt-canary", new AbortController().signal, () => {});
+      await first.run("Follow up", new AbortController().signal, () => {});
+    } finally {
+      first.dispose();
+    }
+    const replacement = await createPiRuntime(config, process.cwd(), models);
+    try {
+      await replacement.run("replacement-runtime-prompt", new AbortController().signal, () => {});
+      expect(provider.state.callCount).toBe(3);
+    } finally {
+      replacement.dispose();
     }
   });
 

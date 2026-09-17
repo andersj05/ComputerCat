@@ -2,7 +2,11 @@
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
 a local demo mode that works without credentials. Screen capture, mouse/keyboard control,
-external MCP servers, persistent memory, and voice are later features, not implicit privileges.
+external MCP servers, persistent user memory, and voice are later features, not implicit privileges.
+
+Developer context is maintained separately in [shared project memory](memory/README.md), entered
+through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
+not provide conversation persistence. Keep these two forms of memory separate when adding features.
 
 ```text
 Sandboxed React renderer
