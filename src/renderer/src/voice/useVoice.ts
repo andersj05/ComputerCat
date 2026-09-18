@@ -37,7 +37,7 @@ export function useVoice(
       revision.current = value.revision;
       setSnapshot(value);
       if (
-        !isPet &&
+        (value.owner === "pet") === isPet &&
         value.transcript &&
         value.sessionId &&
         value.conversationId &&
@@ -63,22 +63,18 @@ export function useVoice(
       }
     };
     const off = window.computerCat.onVoiceChanged(update);
-    const offStart = isPet
-      ? () => {}
-      : window.computerCat.onVoiceCaptureRequested((request) => {
-          if (owner.current?.id === request.sessionId) return;
-          void owner.current?.capture.stop(false);
-          beginnings.current.set(request.sessionId, current.current.revision);
-          const capture = new VoiceCapture(request, window.computerCat);
-          owner.current = { id: request.sessionId, capture };
-          capture.start();
-        });
-    const offStop = isPet
-      ? () => {}
-      : window.computerCat.onVoiceCaptureStopped((request) => {
-          if (owner.current?.id === request.sessionId)
-            void owner.current.capture.stop(request.reason === "finish");
-        });
+    const offStart = window.computerCat.onVoiceCaptureRequested((request) => {
+      if (owner.current?.id === request.sessionId) return;
+      void owner.current?.capture.stop(false);
+      beginnings.current.set(request.sessionId, current.current.revision);
+      const capture = new VoiceCapture(request, window.computerCat);
+      owner.current = { id: request.sessionId, capture };
+      capture.start();
+    });
+    const offStop = window.computerCat.onVoiceCaptureStopped((request) => {
+      if (owner.current?.id === request.sessionId)
+        void owner.current.capture.stop(request.reason === "finish");
+    });
     void window.computerCat.voiceSnapshot().then(update);
     const unload = () => {
       void owner.current?.capture.stop(false);

@@ -45,8 +45,8 @@ Failures carry a typed error and recovery action; no stuck permanent busy state.
 ```
 
 A snapshot has a monotonic revision, availability, sanitized engine/backend/model status,
-optional session ID and conversation ID, phase, elapsed time, and a typed error. The chat-only
-snapshot may include a pending transcript. Pet snapshots contain status only. Track download
+optional session ID and conversation ID, owner, phase, elapsed time, and a typed error.
+Snapshots carry provisional text and pending transcripts; pet text is limited to pet-origin sessions. Track download
 progress separately so a download cannot falsely appear as listening or agent activity.
 
 ## Renderer to main API
@@ -58,16 +58,16 @@ role, session ownership and current state for every call, even if UI controls ar
 
 | Proposed operation | Request | Allowed sender and effect |
 | --- | --- | --- |
-| `voiceSnapshot()` | None | Chat gets settings/pending result; pet gets status-only projection |
-| `voiceStart()` | None | Chat or pet; main binds active conversation, ensures readiness, opens chat, issues grant |
-| `voiceCaptureStarted()` | `{ sessionId }` | Chat capture owner; acknowledges live graph, transitions to recording |
-| `voiceAppend()` | `{ sessionId, sequence, pcm }` | Chat owner; sequence starts at zero, `pcm` is copied/validated Uint8Array; acknowledges next sequence |
-| `voiceRequestFinish()` | `{ sessionId }` | Chat only; main enters finalizing, starts flush deadline and requests track stop |
-| `voiceFinish()` | `{ sessionId, nextSequence }` | Chat owner after stopping tracks and flushing acknowledged chunks; transitions once to transcription |
+| `voiceSnapshot()` | None | Chat gets settings/results; pet gets status and its own text |
+| `voiceStart()` | None | Chat or pet; main binds active conversation, binds initiating window, ensures readiness, issues grant |
+| `voiceCaptureStarted()` | `{ sessionId }` | Initiating capture owner; acknowledges live graph, transitions to recording |
+| `voiceAppend()` | `{ sessionId, sequence, pcm }` | Initiating owner; sequence starts at zero, `pcm` is copied/validated Uint8Array; acknowledges next sequence |
+| `voiceRequestFinish()` | `{ sessionId }` | Initiating owner; main enters finalizing, starts flush deadline and requests track stop |
+| `voiceFinish()` | `{ sessionId, nextSequence }` | Initiating owner after stopping tracks and flushing acknowledged chunks; transitions once to transcription |
 | `voiceCancel()` | `{ sessionId }` | Chat or pet; invalidates the matching active session, discards buffers; idempotent |
-| `voiceCaptureFailed()` | `{ sessionId, code }` | Chat owner; bounded microphone/capture error enum, no browser error stack |
-| `voiceCaptureReleased()` | `{ sessionId }` | Chat owner; acknowledges every track/graph closed; valid for cleanup of a revoked session, never changes a newer session |
-| `voiceResultConsumed()` | `{ sessionId }` | Chat only, after transfer to its composer or pending review panel; idempotent |
+| `voiceCaptureFailed()` | `{ sessionId, code }` | Initiating owner; bounded microphone/capture error enum, no browser error stack |
+| `voiceCaptureReleased()` | `{ sessionId }` | Initiating owner; acknowledges every track/graph closed; valid for cleanup of a revoked session, never changes a newer session |
+| `voiceResultConsumed()` | `{ sessionId }` | Initiating owner, after transfer to its composer or pending review panel; idempotent |
 | `voiceUpdateSettings()` | Complete versioned settings object | Chat only; validates atomic save and live-state constraints |
 | `voiceDownloadModel()` | `{ modelId }` | Chat only; fixed catalogue lookup, returns main-issued download ID |
 | `voiceCancelDownload()` | `{ downloadId }` | Chat only; discard partial asset, preserve installed valid copy |
@@ -82,31 +82,30 @@ Explicit `cuda` selection fails visibly if unavailable; only `auto` falls back t
 Main-to-renderer event subscriptions:
 
 - `onVoiceChanged`: role-specific snapshot; revision guards reject older events.
-- `onVoiceCaptureRequested`: chat-only `{ sessionId, conversationId, inputDeviceId? }`; client
+- `onVoiceCaptureRequested`: owner-only `{ sessionId, conversationId, inputDeviceId? }`; client
   records its draft revision before opening the microphone. Duplicate session events do not
   create multiple streams. Re-check session validity when async microphone acquisition resolves.
-- `onVoiceCaptureStopped`: chat-only `{ sessionId, reason }`; close tracks/graph and discard
+- `onVoiceCaptureStopped`: owner-only `{ sessionId, reason }`; close tracks/graph and discard
   queues on cancel. A finish/duration-limit reason flushes a healthy recording instead.
 
 The main duration timer uses the same finalizing transition as `voiceRequestFinish`. Permit
 only the bounded queued tail in finalizing, within remaining total-byte and flush-time limits.
-Require `voiceCaptureReleased` and the final acknowledged sequence before recognition starts.
+Require `voiceCaptureReleased` and the final acknowledged sequence before final recognition starts. Previews are serialized, provisional passes during capture.
 A capture timeout must never create an indefinitely waiting finalization state.
 
 Subscribe before requesting a snapshot. Reconcile the snapshot with incoming revisions so
 startup races cannot lose a result. Unsubscribe and stop tracks on component disposal. Only
-one capture controller is mounted, in chat; React development effect replay must not duplicate it.
+one capture controller is active, in the initiating renderer; React development effect replay must not duplicate it.
 An unknown/stale session cannot cancel a newer one or deliver text into it.
 
 ## Microphone permission policy
 
-The current [main process](../../../src/main/index.ts) denies all permission requests/checks.
-Replace that blanket handler with a narrowly tested policy for a main-issued, short-lived
-capture grant. Use both Electron permission check and request handlers.
+The [main process](../../../src/main/index.ts) applies a narrow policy for a main-issued,
+short-lived capture grant. Use both Electron permission check and request handlers.
 
-Permit only audio input, only for the registered chat webContents and its exact trusted
+Permit only audio input, only for the registered initiating webContents and its exact trusted
 main-frame URL, and only in the starting/recording state for its current session. Reject
-unregistered/destroyed contents, null contents, subframes, wrong URLs, pet requests, video,
+unregistered/destroyed contents, null contents, subframes, wrong URLs, requests from the other window, video,
 screen capture, and unrelated permission types. Inspect the actual pinned Electron 44.4.1
 declarations: request details use optional `mediaTypes`; check details use optional
 `mediaType: audio | video | unknown`, `requestingUrl`, and `isMainFrame`. Missing/ambiguous
@@ -132,13 +131,13 @@ Capture and result IDs are independent of agent request IDs. Voice never invokes
 `AgentRuntime.run`; only the existing Send flow submits reviewed text.
 
 1. `voiceStart` atomically checks there is no active agent turn/history change/voice session.
-   Main assigns a session and conversation ID. The receiving chat saves its draft revision.
+   Main assigns a session and conversation ID. The initiating renderer saves its draft revision.
 2. `voiceFinish` accepts the terminal sequence only after all append acknowledgments. Main
    closes capture authorization, invokes recognition once, and holds a cancellable job token.
 3. Completion is accepted only for the current session, job token, and originating conversation.
    Validate text, normalize leading/trailing whitespace, preserve words/negations/numbers,
-   and publish a chat-only review result. Do not run an LLM cleanup pass.
-4. Chat consumes that result at most once. Append to the composer only if the draft revision
+   and publish an owner-consumed review result. Do not run an LLM cleanup pass.
+4. The initiating renderer consumes that result at most once. Append to the composer only if the draft revision
    still matches; otherwise use the pending review panel. If combined text exceeds 6,000
    characters, keep it in review for editing rather than clipping it.
 5. Acknowledge only after the renderer owns the text. Main discards its duplicate. Pending

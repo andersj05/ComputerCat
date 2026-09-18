@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
 import { PetArtwork } from "./PetArtwork";
 
@@ -14,6 +14,7 @@ export function Pet({
   talk,
   voiceStatus,
   voiceBusy,
+  voicePanel,
 }: {
   snapshot: ChatSnapshot;
   preferences: PetPreferences;
@@ -26,6 +27,7 @@ export function Pet({
   talk: () => void;
   voiceStatus: string;
   voiceBusy: boolean;
+  voicePanel?: ReactNode;
 }) {
   const [controlsVisible, setControlsVisible] = useState(false);
   const catButton = useRef<HTMLButtonElement>(null);
@@ -61,6 +63,13 @@ export function Pet({
   return (
     <main
       className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
+      style={{
+        position: "absolute",
+        right: 0,
+        bottom: 0,
+        width: { small: 148, medium: 188, large: 228 }[preferences.size],
+        height: { small: 244, medium: 298, large: 352 }[preferences.size],
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           setControlsVisible(false);
@@ -68,8 +77,9 @@ export function Pet({
         }
       }}
     >
+      {voicePanel}
       <div className="pet-status-slot" role="status">
-        {(controlsVisible || voiceBusy) && status && (
+        {!voicePanel && (controlsVisible || voiceBusy) && status && (
           <span className="pet-bubble">
             {snapshot.busy && !error && !dragError && (
               <span className="thinking-dot" aria-hidden="true" />
@@ -141,6 +151,15 @@ export function Pet({
           onClick={() => act(talk)}
           disabled={snapshot.busy || voiceBusy}
         >
+          <svg width="11" height="13" viewBox="0 0 12 16" aria-hidden="true" className="mic-icon">
+            <rect x="4" y="1" width="4" height="8" rx="2" fill="currentColor" />
+            <path
+              d="M2 7v1a4 4 0 0 0 8 0V7M6 12v3M3 15h6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>{" "}
           Talk
         </button>
         {(snapshot.busy || voiceBusy) && (

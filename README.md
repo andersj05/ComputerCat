@@ -52,20 +52,25 @@ That development context is separate from the app's conversation memory.
    and click **Download model**. A small Silero speech detector is included. Download and
    Remove take effect immediately; downloads can be cancelled and restarted.
 2. Check **Enable voice input**, choose English or automatic detection for Turbo, and Apply.
-   Voice starts disabled. Enabling it does not open the microphone.
-3. Click **Talk** in chat or on the cat. Wait for **Listening**, speak, then choose
-   **Finish recording**. Recordings are limited to two minutes.
-4. Edit the transcript in the composer and press normal **Send**. If you typed during
-   recognition, use the transcript's **Insert** or **Discard** controls instead.
+   Voice starts disabled. Installed weights prepare in the background when enabled and on startup;
+   this never opens the microphone. The model unloads after five minutes idle.
+3. Click **Talk** on the cat to open its speech bubble without opening chat. Wait for **Listening**,
+   speak, then choose **Finish recording**. Provisional text updates during recording as local
+   recognition completes. Recordings are limited to two minutes.
+4. Edit the transcript and **Send message** (or Enter) in the bubble; the reply appears there too.
+   Closing the bubble cancels recording and keeps an already reviewed draft for this app run.
+   **Talk** in chat still places the transcript in its composer. Concurrent edits use **Insert**
+   or **Discard**. Nothing is sent automatically.
 
-**Cancel recording**, Escape, Stop, or hiding/minimizing chat discards active recognition.
+**Cancel recording**, Escape, Stop, or hiding/minimizing the recording's window discards active recognition.
 Conversation/model changes, Options, sleep, screen lock and quit also stop capture.
 Audio and unsent transcripts remain in memory. Sent text follows normal chat retention.
 Speech is transcribed on this computer; sending the text uses the selected connection.
 
 Auto uses a CPU helper, selecting the AVX2 build when the CPU and Windows support it.
 CUDA is not included in this build. Turbo can be slow on CPU; choose Base English for a
-smaller, faster English option. A portable Turbo trial exceeded the two-minute transcription
+smaller, faster English option. Previews arrive in passes after at least four seconds of audio;
+they may lag on slower CPUs and can change when you finish. A portable Turbo trial exceeded the two-minute transcription
 limit; the selected model is never silently replaced. Real microphone accuracy, clean-machine
 installation, and broader latency evaluation remain [release checks](docs/memory/handoffs/2026-09-17-local-whisper.md).
 

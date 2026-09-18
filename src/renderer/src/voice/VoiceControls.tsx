@@ -51,7 +51,8 @@ export function VoiceControls({
             <button
               type="button"
               className="xp-button"
-              disabled={state.phase !== "recording"}
+              disabled={state.phase !== "recording" || state.owner === "pet"}
+              title={state.owner === "pet" ? "Finish in the cat's speech bubble" : undefined}
               onClick={() =>
                 state.sessionId &&
                 void run(window.computerCat.voiceRequestFinish({ sessionId: state.sessionId }))

@@ -62,10 +62,11 @@ const api: ComputerCatAPI = {
     return () => ipcRenderer.removeListener(IPC.modelsRequested, receive);
   },
   openChat: () => ipcRenderer.invoke(IPC.openChat),
-  openOptions: () => ipcRenderer.invoke(IPC.openOptions),
+  openOptions: (tab) => ipcRenderer.invoke(IPC.openOptions, tab),
   dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),
+  setPetVoiceOpen: (open) => ipcRenderer.invoke(IPC.petVoiceOpen, open),
   onOptionsRequested: (listener) => {
-    const receive = () => listener();
+    const receive = (_event: Electron.IpcRendererEvent, tab?: "voice") => listener(tab);
     ipcRenderer.on(IPC.optionsRequested, receive);
     return () => ipcRenderer.removeListener(IPC.optionsRequested, receive);
   },

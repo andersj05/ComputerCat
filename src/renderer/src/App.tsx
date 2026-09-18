@@ -7,12 +7,14 @@ import {
   type PetPreferences,
 } from "../../shared/contracts";
 import { activeModelInfo } from "../../shared/models";
+import { voiceMessages } from "../../shared/voice";
 import { HistoryDialog } from "./HistoryDialog";
 import { Icon } from "./Icon";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
+import { PetVoice } from "./voice/PetVoice";
 import { useVoice } from "./voice/useVoice";
 import { VoiceControls, voiceStatus } from "./voice/VoiceControls";
 import { WindowCaption } from "./WindowCaption";
@@ -41,9 +43,28 @@ export function App() {
   });
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [petVoiceOpen, setPetVoiceOpen] = useState(false);
+  async function startPetVoice() {
+    setError("");
+    try {
+      await window.computerCat.setPetVoiceOpen(true);
+      setPetVoiceOpen(true);
+      if (text || voice.review || voice.busy) return;
+      const result = await window.computerCat.voiceStart();
+      if (!result.ok) setError(voiceMessages[result.code]);
+    } catch {
+      setError("Couldn't start voice input. Try again.");
+    }
+  }
+  async function closePetVoice() {
+    if (voice.busy && voice.snapshot.owner === "pet" && voice.snapshot.sessionId)
+      await window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
+    await window.computerCat.setPetVoiceOpen(false);
+    setPetVoiceOpen(false);
+  }
   const [maximized, setMaximized] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [optionsTab, setOptionsTab] = useState<"cat" | "models">("cat");
+  const [optionsTab, setOptionsTab] = useState<"cat" | "models" | "voice">("cat");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
   const drafts = useRef(new Map<string, string>());
@@ -64,9 +85,9 @@ export function App() {
     let receivedPreferences = false;
     let receivedWindow = false;
     let latestModels: AppInfo["models"] | undefined;
-    const unsubscribeOptions = window.computerCat.onOptionsRequested(() => {
+    const unsubscribeOptions = window.computerCat.onOptionsRequested((tab) => {
       if (!isPet) {
-        setOptionsTab("cat");
+        setOptionsTab(tab ?? "cat");
         setModelsOpen(false);
         setHistoryOpen(false);
         setOptionsOpen(true);
@@ -238,10 +259,24 @@ export function App() {
         }
         voiceStatus={voiceStatus(voice.snapshot)}
         voiceBusy={voice.busy}
-        talk={() =>
-          void window.computerCat.voiceStart().then((result) => {
-            if (!result.ok) void window.computerCat.openOptions();
-          })
+        talk={() => void startPetVoice()}
+        voicePanel={
+          petVoiceOpen ? (
+            <PetVoice
+              state={voice.snapshot}
+              chat={snapshot}
+              text={text}
+              setText={setText}
+              review={voice.review}
+              setReview={voice.setReview}
+              send={() => void send()}
+              sending={sending}
+              error={error}
+              close={() => void closePetVoice()}
+              start={() => void startPetVoice()}
+              options={() => void window.computerCat.openOptions("voice")}
+            />
+          ) : undefined
         }
         stop={stop}
       />
