@@ -89,7 +89,7 @@ void validate(const json& j, size_t bytes) {
     } else if (kind == "transcribe") {
         keys(j, {"version", "kind", "requestId", "language", "sampleRate", "sampleCount"});
         if (j["language"] != "en" && j["language"] != "auto") throw std::runtime_error("language");
-        if (j["sampleRate"] != 16000 || !j["sampleCount"].is_number_unsigned() || j["sampleCount"].get<size_t>() * 2 != bytes || bytes < 9600 || bytes > max_pcm || bytes % 2) throw std::runtime_error("pcm");
+        if (j["sampleRate"] != 16000 || !j["sampleCount"].is_number_unsigned() || j["sampleCount"].get<uint64_t>() > max_pcm / 2 || j["sampleCount"].get<size_t>() * 2 != bytes || bytes < 9600 || bytes > max_pcm || bytes % 2) throw std::runtime_error("pcm");
     } else throw std::runtime_error("kind");
     if (kind != "transcribe" && bytes) throw std::runtime_error("payload");
 }

@@ -7,7 +7,10 @@ import { dirname, resolve } from "node:path";
 
 const executable = resolve(process.argv[2] ?? "resources/voice/bin/cpu/computercat-whisper.exe");
 export function frame(value, pcm = Buffer.alloc(0)) {
-  const data = Buffer.from(JSON.stringify({ version: 1, ...value }));
+  return rawFrame(JSON.stringify({ version: 1, ...value }), pcm);
+}
+function rawFrame(raw, pcm = Buffer.alloc(0)) {
+  const data = Buffer.from(raw);
   const result = Buffer.alloc(data.length + pcm.length + 8);
   result.writeUInt32LE(data.length);
   data.copy(result, 4);
@@ -77,10 +80,15 @@ for (const payload of [
   Buffer.from([255, 255, 255, 127]),
   frame({ kind: "shutdown", unexpected: true }),
   Buffer.from([1, 0, 0, 0, 255, 0, 0, 0, 0]),
+  rawFrame('{"version":1,"kind":"shutdown","kind":"shutdown"}'),
+  rawFrame(
+    '{"version":1,"kind":"transcribe","requestId":"00000000-0000-4000-8000-000000000000","language":"en","sampleRate":16000,"sampleCount":9223372036854780608}',
+    Buffer.alloc(9600),
+  ),
 ]) {
   const p = launch();
   assert.equal((await p.next()).kind, "hello");
-  p.child.stdin.end(payload);
+  p.child.stdin.write(payload);
   await p.exit();
 }
 {
