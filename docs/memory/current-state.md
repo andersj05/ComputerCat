@@ -1,7 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-17.
-Check Git and relevant code when resuming; this map does not establish checkout or test results.
+Reviewed: 2026-09-17. Verify checkout and tests when resuming.
 
 ## What exists
 
@@ -9,8 +8,9 @@ Computer Cat is a Windows-first Electron/React/TypeScript desktop companion usin
 SDK behind an application-owned runtime interface. Use the Node version in
 [.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
 
-- The transparent cat supports click-to-chat, body/grip dragging, Chat/Options/Stop controls,
-  blinking, and separate idle/thinking motion. Tray actions and shortcuts show chat and stop replies.
+- The transparent cat supports body dragging and click-to-toggle controls with a silhouette glow.
+  Chat/Options/Stop/model controls hide on actions, Escape, or blur; there is no drag grip.
+  Blinking and idle/thinking motion remain. Tray actions and shortcuts show chat and stop replies.
 - Always on top recovers z-order without focus; Find cat brings it to the pointer’s display.
 - Assistant replies render Markdown (including lists, emphasis, code, and tables) without active
   HTML, remote images, or navigation; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
@@ -22,11 +22,8 @@ SDK behind an application-owned runtime interface. Use the Node version in
 - Project development memory lives in [this directory](README.md). Its entry points are shared
   across supported coding clients and checked by `npm run memory:check`.
 
-User-facing behavior is documented in [README](../../README.md) and
-[XP design](../windows-xp-design.md). Verify desktop behavior with
-[Electron smoke tests](../../tests/smoke/desktop.spec.ts).
-[Codex smoke tests](../../tests/smoke/codex.spec.ts) intercept OAuth and model traffic; they
-consume no subscription usage and cannot establish live account entitlement.
+See [XP design](../windows-xp-design.md) and [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
+[Codex smoke tests](../../tests/smoke/codex.spec.ts) use offline OAuth/model fixtures.
 
 ## Persistence boundaries
 
@@ -63,8 +60,5 @@ Screen capture, computer control, external MCP connections, selected-fact user m
 credential settings for other providers, code signing, and automatic app updates remain
 future work. The [research plan](../research-and-build-plan.md) discusses these; it is not a
 completion checklist. A worker process isolates crashes but is not an OS security sandbox.
-
-Future user memory needs a storage design with inspection/deletion, retention, migrations,
-corruption recovery, and tests for context selection. Conversation history is a separate feature.
 
 See [handoffs](handoffs/README.md) for unfinished work.

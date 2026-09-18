@@ -340,7 +340,7 @@ label,
   margin: 6px 0;
   padding-left: 24px;
 }
-.markdown-message li + li {
+.markdown-message :where(li + li) {
   margin-top: 3px;
 }
 .markdown-message h1,
@@ -970,23 +970,8 @@ input:disabled {
   justify-content: center;
   gap: 3px;
 }
-.pet-handle {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  width: 18px;
-  height: 23px;
-  border: 1px solid #aaa99a;
-  border-radius: 2px;
-  background: #ece9d8;
-  box-shadow: inset 1px 1px #fff;
-  -webkit-app-region: drag;
-}
-.pet-handle span {
-  width: 9px;
-  height: 9px;
-  background: repeating-linear-gradient(90deg, #9c998d 0 1px, #fff 1px 2px, transparent 2px 4px);
+.pet-wrap.selected .pet-art {
+  filter: drop-shadow(0 0 4px #7bc8ff) drop-shadow(0 0 7px #4189d9);
 }
 .pet-dock .xp-button {
   min-width: 0;

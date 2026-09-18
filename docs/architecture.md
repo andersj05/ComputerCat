@@ -88,7 +88,7 @@ chat window. Only the chat renderer can request those controls or change compani
 The companion can open chat or Options, stop a reply, and request a drag phase. Only the pet
 renderer can initiate dragging; main validates the phase, reads desktop cursor coordinates,
 uses a five-DIP movement threshold, and clamps its own window to a display work area. Cancellation,
-hide, blur, reload, and a thirty-second gesture limit prevent stale drags from opening chat.
+hide, blur, reload, and a thirty-second gesture limit prevent stale drags from revealing controls.
 No generic window or IPC interface is exposed.
 
 Pet size, always-on-top, and animation are saved in their own preference file. Main validates a strict
@@ -101,7 +101,7 @@ failure leaves the draft available to retry without changing the live cat.
 
 The cat retains its original transparent silhouette. Size changes stay within the current
 display work area. The cat body uses pointer capture and the narrow drag bridge; native drag
-regions remain on its grip and the chat caption. Renderer code never accesses the OS. Find cat
+regions remain on the chat caption. Renderer code never accesses the OS. Find cat
 places the pet inside the display under the pointer and shows it without activating it. Display
 changes re-clamp its bounds. Position is session-only.
 

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { IPC } from "../../src/shared/contracts";
-import { composeMessage } from "./chat";
+import { composeMessage, showCatControls } from "./chat";
 
 async function launch(userData: string, mode: "demo" | "pi" = "demo") {
   const env = Object.fromEntries(
@@ -105,6 +105,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(input).toBeFocused();
     await input.press("Enter");
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeVisible();
+    await showCatControls(pet);
     await expect(pet.getByRole("status")).toContainText("Thinking");
     await expect(page.getByRole("button", { name: "New conversation" })).toBeDisabled();
     await expect(page.locator(".message.assistant")).toContainText("local demo");
@@ -115,6 +116,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await input.pressSequentially("Second line");
     await expect(input).toHaveValue("First line\nSecond line");
     await page.getByRole("button", { name: "Send message" }).click();
+    await showCatControls(pet);
     await pet.getByRole("button", { name: "Stop reply" }).click();
     await expect(page.locator('[data-state="stopped"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
@@ -181,7 +183,8 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
         ),
       )
       .toBe(true);
-    await pet.getByRole("button", { name: "Open Computer Cat chat" }).click();
+    await showCatControls(pet);
+    await pet.getByRole("button", { name: "Chat", exact: true }).click();
     await expect
       .poll(() =>
         electron.evaluate(({ BrowserWindow }) =>
@@ -202,7 +205,8 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
           ),
         )
         .toBe(false);
-      await pet.getByRole("button", { name: "Open Computer Cat chat" }).click();
+      await showCatControls(pet);
+      await pet.getByRole("button", { name: "Chat", exact: true }).click();
       await expect
         .poll(() =>
           electron.evaluate(({ BrowserWindow }) =>
@@ -478,6 +482,21 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
         ),
       ),
     ).toBe("denied");
+    const toggle = pet.getByRole("button", { name: "Show cat controls" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(pet.getByRole("button", { name: "Chat", exact: true })).toBeHidden();
+    await expect(pet.locator(".pet-handle")).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(pet.locator(".pet-wrap")).toHaveClass(/selected/);
+    await pet.screenshot({ path: testInfo.outputPath("cat-controls.png"), omitBackground: true });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.focus();
+    await pet.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await pet.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await pet.emulateMedia({ reducedMotion: "no-preference" });
     expect(
       await pet.locator(".cat-head").evaluate((element) => getComputedStyle(element).animationName),
@@ -513,6 +532,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
     await expect.poll(async () => (await petState()).onTop).toBe(true);
     expect((await petState()).chatFocused).toBe(true);
     await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    await showCatControls(pet);
     await pet.getByRole("button", { name: "Cat options" }).click();
     await expect(page.getByRole("dialog", { name: "Options", exact: true })).toBeVisible();
     await page.getByRole("checkbox", { name: "Always on top" }).uncheck();
@@ -607,6 +627,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
     await pet.mouse.up();
     await pet.evaluate(() => window.computerCat.info());
     expect((await petState()).chatVisible).toBe(false);
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await pet.mouse.down();
     await pet.evaluate(() => window.computerCat.info());
     await electron.evaluate(({ BrowserWindow }) =>
@@ -617,15 +638,18 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
     await pet.mouse.up();
     await pet.evaluate(() => window.computerCat.info());
     expect((await petState()).chatVisible).toBe(false);
-    await pet.getByRole("button", { name: "Open Computer Cat chat" }).click();
+    await showCatControls(pet);
+    await pet.getByRole("button", { name: "Chat", exact: true }).click();
     await expect.poll(async () => (await petState()).chatVisible).toBe(true);
 
     for (const size of ["Small", "Medium", "Large"]) {
+      await showCatControls(pet);
       await pet.getByRole("button", { name: "Cat options" }).click();
       await page.getByRole("radio", { name: size, exact: true }).check();
       await page.getByRole("button", { name: "OK", exact: true }).click();
       await composeMessage(page, "Hello");
       await page.getByRole("button", { name: "Send message" }).click();
+      await showCatControls(pet);
       await expect(pet.getByRole("button", { name: "Stop reply" })).toBeVisible();
       expect(
         await pet
@@ -641,6 +665,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
         path: testInfo.outputPath(`cat-thinking-${size.toLowerCase()}.png`),
         omitBackground: true,
       });
+      await showCatControls(pet);
       await pet.getByRole("button", { name: "Stop reply" }).click();
       await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
     }
