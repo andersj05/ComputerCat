@@ -165,7 +165,7 @@ export class VoiceController {
       });
       this.publish();
     } catch (e) {
-      if (this.session === s)
+      if (this.session === s && !s.abort.signal.aborted)
         await this.fail(s, e instanceof VoiceError ? e.code : "model-load-failed");
     }
   }
@@ -270,7 +270,7 @@ export class VoiceController {
       this.state.transcript = text;
       this.publish();
     } catch (e) {
-      if (this.session === s)
+      if (this.session === s && !s.abort.signal.aborted)
         await this.fail(s, e instanceof VoiceError ? e.code : "helper-crashed");
     } finally {
       pcm.fill(0);
@@ -363,7 +363,8 @@ export class VoiceController {
         }
       })
       .catch((e) => {
-        this.state.error = e instanceof VoiceError ? e.code : "download-failed";
+        if (abort.signal.aborted) delete this.state.error;
+        else this.state.error = e instanceof VoiceError ? e.code : "download-failed";
       })
       .finally(async () => {
         this.download = undefined;

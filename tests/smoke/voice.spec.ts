@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
 import { DEFAULT_VOICE } from "../../src/shared/voice";
+import { showCatControls } from "./chat";
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
 test("local voice records synthetic audio, reviews text, and cancels without sending", async ({}, testInfo) => {
@@ -167,7 +168,8 @@ test("voice permissions, hidden pet indicator and window cancellation stay isola
     expect(
       await pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings),
     ).toBeUndefined();
-    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await showCatControls(pet);
+    await pet.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(page.locator(".voice-controls")).toContainText("Listening");
     await expect(pet.locator(".pet-bubble")).toContainText("Listening");
     expect(

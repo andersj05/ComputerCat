@@ -92,6 +92,23 @@ describe("voice session boundary", () => {
     expect(runtime.transcribe).not.toHaveBeenCalled();
     expect(voice.snapshot().phase).toBe("idle");
   });
+  it("keeps cancellation during model loading out of the error state", async () => {
+    const { voice, runtime } = setup();
+    let reject!: (error: Error) => void;
+    runtime.prepare.mockImplementation(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    const loading = voice.start();
+    await vi.advanceTimersByTimeAsync(0);
+    await voice.cancel();
+    reject(new Error("aborted load"));
+    await loading;
+    expect(voice.snapshot().phase).toBe("idle");
+    expect(voice.snapshot().error).toBeUndefined();
+  });
   it("reserves transitions before awaiting and rejects simultaneous Talk", async () => {
     const { voice } = setup();
     let release!: () => void;
