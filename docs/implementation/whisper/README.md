@@ -16,10 +16,11 @@ supersedes the earlier cloud-first speech-input recommendation.
 Add free, local speech-to-text to the existing Windows desktop app. The first complete flow is:
 
 1. Enable voice and explicitly download a supported speech model in Options.
-2. Click **Talk** in chat or the cat's revealed controls. Chat becomes visible, shows the
-   recording indicator, and owns the microphone. Wait for **Listening** before speaking.
-3. Click **Finish recording**. The microphone stops, then local Whisper produces a transcript.
-4. Review/edit that text in the existing composer and press **Send**, using the currently
+2. Click **Talk** in chat or the cat's revealed controls. The initiating window owns the
+   microphone; the cat opens a speech bubble without opening chat. Wait for **Listening**.
+3. Provisional previews update during recording. **Finish recording** stops the microphone
+   and waits for final local recognition.
+4. Review/edit that text in the composer or cat balloon and press **Send**, using the currently
    selected demo, Codex, or environment connection exactly as typed input does today.
 5. **Cancel recording**, Escape while recording, or the existing global Stop ends capture or
    transcription and discards the unfinished result. Typing stays available after failure.
@@ -72,9 +73,10 @@ avoid looping expensive retries while preserving audio indefinitely.
 
 ```mermaid
 flowchart TD
-    Pet[Cat Talk button] --> Main[Main voice controller]
-    Chat[Trusted chat renderer: microphone and editable draft] <--> Bridge[Named preload operations]
-    Bridge <--> Main
+    Pet[Trusted cat renderer: microphone and balloon] <--> Bridge[Named preload operations]
+    Chat[Trusted chat renderer: microphone and editable draft] <--> Bridge
+    Pet --> Send[Existing Send operation]
+    Bridge <--> Main[Main voice controller]
     Main <--> Helper[Native Whisper helper over private pipes]
     Helper --> Weights[Verified local model and VAD]
     Chat --> Send[Existing Send operation]
@@ -82,9 +84,8 @@ flowchart TD
 ```
 
 Main owns lifecycle, sender validation, download state, model selection, capture sessions, and
-helper supervision. The chat renderer uses browser microphone APIs and emits bounded PCM.
-The pet can request Talk and show status, but cannot capture audio, receive audio/transcripts,
-or change speech settings. The helper has no microphone, credentials, Pi imports, tool access,
+helper supervision. The initiating renderer uses browser microphone APIs and emits bounded PCM.
+The pet receives its own transcript and can Send reviewed text, but cannot change speech settings. The helper has no microphone, credentials, Pi imports, tool access,
 or network server. It receives a model path selected by main and audio over inherited pipes.
 Process separation contains inference crashes; it is not an OS security sandbox.
 
@@ -138,7 +139,7 @@ Do not put speech code in `src/agent/`: that directory remains Pi-specific.
 
 ## Capture and normalization
 
-Use `getUserMedia({ audio: ..., video: false })` in the trusted chat main frame after a
+Use `getUserMedia({ audio: ..., video: false })` in the trusted initiating main frame after a
 main-issued capture grant. Default to the OS input device; an optional selected microphone
 ID may live in local preferences, never shared developer memory. Handle a disappeared device
 with an explicit selector/retry instead of changing input devices mid-recording.
@@ -169,16 +170,17 @@ words before selecting thresholds; do not treat amplitude alone as reliable spee
 
 - Voice is disabled by default. Enabling it does not open the microphone. Download is a
   separate immediate action showing model size/progress/cancel; no background first-run fetch.
-- **Talk** prepares the helper before granting capture. Show **Loading speech model** until
+- Enabled, installed weights prepare at startup and after settings Apply, without a microphone.
+  **Talk** awaits preparation before granting capture. Show **Loading speech model** until
   ready, then **Starting microphone**, then **Listening** only after the graph is producing data.
-- Talk from the pet routes to the visible chat renderer. Show listening status on both
-  surfaces, including the pet when its controls auto-hide. It must not depend on animation.
+- Talk from the pet stays in its balloon, with persistent Finish/Cancel and transcript previews.
+  Chat-origin recording still shows a pet status indicator when its controls hide. Neither relies on animation.
 - Use click-to-start/click-to-finish initially. Do not add a global hold-to-talk shortcut:
   Electron's current shortcut callback is not a key-up stream. Preserve existing shortcuts.
 - **Finish recording** closes tracks, flushes final chunks, and starts transcription.
   **Cancel recording** discards; **Stop** and `Ctrl+Shift+Escape` cancel voice and the active
   agent turn. A pending reviewed transcript is a draft and is not erased by Stop.
-- Ordinary focus changes may continue a visible recording. Hiding/minimizing chat, opening
+- Ordinary focus changes may continue a visible recording. Hiding/minimizing the recording owner, opening
   a modal dialog, changing conversation/model, disconnecting, renderer navigation/reload/crash,
   app lock/suspend, or quitting cancels active capture/transcription before proceeding.
 - Reject Talk while an agent reply is busy; the user can use the existing Stop first. Reject
@@ -201,7 +203,7 @@ At recording start, remember the active conversation ID and renderer draft revis
 never calls the agent. If the conversation/revision still match, append the finished text to the
 existing composer with one appropriate separator. If typing changed the draft, keep the transcript
 in a small review panel with **Insert** and **Discard**; never overwrite concurrent typing.
-Use the session ID to deduplicate deliveries. Keep a result in main only until the chat renderer
+Use the session ID to deduplicate deliveries. Keep a result in main only until the initiating renderer
 acknowledges safe ownership. See the [contract](contracts.md#result-delivery-and-chat-races).
 
 Recordings, model input, and unsent transcripts are memory-only. Do not create WAV files, dump

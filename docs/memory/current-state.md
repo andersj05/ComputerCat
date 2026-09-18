@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-18. Verify checkout and tests when resuming.
+Reviewed: 2026-09-18. Recheck checkout and tests.
 
 ## What exists
 
@@ -15,10 +15,9 @@ SDK behind an application-owned runtime interface. Use the Node version in
   Connections supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
-- Local Whisper input uses explicit verified model downloads and Talk/Finish/Cancel with draft
-  review. Talk on the cat stays in a desktop speech bubble with periodic transcript previews,
-  editable Send, and replies. Enabled installed weights preload without microphone access.
-  CPU helpers support portable/AVX2 execution; CUDA is unsupported. Audio is not saved.
+- Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
+  The cat's speech bubble shows transcript previews, editable Send and replies without opening chat.
+  Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
   See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).
 - Project development memory lives in [this directory](README.md). Its entry points are shared
   across supported coding clients and checked by `npm run memory:check`.

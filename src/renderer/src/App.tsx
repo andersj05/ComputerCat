@@ -64,7 +64,7 @@ export function App() {
   }
   const [maximized, setMaximized] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [optionsTab, setOptionsTab] = useState<"cat" | "models">("cat");
+  const [optionsTab, setOptionsTab] = useState<"cat" | "models" | "voice">("cat");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
   const drafts = useRef(new Map<string, string>());
@@ -85,9 +85,9 @@ export function App() {
     let receivedPreferences = false;
     let receivedWindow = false;
     let latestModels: AppInfo["models"] | undefined;
-    const unsubscribeOptions = window.computerCat.onOptionsRequested(() => {
+    const unsubscribeOptions = window.computerCat.onOptionsRequested((tab) => {
       if (!isPet) {
-        setOptionsTab("cat");
+        setOptionsTab(tab ?? "cat");
         setModelsOpen(false);
         setHistoryOpen(false);
         setOptionsOpen(true);
@@ -274,7 +274,7 @@ export function App() {
               error={error}
               close={() => void closePetVoice()}
               start={() => void startPetVoice()}
-              options={() => void window.computerCat.openOptions()}
+              options={() => void window.computerCat.openOptions("voice")}
             />
           ) : undefined
         }

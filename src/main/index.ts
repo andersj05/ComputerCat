@@ -574,10 +574,11 @@ else {
         assertSender(event);
         showChat();
       });
-      ipcMain.handle(IPC.openOptions, (event) => {
+      ipcMain.handle(IPC.openOptions, (event, tab: unknown) => {
         assertSender(event);
+        if (tab !== undefined && tab !== "voice") throw new Error("Invalid Options tab.");
         showChat();
-        void voice.transition(() => chat.webContents.send(IPC.optionsRequested));
+        void voice.transition(() => chat.webContents.send(IPC.optionsRequested, tab));
       });
       ipcMain.handle(IPC.dragPet, (event, request: unknown) => {
         assertSender(event);
@@ -649,7 +650,13 @@ else {
         };
         win.on("hide", cancelOwned);
         win.on("minimize", cancelOwned);
-        win.webContents.on("did-start-loading", cancelOwned);
+        win.webContents.on("did-start-loading", () => {
+          cancelOwned();
+          if (win === pet) {
+            petVoiceOpen = false;
+            applyPetPreferences();
+          }
+        });
         win.webContents.on("render-process-gone", () => {
           const cleanup = captureWindow() === win ? voice.cancel() : Promise.resolve();
           void cleanup.then(() => {

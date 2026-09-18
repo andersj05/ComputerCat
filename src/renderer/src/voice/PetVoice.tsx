@@ -80,6 +80,17 @@ export function PetVoice({
               onChange={(event) =>
                 review ? setReview(event.target.value) : setText(event.target.value)
               }
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing &&
+                  !review
+                ) {
+                  event.preventDefault();
+                  if (!sending && text.trim()) send();
+                }
+              }}
             />
           </>
         ) : chat.busy || reply ? (
@@ -134,8 +145,9 @@ export function PetVoice({
               <button
                 type="button"
                 className="xp-button primary"
+                disabled={(text ? `${text.trimEnd()} ${review}` : review).length > 6000}
                 onClick={() => {
-                  setText(text ? `${text.trimEnd()} ${review}`.slice(0, 6000) : review);
+                  setText(text ? `${text.trimEnd()} ${review}` : review);
                   setReview("");
                 }}
               >
@@ -156,8 +168,8 @@ export function PetVoice({
               className="xp-button"
               disabled={sending}
               onClick={() => {
-                setText("");
-                setReview("");
+                if (review) setReview("");
+                else setText("");
               }}
             >
               Discard

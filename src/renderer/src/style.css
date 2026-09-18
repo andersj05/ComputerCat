@@ -1057,6 +1057,10 @@ input:disabled {
 .pet-options {
   width: 24px;
 }
+.mic-icon {
+  vertical-align: -2px;
+  color: #244e88;
+}
 .pet-wrap.animated .cat-body,
 .preview-surface.animated .cat-body {
   animation: cat-breathe 4.6s ease-in-out infinite;

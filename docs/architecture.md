@@ -13,13 +13,16 @@ Local speech input (reviewed 2026-09-18) follows the
 AudioWorklet and microphone grant. A [main controller](../src/main/voice/controller.ts)
 serializes sessions against Send/history/model changes, validates PCM and releases capture
 before final inference. Both Electron permission handlers require the exact initiating window URL, main frame,
-audio-only request and active grant. A missing cleanup acknowledgment crashes/reloads the
+audio-only request and active grant. Capture IPC also verifies the initiating window.
+A missing cleanup acknowledgment crashes/reloads the
 capture renderer after two seconds; this can lose unsent drafts, like an ordinary renderer crash.
 
 The [supervisor](../src/main/voice/whisper-runtime.ts) starts a persistent native helper over
 private pipes with an allowlisted environment. Portable and guarded AVX2 CPU builds share
 whisper.cpp 1.9.4; no CUDA backend is distributed. The helper resets linguistic context,
-performs Silero VAD and returns bounded text. It has no microphone, credentials or network
+performs Silero VAD and returns bounded text. During recording the controller runs at most one
+provisional pass at a time, after four seconds of new audio. Finish waits for that pass before
+final recognition; cancellation suppresses both results. It has no microphone, credentials or network
 service. stdin EOF triggers cooperative abort and a hard exit deadline. Main also enforces
 load/inference timeouts and waits for exit before replacement. Enabled, installed models preload
 at startup and after voice settings are applied without opening a microphone. Idle models unload after five minutes.
@@ -54,7 +57,7 @@ Sandboxed React renderer
 The renderer is sandboxed with context isolation and no Node integration. It can request
 only named application operations. Main validates both sender identity and arguments. Remote
 navigation and new windows are denied. Browser permissions are denied except the narrow
-chat microphone grant described above. Model output is rendered as Markdown through React elements, with raw HTML skipped,
+session-owner microphone grant described above. Model output is rendered as Markdown through React elements, with raw HTML skipped,
 images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,

@@ -151,6 +151,15 @@ export function Pet({
           onClick={() => act(talk)}
           disabled={snapshot.busy || voiceBusy}
         >
+          <svg width="11" height="13" viewBox="0 0 12 16" aria-hidden="true" className="mic-icon">
+            <rect x="4" y="1" width="4" height="8" rx="2" fill="currentColor" />
+            <path
+              d="M2 7v1a4 4 0 0 0 8 0V7M6 12v3M3 15h6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>{" "}
           Talk
         </button>
         {(snapshot.busy || voiceBusy) && (
