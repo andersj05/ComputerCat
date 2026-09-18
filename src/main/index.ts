@@ -98,6 +98,11 @@ const petSizes = {
   medium: { width: 188, height: 298 },
   large: { width: 228, height: 352 },
 };
+let petVoiceOpen = false;
+function petWindowSize() {
+  const size = petSizes[preferences.snapshot().size];
+  return petVoiceOpen ? { width: 340, height: size.height + 210 } : size;
+}
 
 function placePet(bounds: Rectangle, area: Rectangle): void {
   const target = keepInWorkArea(bounds, area);
@@ -113,7 +118,7 @@ function applyPetPreferences(): void {
   if (!pet || pet.isDestroyed()) return;
   const settings = preferences.snapshot();
   const bounds = pet.getBounds();
-  const size = petSizes[settings.size];
+  const size = petWindowSize();
   const area = screen.getDisplayMatching(bounds).workArea;
   placePet(
     {
@@ -138,7 +143,7 @@ function findPet(): void {
   if (!pet || pet.isDestroyed()) return;
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   // Off-screen Windows bounds can report a different size after a DPI transition.
-  const size = petSizes[preferences.snapshot().size];
+  const size = petWindowSize();
   placePet(
     {
       ...size,
@@ -591,6 +596,13 @@ else {
         }
         if (phase === "cancel") petDrag.cancel();
         return { moved: phase === "end" ? petDrag.end() : false };
+      });
+      ipcMain.handle(IPC.petVoiceOpen, (event, open: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet" || typeof open !== "boolean")
+          throw new Error("Invalid cat voice panel request.");
+        petVoiceOpen = open;
+        applyPetPreferences();
       });
       ipcMain.handle(IPC.hideChat, (event) => {
         assertSender(event, true);

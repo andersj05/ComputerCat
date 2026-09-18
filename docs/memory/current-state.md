@@ -16,7 +16,9 @@ SDK behind an application-owned runtime interface. Use the Node version in
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
 - Local Whisper input uses explicit verified model downloads and Talk/Finish/Cancel with draft
-  review. CPU helpers support portable/AVX2 execution; CUDA is unsupported. Audio is not saved.
+  review. Talk on the cat stays in a desktop speech bubble with periodic transcript previews,
+  editable Send, and replies. Enabled installed weights preload without microphone access.
+  CPU helpers support portable/AVX2 execution; CUDA is unsupported. Audio is not saved.
   See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).
 - Project development memory lives in [this directory](README.md). Its entry points are shared
   across supported coding clients and checked by `npm run memory:check`.

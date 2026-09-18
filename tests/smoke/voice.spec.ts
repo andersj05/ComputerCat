@@ -97,7 +97,7 @@ async function checkCleanup(dir: string): Promise<void> {
 }
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
-test("voice permissions, hidden pet indicator and window cancellation stay isolated", async ({}, testInfo) => {
+test("desktop voice stays beside the cat with preview, review, reply and scoped permissions", async ({}, testInfo) => {
   test.setTimeout(60000);
   const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
   await writeFile(
@@ -126,7 +126,7 @@ test("voice permissions, hidden pet indicator and window cancellation stay isola
     const page = app.windows().find((p) => p.url().includes("view=chat"));
     const pet = app.windows().find((p) => p.url().includes("view=pet"));
     if (!page || !pet) throw Error("Missing windows");
-    await page.evaluate(() => {
+    await pet.evaluate(() => {
       const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
       const tracks: MediaStreamTrack[] = [];
       Reflect.set(window, "testVoiceTracks", tracks);
@@ -168,10 +168,47 @@ test("voice permissions, hidden pet indicator and window cancellation stay isola
     expect(
       await pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings),
     ).toBeUndefined();
+    await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    const chatVisible = () =>
+      app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes("view=chat"))
+          ?.isVisible(),
+      );
+    expect(await chatVisible()).toBe(false);
+    const catBounds = await pet.locator(".pet-button").boundingBox();
     await showCatControls(pet);
     await pet.getByRole("button", { name: "Talk", exact: true }).click();
-    await expect(page.locator(".voice-controls")).toContainText("Listening");
-    await expect(pet.locator(".pet-bubble")).toContainText("Listening");
+    await expect(pet.locator(".pet-voice")).toContainText("Listening");
+    expect(await chatVisible()).toBe(false);
+    const expandedCat = await pet.locator(".pet-button").boundingBox();
+    expect(expandedCat?.width).toBeCloseTo(catBounds?.width ?? 0, 0);
+    expect(expandedCat?.height).toBeCloseTo(catBounds?.height ?? 0, 0);
+    await expect(pet.locator(".pet-voice-transcript")).toContainText("Do not delete the folder.", {
+      timeout: 15000,
+    });
+    await pet.screenshot({ path: testInfo.outputPath("pet-listening.png") });
+    expect(
+      await page.evaluate(() =>
+        window.computerCat.voiceRequestFinish({ sessionId: crypto.randomUUID() }).then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    expect(
+      await page.evaluate(() =>
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(
+          (s) => {
+            s.getTracks().forEach((t) => {
+              t.stop();
+            });
+            return "allowed";
+          },
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
     expect(
       await page.evaluate(() =>
         navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(
@@ -189,17 +226,38 @@ test("voice permissions, hidden pet indicator and window cancellation stay isola
       window.computerCat.send({ id: crypto.randomUUID(), text: "must not send" }),
     );
     expect(send.ok).toBe(false);
-    await page.getByRole("button", { name: "Minimize window" }).click();
+    await pet.getByRole("button", { name: "Finish recording" }).click();
+    await expect(pet.locator("#pet-voice-draft")).toHaveValue("Do not delete the folder.");
+    await expect(page.locator("#message-input")).toHaveValue("");
+    await pet.locator("#pet-voice-draft").fill("Keep the folder, please.");
+    await pet.screenshot({ path: testInfo.outputPath("pet-review.png") });
+    await pet.getByRole("button", { name: "Send message" }).click();
+    await expect(page.locator(".message.user")).toContainText("Keep the folder, please.");
+    await expect(pet.locator(".pet-voice-reply")).not.toBeEmpty();
+    await expect(pet.getByRole("button", { name: "Talk again" })).toBeVisible();
+    expect(await chatVisible()).toBe(false);
+    await pet.screenshot({ path: testInfo.outputPath("pet-reply.png") });
+    await pet.getByRole("button", { name: "Talk again" }).click();
+    await expect(pet.locator(".pet-voice")).toContainText("Listening");
+    await pet.getByRole("button", { name: "Close voice bubble" }).click();
+    await expect(pet.locator(".pet-voice")).toHaveCount(0);
     await expect
-      .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase))
+      .poll(() => pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase))
       .toBe("idle");
     expect(
-      await page.evaluate(() =>
+      await pet.evaluate(() =>
         (Reflect.get(window, "testVoiceTracks") as MediaStreamTrack[]).every(
           (t) => t.readyState === "ended",
         ),
       ),
     ).toBe(true);
+    await page.evaluate(() => window.computerCat.openChat());
+    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(page.locator(".voice-controls")).toContainText("Listening");
+    await page.getByRole("button", { name: "Minimize window" }).click();
+    await expect
+      .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase))
+      .toBe("idle");
     await app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows().find((w) =>
         w.webContents.getURL().includes("view=chat"),

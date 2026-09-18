@@ -52,6 +52,64 @@ function setup() {
 }
 afterEach(() => vi.useRealTimers());
 describe("voice session boundary", () => {
+  it("serializes transcript previews with Finish and keeps pet text with its owner", async () => {
+    const { voice, runtime, advance } = setup();
+    let preview!: (text: string) => void;
+    runtime.transcribe.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          preview = resolve;
+        }),
+    );
+    await voice.start("pet");
+    const sessionId = voice.snapshot().sessionId ?? "missing";
+    voice.captureStarted({ sessionId });
+    for (let sequence = 0; sequence < 8; sequence++) {
+      advance();
+      voice.append({ sessionId, sequence, pcm: new Uint8Array(16000) });
+    }
+    expect(runtime.transcribe).toHaveBeenCalledOnce();
+    preview("Still speaking");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(voice.snapshot(false).partial).toBe("Still speaking");
+    expect(voice.snapshot().transcript).toBeUndefined();
+    voice.requestFinish({ sessionId });
+    voice.released({ sessionId });
+    await voice.finish({ sessionId, nextSequence: 8 });
+    expect(runtime.transcribe).toHaveBeenCalledTimes(2);
+    expect(voice.snapshot(false).transcript).toBe("Do not delete.");
+    expect(voice.snapshot(false).partial).toBeUndefined();
+    expect(voice.snapshot(false).settings).toBeUndefined();
+    voice.consumed({ sessionId });
+  });
+  it("does not overlap final inference with an unfinished preview or publish it after cancel", async () => {
+    const { voice, runtime, advance } = setup();
+    let preview!: (text: string) => void;
+    runtime.transcribe.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          preview = resolve;
+        }),
+    );
+    await voice.start("pet");
+    const sessionId = voice.snapshot().sessionId ?? "missing";
+    voice.captureStarted({ sessionId });
+    for (let sequence = 0; sequence < 8; sequence++) {
+      advance();
+      voice.append({ sessionId, sequence, pcm: new Uint8Array(16000) });
+    }
+    voice.requestFinish({ sessionId });
+    voice.released({ sessionId });
+    const finish = voice.finish({ sessionId, nextSequence: 8 });
+    expect(runtime.transcribe).toHaveBeenCalledOnce();
+    await voice.cancel();
+    preview("Late words");
+    await finish;
+    expect(voice.snapshot().partial).toBeUndefined();
+    expect(voice.snapshot().transcript).toBeUndefined();
+    expect(runtime.transcribe).toHaveBeenCalledOnce();
+  });
   it("preloads without a microphone grant and shares an in-flight load with Talk", async () => {
     const { voice, runtime, capture } = setup();
     await voice.refresh();

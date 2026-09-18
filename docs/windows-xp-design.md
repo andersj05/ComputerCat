@@ -57,6 +57,15 @@ immediate operations with size/progress. The panel scrolls within the existing p
 See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
 [smoke coverage](../tests/smoke/voice.spec.ts).
 
+Talk on the desktop cat opens a cream speech balloon above the original artwork, keeping
+chat hidden and the cat's size/foot position stable except when fitting the display work area.
+Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
+Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
+Finish releases the microphone and produces an editable message; only Send submits it.
+The reply stays in the balloon. Close cancels capture but keeps an already reviewed draft
+in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
+Installed weights prepare in the background when enabled; first-run downloads remain explicit.
+
 ## References
 
 - [Microsoft's Windows interface text guidance](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/bb246446(v=vs.85)) informs concise labels and restrained descriptions.

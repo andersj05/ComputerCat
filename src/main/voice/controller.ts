@@ -41,6 +41,8 @@ interface Session {
   timer?: ReturnType<typeof setTimeout>;
   heartbeat?: ReturnType<typeof setTimeout>;
   cleanup?: () => void;
+  preview?: Promise<void>;
+  previewBytes: number;
 }
 export class VoiceController {
   private state: VoiceSnapshot = {
@@ -177,6 +179,7 @@ export class VoiceController {
       grant: false,
       released: true,
       started: 0,
+      previewBytes: 0,
     };
     this.session = s;
     this.state = {
@@ -189,6 +192,7 @@ export class VoiceController {
       owner,
     };
     delete this.state.error;
+    delete this.state.partial;
     this.publish();
     try {
       await this.warming?.task;
@@ -223,6 +227,42 @@ export class VoiceController {
     this.heartbeat(s);
     this.publish();
   }
+  private preview(s: Session): void {
+    // One best-effort pass at a time, at least four seconds of new audio per pass.
+    if (s.preview || s.bytes - s.previewBytes < 128000 || this.state.phase !== "recording") return;
+    s.previewBytes = s.bytes;
+    const pcm = new Uint8Array(s.bytes);
+    let offset = 0;
+    for (const chunk of s.chunks) {
+      pcm.set(chunk, offset);
+      offset += chunk.length;
+    }
+    s.preview = (async () => {
+      try {
+        const text = await this.runtime.transcribe(
+          pcm,
+          this.settings.snapshot().language,
+          s.abort.signal,
+        );
+        if (this.session === s && !s.abort.signal.aborted && this.state.phase === "recording") {
+          this.state.partial = text.slice(0, VOICE.maxText);
+          this.publish();
+        }
+      } catch (error) {
+        // Silence is expected in previews. Other failures need a fresh helper for final inference.
+        if (
+          this.session === s &&
+          !s.abort.signal.aborted &&
+          !(error instanceof VoiceError && error.code === "no-speech")
+        ) {
+          await this.fail(s, error instanceof VoiceError ? error.code : "helper-crashed");
+        }
+      } finally {
+        pcm.fill(0);
+        delete s.preview;
+      }
+    })();
+  }
   private heartbeat(s: Session): void {
     clearTimeout(s.heartbeat);
     s.heartbeat = setTimeout(() => void this.fail(s, "capture-failed"), VOICE.heartbeatMs);
@@ -256,6 +296,7 @@ export class VoiceController {
     this.state.elapsedMs = Math.min(VOICE.captureMs, Math.max(0, this.now() - s.started));
     if (this.state.phase === "recording") this.heartbeat(s);
     this.publish();
+    this.preview(s);
   }
   requestFinish(input: unknown): void {
     const s = this.current(sessionSchema.parse(input).sessionId);
@@ -298,6 +339,8 @@ export class VoiceController {
     this.state.phase = "transcribing";
     this.publish();
     try {
+      if (s.preview) await s.preview;
+      if (this.session !== s || s.abort.signal.aborted) return;
       const text = await this.runtime.transcribe(
         pcm,
         this.settings.snapshot().language,
@@ -311,6 +354,7 @@ export class VoiceController {
         return;
       if (text.length > VOICE.maxText) throw new VoiceError("text-too-long");
       this.state.phase = "review";
+      delete this.state.partial;
       this.state.transcript = text;
       this.publish();
     } catch (e) {
@@ -324,6 +368,7 @@ export class VoiceController {
     const id = sessionSchema.parse(input).sessionId;
     if (this.session?.id !== id || this.state.phase !== "review") return;
     delete this.state.transcript;
+    delete this.state.partial;
     this.session = undefined;
     this.state.phase = "idle";
     delete this.state.sessionId;
@@ -374,6 +419,7 @@ export class VoiceController {
       if (this.session === s) {
         this.session = undefined;
         this.state.phase = "idle";
+        delete this.state.partial;
         delete this.state.sessionId;
         delete this.state.conversationId;
         this.publish();

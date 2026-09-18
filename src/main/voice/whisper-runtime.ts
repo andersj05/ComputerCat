@@ -210,7 +210,7 @@ export class WhisperRuntime implements SpeechRecognizer {
       if (!text) throw new VoiceError("no-speech");
       return text;
     } catch (error) {
-      await this.dispose();
+      if (!(error instanceof VoiceError && error.code === "no-speech")) await this.dispose();
       throw error;
     } finally {
       this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
