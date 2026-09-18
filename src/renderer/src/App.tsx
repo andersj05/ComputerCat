@@ -57,7 +57,7 @@ export function App() {
     }
   }
   async function closePetVoice() {
-    if (voice.busy && voice.snapshot.sessionId)
+    if (voice.busy && voice.snapshot.owner === "pet" && voice.snapshot.sessionId)
       await window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
     await window.computerCat.setPetVoiceOpen(false);
     setPetVoiceOpen(false);

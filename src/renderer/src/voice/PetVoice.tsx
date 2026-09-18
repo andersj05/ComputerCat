@@ -112,7 +112,8 @@ export function PetVoice({
             <button
               type="button"
               className="xp-button primary"
-              disabled={state.phase !== "recording"}
+              disabled={state.phase !== "recording" || state.owner !== "pet"}
+              title={state.owner === "chat" ? "Finish in the chat window" : undefined}
               onClick={() =>
                 state.sessionId &&
                 void window.computerCat.voiceRequestFinish({ sessionId: state.sessionId })

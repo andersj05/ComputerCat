@@ -180,6 +180,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await showCatControls(pet);
     await pet.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
+    await expect(page.getByRole("button", { name: "Finish recording" })).toBeDisabled();
     expect(await chatVisible()).toBe(false);
     const expandedCat = await pet.locator(".pet-button").boundingBox();
     expect(expandedCat?.width).toBeCloseTo(catBounds?.width ?? 0, 0);
@@ -230,8 +231,15 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await expect(pet.locator("#pet-voice-draft")).toHaveValue("Do not delete the folder.");
     await expect(page.locator("#message-input")).toHaveValue("");
     await pet.locator("#pet-voice-draft").fill("Keep the folder, please.");
+    await pet.getByRole("button", { name: "Close voice bubble" }).click();
+    await showCatControls(pet);
+    await pet.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(pet.locator("#pet-voice-draft")).toHaveValue("Keep the folder, please.");
+    expect(await pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase)).toBe(
+      "idle",
+    );
     await pet.screenshot({ path: testInfo.outputPath("pet-review.png") });
-    await pet.getByRole("button", { name: "Send message" }).click();
+    await pet.locator("#pet-voice-draft").press("Enter");
     await expect(page.locator(".message.user")).toContainText("Keep the folder, please.");
     await expect(pet.locator(".pet-voice-reply")).not.toBeEmpty();
     await expect(pet.getByRole("button", { name: "Talk again" })).toBeVisible();
@@ -274,6 +282,20 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     expect(
       await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.enabled),
     ).toBe(true);
+    await page.evaluate(async () => {
+      const settings = (await window.computerCat.voiceSnapshot()).settings;
+      if (settings) await window.computerCat.voiceUpdateSettings({ ...settings, enabled: false });
+    });
+    await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    await showCatControls(pet);
+    await pet.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(pet.getByRole("button", { name: "Set up voice…" })).toBeVisible();
+    expect(await chatVisible()).toBe(false);
+    await pet.getByRole("button", { name: "Set up voice…" }).click();
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   } finally {
     await app.close();
     await checkCleanup(dir);
