@@ -55,7 +55,7 @@ export class VoiceController {
   private download: { id: string; abort: AbortController; task: Promise<void> } | undefined;
   constructor(
     readonly settings: VoiceSettingsStore,
-    private readonly store: VoiceModelStore,
+    private readonly store: Pick<VoiceModelStore, "installed" | "prepare" | "install" | "remove">,
     private readonly runtime: SpeechRecognizer,
     private readonly hooks: Hooks,
     private readonly now = Date.now,

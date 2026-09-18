@@ -1,0 +1,89 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { _electron, expect, test } from "@playwright/test";
+import { DEFAULT_VOICE } from "../../src/shared/voice";
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("local voice records synthetic audio, reviews text, and cancels without sending", async ({}, testInfo) => {
+  const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
+  await writeFile(
+    join(dir, "voice.json"),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+  );
+  const env: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    COMPUTERCAT_RUNTIME: "demo",
+    COMPUTERCAT_SMOKE_TEST: "1",
+    COMPUTERCAT_TEST_USER_DATA: dir,
+    COMPUTERCAT_VOICE_FIXTURE: "1",
+  };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const executable = process.env.COMPUTERCAT_PACKAGED_EXECUTABLE;
+  const app = await _electron.launch({
+    ...(executable ? { executablePath: executable, args: [] } : { args: [resolve(".")] }),
+    env,
+  });
+  try {
+    let page = await app.firstWindow();
+    for (let i = 0; i < 30; i++) {
+      const p = app.windows().find((p) => p.url().includes("view=chat"));
+      if (p) {
+        page = p;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await expect(page.getByRole("button", { name: "Talk", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(page.locator(".voice-controls")).toContainText("Listening", { timeout: 15000 });
+    await expect(page.getByRole("button", { name: "Finish recording" })).toBeEnabled();
+    await expect
+      .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).elapsedMs))
+      .toBeGreaterThan(700);
+    await page.getByRole("button", { name: "Finish recording" }).click();
+    await expect(page.locator("#message-input")).toHaveValue("Do not delete the folder.");
+    await expect(page.locator(".message.user")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("voice-draft.png") });
+    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(page.locator(".voice-controls")).toContainText("Listening");
+    await page.locator("#message-input").fill("Typed while listening.");
+    await expect
+      .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).elapsedMs))
+      .toBeGreaterThan(700);
+    await page.getByRole("button", { name: "Finish recording" }).click();
+    await expect(page.locator("#voice-review-text")).toHaveValue("Do not delete the folder.");
+    await expect(page.locator("#message-input")).toHaveValue("Typed while listening.");
+    await page.getByRole("button", { name: "Insert", exact: true }).click();
+    await expect(page.locator("#message-input")).toHaveValue(
+      "Typed while listening. Do not delete the folder.",
+    );
+    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(page.locator(".voice-controls")).toContainText("Listening");
+    await page.getByRole("button", { name: "Cancel recording" }).click();
+    await expect(page.getByRole("button", { name: "Talk", exact: true })).toBeVisible();
+    await expect(page.locator("#message-input")).toHaveValue(
+      "Typed while listening. Do not delete the folder.",
+    );
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByRole("tab", { name: "Voice", exact: true }).click();
+    await expect(page.getByLabel("Enable voice input")).toBeChecked();
+    await page.screenshot({ path: testInfo.outputPath("voice-options.png") });
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
+    await checkCleanup(dir);
+    await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+});
+
+async function checkCleanup(dir: string): Promise<void> {
+  if (!dir.startsWith(join(tmpdir(), "computercat-voice-smoke-"))) throw Error("Unsafe cleanup");
+}

@@ -27,7 +27,7 @@ import {
   modelSettingsSchema,
   petDragSchema,
 } from "../shared/validation";
-import { sessionSchema } from "../shared/voice";
+import { sessionSchema, VoiceError } from "../shared/voice";
 import { ChatController } from "./chat-controller";
 import { ConversationStore } from "./conversation-store";
 import { ModelController } from "./model-controller";
@@ -293,26 +293,56 @@ else {
           ? join(process.resourcesPath, "voice/bin/cpu/computercat-whisper.exe")
           : join(app.getAppPath(), "resources/voice/bin/cpu/computercat-whisper.exe"),
       );
-      voice = new VoiceController(voiceSettings, voiceStore, recognizer, {
-        conversation: () => controller.snapshot().conversationId ?? "",
-        agentBusy: () => controller.snapshot().busy || disconnecting || quitting,
-        visible: () => !!chat && !chat.isDestroyed() && chat.isVisible() && !chat.isMinimized(),
-        changed: () => {
-          for (const win of BrowserWindow.getAllWindows())
-            if (!win.isDestroyed())
-              win.webContents.send(
-                IPC.voiceChanged,
-                voice.snapshot(trusted.get(win.webContents.id)?.role === "chat"),
-              );
+      const voiceFixture = smoke && process.env.COMPUTERCAT_VOICE_FIXTURE === "1";
+      voice = new VoiceController(
+        voiceSettings,
+        voiceFixture
+          ? {
+              installed: async () => ["base.en", "large-v3-turbo", "silero-v6.2.0"],
+              prepare: async (id) => ({
+                modelId: id as "base.en" | "large-v3-turbo",
+                modelPath: "fixture",
+                vadPath: "fixture",
+              }),
+              install: async () => {
+                throw new VoiceError("download-failed");
+              },
+              remove: async () => {},
+            }
+          : voiceStore,
+        voiceFixture
+          ? {
+              prepare: async () => {},
+              transcribe: async (_pcm, _language, signal) => {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+                signal.throwIfAborted();
+                return "Do not delete the folder.";
+              },
+              dispose: async () => {},
+            }
+          : recognizer,
+        {
+          conversation: () => controller.snapshot().conversationId ?? "",
+          agentBusy: () => controller.snapshot().busy || disconnecting || quitting,
+          visible: () => !!chat && !chat.isDestroyed() && chat.isVisible() && !chat.isMinimized(),
+          changed: () => {
+            for (const win of BrowserWindow.getAllWindows())
+              if (!win.isDestroyed())
+                win.webContents.send(
+                  IPC.voiceChanged,
+                  voice.snapshot(trusted.get(win.webContents.id)?.role === "chat"),
+                );
+          },
+          capture: (request) => chat.webContents.send(IPC.voiceCaptureRequested, request),
+          stop: (request) => {
+            if (chat && !chat.isDestroyed())
+              chat.webContents.send(IPC.voiceCaptureStopped, request);
+          },
+          terminateCapture: () => {
+            if (chat && !chat.isDestroyed()) chat.webContents.forcefullyCrashRenderer();
+          },
         },
-        capture: (request) => chat.webContents.send(IPC.voiceCaptureRequested, request),
-        stop: (request) => {
-          if (chat && !chat.isDestroyed()) chat.webContents.send(IPC.voiceCaptureStopped, request);
-        },
-        terminateCapture: () => {
-          if (chat && !chat.isDestroyed()) chat.webContents.forcefullyCrashRenderer();
-        },
-      });
+      );
       await voice.refresh();
       const permissionOwner = (contents: Electron.WebContents | null) =>
         contents

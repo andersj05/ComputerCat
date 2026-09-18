@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { ActionResult, AppInfo, PetPreferences } from "../../shared/contracts";
 import { DEFAULT_MODEL_SETTINGS } from "../../shared/models";
+import { DEFAULT_VOICE, type VoiceSnapshot, voiceMessages } from "../../shared/voice";
 import { ModelOptions } from "./ModelOptions";
 import { PetArtwork } from "./PetArtwork";
+import { VoiceOptions } from "./voice/VoiceOptions";
 import { WindowCaption } from "./WindowCaption";
 
-const optionTabs = ["cat", "models", "general"] as const;
+const optionTabs = ["cat", "models", "voice", "general"] as const;
 type OptionTab = (typeof optionTabs)[number];
 
 export function OptionsDialog({
   info,
   preferences,
+  voice,
   onApply,
   onClose,
   onShowPet,
@@ -20,6 +23,7 @@ export function OptionsDialog({
 }: {
   info: AppInfo | undefined;
   preferences: PetPreferences;
+  voice: VoiceSnapshot;
   onApply: (preferences: PetPreferences) => Promise<ActionResult>;
   onClose: () => void;
   onShowPet: () => Promise<void>;
@@ -32,6 +36,9 @@ export function OptionsDialog({
   const [saved, setSaved] = useState(preferences);
   const [draftModels, setDraftModels] = useState(info?.models.defaults ?? DEFAULT_MODEL_SETTINGS);
   const [savedModels, setSavedModels] = useState(draftModels);
+  const [draftVoice, setDraftVoice] = useState(voice.settings ?? DEFAULT_VOICE);
+  const [savedVoice, setSavedVoice] = useState(draftVoice);
+  const voiceTab = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -57,7 +64,8 @@ export function OptionsDialog({
     draftModels.source !== savedModels.source ||
     draftModels.codexModel !== savedModels.codexModel ||
     draftModels.reasoning !== savedModels.reasoning;
-  const dirty = dirtyPet || dirtyModels;
+  const dirtyVoice = JSON.stringify(draftVoice) !== JSON.stringify(savedVoice);
+  const dirty = dirtyPet || dirtyModels || dirtyVoice;
 
   async function close() {
     if (info?.models.codex.login) {
@@ -74,7 +82,9 @@ export function OptionsDialog({
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
-    ({ cat: catTab, models: modelsTab, general: generalTab })[initialTab].current?.focus();
+    ({ cat: catTab, models: modelsTab, voice: voiceTab, general: generalTab })[
+      initialTab
+    ].current?.focus();
     return () => element?.close();
   }, [initialTab]);
 
@@ -104,6 +114,16 @@ export function OptionsDialog({
         }
         setSavedModels(draftModels);
       }
+      if (dirtyVoice) {
+        const result = await window.computerCat.voiceUpdateSettings(draftVoice);
+        if (!result.ok) {
+          setError(
+            `${voiceMessages[result.code]}${dirtyPet || dirtyModels ? " Changes to the other tabs were saved." : ""}`,
+          );
+          return;
+        }
+        setSavedVoice(draftVoice);
+      }
       if (closeAfter) await close();
     } catch {
       setError("Couldn't save these settings. Try again.");
@@ -124,7 +144,9 @@ export function OptionsDialog({
 
   function selectTab(next: OptionTab) {
     setTab(next);
-    ({ cat: catTab, models: modelsTab, general: generalTab })[next].current?.focus();
+    ({ cat: catTab, models: modelsTab, voice: voiceTab, general: generalTab })[
+      next
+    ].current?.focus();
   }
 
   return (
@@ -159,7 +181,7 @@ export function OptionsDialog({
                 event.preventDefault();
                 selectTab(
                   optionTabs[
-                    (optionTabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : 2)) % 3
+                    (optionTabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : 3)) % 4
                   ] ?? "cat",
                 );
               }
@@ -196,6 +218,18 @@ export function OptionsDialog({
             <button
               type="button"
               role="tab"
+              ref={voiceTab}
+              id="voice-tab"
+              aria-controls="voice-options"
+              aria-selected={tab === "voice"}
+              tabIndex={tab === "voice" ? 0 : -1}
+              onClick={() => setTab("voice")}
+            >
+              Voice
+            </button>
+            <button
+              type="button"
+              role="tab"
               ref={generalTab}
               id="general-tab"
               aria-controls="general-options"
@@ -205,6 +239,20 @@ export function OptionsDialog({
             >
               General
             </button>
+          </div>
+          <div
+            className="tab-panel"
+            role="tabpanel"
+            id="voice-options"
+            aria-labelledby="voice-tab"
+            hidden={tab !== "voice"}
+          >
+            <VoiceOptions
+              draft={draftVoice}
+              onChange={setDraftVoice}
+              state={voice}
+              disabled={saving}
+            />
           </div>
           <div
             className="tab-panel"
