@@ -18,8 +18,10 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the pixel cat to open chat, or drag the cat itself to move it. Its grip still works too.
-- The buttons beneath the cat open Chat and Options; Stop appears during a reply.
+- Click the pixel cat to make it glow and reveal Chat, Options, and model controls; Stop is
+  available during replies. Click again, press Escape, or choose an action to hide the controls.
+- Drag the cat itself to move it. Otherwise, only the cat is visible.
+- Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
 - The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
   the system reduced-motion setting control motion.
 - Always on top keeps the cat above ordinary windows without taking keyboard focus.

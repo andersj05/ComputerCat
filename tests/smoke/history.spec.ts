@@ -2,7 +2,7 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
-import { sendAndWaitForReply } from "./chat";
+import { sendAndWaitForReply, showCatControls } from "./chat";
 
 async function launch(userData: string) {
   const env: NodeJS.ProcessEnv = {
@@ -64,6 +64,7 @@ test("history survives restart, resumes drafts, and deletes only the chosen conv
     expect(
       await page.evaluate(() => window.computerCat.openConversation("../outside")),
     ).toMatchObject({ ok: false });
+    await showCatControls(app.pet);
     await app.pet.getByRole("button", { name: "Choose model" }).click();
     await expect(page.getByRole("dialog", { name: "Choose model" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("pet-model-picker.png") });

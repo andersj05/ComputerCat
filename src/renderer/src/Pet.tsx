@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
 import { PetArtwork } from "./PetArtwork";
 
@@ -21,6 +21,17 @@ export function Pet({
   modelLabel: string;
   stop: () => void;
 }) {
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const catButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const hide = () => setControlsVisible(false);
+    window.addEventListener("blur", hide);
+    return () => window.removeEventListener("blur", hide);
+  }, []);
+  function act(action: () => void) {
+    setControlsVisible(false);
+    action();
+  }
   const pointer = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [dragError, setDragError] = useState("");
@@ -43,10 +54,16 @@ export function Pet({
           : "";
   return (
     <main
-      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""}`}
+      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setControlsVisible(false);
+          catButton.current?.focus();
+        }
+      }}
     >
       <div className="pet-status-slot" role="status">
-        {status && (
+        {controlsVisible && status && (
           <span className="pet-bubble">
             {snapshot.busy && !error && !dragError && (
               <span className="thinking-dot" aria-hidden="true" />
@@ -58,8 +75,11 @@ export function Pet({
       <button
         type="button"
         className="pet-button"
+        ref={catButton}
+        aria-expanded={controlsVisible}
+        aria-controls="pet-controls"
         onClick={(event) => {
-          if (event.detail === 0) openChat();
+          if (event.detail === 0) setControlsVisible((visible) => !visible);
         }}
         onPointerDown={(event) => {
           if (event.button !== 0 || pointer.current !== null) return;
@@ -78,7 +98,7 @@ export function Pet({
           event.currentTarget.releasePointerCapture(event.pointerId);
           setDragging(false);
           void drag("end").then(({ moved }) => {
-            if (!moved) openChat();
+            if (!moved) setControlsVisible((visible) => !visible);
           });
         }}
         onLostPointerCapture={() => {
@@ -87,22 +107,23 @@ export function Pet({
           setDragging(false);
           void drag("cancel");
         }}
-        aria-label="Open Computer Cat chat"
-        title="Click to chat · Drag to move"
+        aria-label="Show cat controls"
+        title="Click for controls; drag to move"
       >
         <PetArtwork />
       </button>
-      <div className="pet-dock">
-        <div className="pet-handle" title="Drag to move your cat">
-          <span aria-hidden="true" />
-        </div>
-        <button type="button" className="xp-button pet-chat" onClick={openChat}>
+      <div
+        id="pet-controls"
+        className="pet-dock"
+        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+      >
+        <button type="button" className="xp-button pet-chat" onClick={() => act(openChat)}>
           Chat
         </button>
         <button
           type="button"
           className="xp-button pet-options"
-          onClick={openOptions}
+          onClick={() => act(openOptions)}
           aria-label="Cat options"
           title="Cat options"
         >
@@ -112,7 +133,7 @@ export function Pet({
           <button
             type="button"
             className="xp-button pet-stop"
-            onClick={stop}
+            onClick={() => act(stop)}
             aria-label="Stop reply"
           >
             Stop
@@ -122,7 +143,8 @@ export function Pet({
       <button
         type="button"
         className="xp-button pet-model"
-        onClick={openModels}
+        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+        onClick={() => act(openModels)}
         aria-label="Choose model"
         title={`Change model: ${modelLabel}`}
       >
