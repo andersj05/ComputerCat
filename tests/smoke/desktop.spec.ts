@@ -5,6 +5,63 @@ import { _electron, type ElectronApplication, expect, test } from "@playwright/t
 import { IPC } from "../../src/shared/contracts";
 import { composeMessage, showCatControls } from "./chat";
 
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("Markdown replies format while streaming and fit a narrow chat", async ({}, testInfo) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    const publish = async (text: string, busy: boolean) => {
+      await electron.evaluate(
+        ({ BrowserWindow }, { channel, text, busy }) => {
+          BrowserWindow.getAllWindows()
+            .find((win) => win.webContents.getURL().includes("view=chat"))
+            ?.webContents.send(channel, {
+              busy,
+              messages: [
+                {
+                  id: "markdown-fixture",
+                  role: "assistant",
+                  text,
+                  state: busy ? "streaming" : "complete",
+                },
+              ],
+            });
+        },
+        { channel: IPC.changed, text, busy },
+      );
+    };
+    await publish("**Starting", true);
+    await expect(page.locator(".message.assistant")).toContainText("Starting");
+    await publish(
+      "## A small plan\n\n**Bold** and *italic*, with `inline code`.\n\n- First item\n- Second item\n  - Nested item\n\n1. Start\n2. Finish\n\n> A helpful note\n\n```js\nconst greeting = 'Hello';\n```\n\n| Task | Status |\n| --- | --- |\n| Formatting | Done |\n\n![No remote load](https://example.com/image.png)",
+      false,
+    );
+    await expect(page.locator(".markdown-message strong")).toHaveText("Bold");
+    await expect(page.locator(".markdown-message ul li")).toHaveCount(3);
+    await expect(page.locator(".markdown-message ol li")).toHaveCount(2);
+    await expect(page.locator(".markdown-message pre code")).toContainText("const greeting");
+    await expect(page.locator(".markdown-message table")).toBeVisible();
+    await expect(page.locator(".markdown-message img")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("markdown.png") });
+    await electron.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().includes("view=chat"))
+        ?.setSize(500, 420);
+    });
+    await publish(`\`\`\`text\n${"long_code_".repeat(100)}\n\`\`\``, false);
+    expect(
+      await page
+        .locator(".messages")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath("markdown-narrow.png") });
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
 async function launch(userData: string, mode: "demo" | "pi" = "demo") {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
