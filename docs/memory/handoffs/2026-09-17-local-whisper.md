@@ -49,12 +49,12 @@ change is implied by this handoff.
 
 ## Final verification recorded 2026-09-18
 
-- npm run verify: passed; memory, lint, TypeScript, 91 tests across 19 files, production build.
-- npm run test:smoke: passed all 12 source-build desktop tests.
-- npm run voice:build and npm run voice:test-native: passed for portable/AVX2 CPU helpers
+- `npm run verify`: passed; memory, lint, TypeScript, 91 tests across 19 files, production build.
+- `npm run test:smoke`: passed all 12 source-build desktop tests.
+- `npm run voice:build` and `npm run voice:test-native`: passed for portable/AVX2 CPU helpers
   and the separate injected-inference test target. Malformed frames must terminate the helper
   without closing its stdin; oversized sample counts are checked before multiplication.
-- npm run package:dir: passed. All 12 desktop tests passed against the unpacked application;
+- `npm run package:dir`: passed. All 12 desktop tests passed against the unpacked application;
   both voice tests were rerun after the final application fixes, including Talk from the pet.
   The final native-only parser fix was rebuilt, copied into the unpacked resources and checked
   there with malformed frames and real base.en transcription, silence and cancellation.
