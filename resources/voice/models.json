@@ -4,6 +4,7 @@
   "reviewed": "2026-09-18",
   "redirectHosts": [
     "huggingface.co",
+    "us.aws.cdn.hf.co",
     "cdn-lfs.huggingface.co",
     "cdn-lfs-us-1.huggingface.co",
     "cas-bridge.xethub.hf.co"

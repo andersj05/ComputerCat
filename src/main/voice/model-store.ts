@@ -107,7 +107,15 @@ export class VoiceModelStore {
     for (const a of this.assets) {
       try {
         const st = await lstat(await this.path(a));
-        if (st.isFile() && st.size === a.bytes) result.push(a.id);
+        if (
+          st.isFile() &&
+          st.size === a.bytes &&
+          (this.verified.has(a.id) ||
+            (await this.hash(await this.path(a), a, new AbortController().signal)))
+        ) {
+          this.verified.add(a.id);
+          result.push(a.id);
+        }
       } catch {
         /* unavailable */
       }

@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { type Asset, VoiceModelStore } from "../../src/main/voice/model-store";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { type Asset, downloadAsset, VoiceModelStore } from "../../src/main/voice/model-store";
 import { VoiceSettingsStore } from "../../src/main/voice/settings";
 import { DEFAULT_VOICE } from "../../src/shared/voice";
 
@@ -105,5 +105,49 @@ describe("voice model storage and preferences", () => {
     const blocked = new VoiceSettingsStore(join(path, "voice.json"));
     await expect(blocked.update({ ...DEFAULT_VOICE, enabled: true })).rejects.toThrow();
     expect(blocked.snapshot().enabled).toBe(false);
+  });
+});
+
+describe("model download destination boundary", () => {
+  it("rejects redirects to unreviewed hosts before contacting them", async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://unreviewed.example/model" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    try {
+      await expect(
+        downloadAsset("https://huggingface.co/model", new AbortController().signal),
+      ).rejects.toThrow("download-failed");
+      expect(fetcher).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it("accepts the reviewed Hugging Face CDN redirect without credentials", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://us.aws.cdn.hf.co/model" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("bytes"));
+    vi.stubGlobal("fetch", fetcher);
+    try {
+      const stream = await downloadAsset(
+        "https://huggingface.co/model",
+        new AbortController().signal,
+      );
+      for await (const _chunk of stream) {
+      }
+      expect(fetcher.mock.calls[1]?.[1]).toMatchObject({ credentials: "omit", redirect: "manual" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
