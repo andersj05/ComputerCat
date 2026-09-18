@@ -1,7 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-17.
-Check Git and relevant code when resuming; this map does not establish checkout or test results.
+Reviewed: 2026-09-18. Recheck checkout and tests.
 
 ## What exists
 
@@ -9,22 +8,22 @@ Computer Cat is a Windows-first Electron/React/TypeScript desktop companion usin
 SDK behind an application-owned runtime interface. Use the Node version in
 [.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
 
-- The transparent cat supports click-to-chat, body/grip dragging, Chat/Options/Stop controls,
-  blinking, and separate idle/thinking motion. Tray actions and shortcuts show chat and stop replies.
-- Always on top recovers z-order without focus; Find cat brings it to the pointer’s display.
+- The transparent cat supports body dragging, click-to-toggle controls, silhouette glow and
+  idle/thinking motion. Always-on-top recovers without focus; Find cat moves to the pointer display.
+- Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Connections supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
-- Options stages pet size, animation, and always-on-top changes. Apply/OK persists them;
-  Cancel/Escape discards unapplied changes. Saving failures preserve the previous live settings.
+- Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
+- Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
+  The cat's speech bubble shows transcript previews, editable Send and replies without opening chat.
+  Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
+  See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).
 - Project development memory lives in [this directory](README.md). Its entry points are shared
   across supported coding clients and checked by `npm run memory:check`.
 
-User-facing behavior is documented in [README](../../README.md) and
-[XP design](../windows-xp-design.md). Verify desktop behavior with
-[Electron smoke tests](../../tests/smoke/desktop.spec.ts).
-[Codex smoke tests](../../tests/smoke/codex.spec.ts) intercept OAuth and model traffic; they
-consume no subscription usage and cannot establish live account entitlement.
+See [XP design](../windows-xp-design.md) and [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
+[Codex smoke tests](../../tests/smoke/codex.spec.ts) use offline OAuth/model fixtures.
 
 ## Persistence boundaries
 
@@ -37,11 +36,10 @@ consume no subscription usage and cannot establish live account entitlement.
 | Model defaults | Atomic models.json defaults; direct model changes persist per chat | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |
 
-The Pi resource loader returns no discovered agent files, extensions, skills, or prompts;
-all eight built-in Pi tools are enabled (read, write, edit, ls, find, grep, Bash, PowerShell).
-The worker starts in the OS Desktop folder and reports tool activity in chat. Local tools run
-with the user’s OS permissions, as explicitly requested; the worker is not an OS sandbox. Developer memory must not be loaded into the desktop agent.
-See [architecture](../architecture.md) and [Pi isolation tests](../../tests/unit/pi-runtime.test.ts).
+Pi discovers no agent files, extensions, skills or prompts. Its eight built-in file/search/shell
+ tools run with OS user permissions from Desktop and report tool activity. The worker is not
+an OS sandbox. Developer memory is never loaded into the in-app agent. See
+[architecture](../architecture.md) and [Pi tests](../../tests/unit/pi-runtime.test.ts).
 
 ## Find the implementation
 
@@ -53,16 +51,14 @@ See [architecture](../architecture.md) and [Pi isolation tests](../../tests/unit
 | Model setup and resource isolation | [Pi adapter](../../src/agent/pi-runtime.ts), [configuration](../../src/agent/config.ts) | [Pi tests](../../tests/unit/pi-runtime.test.ts) |
 | Codex sign-in, refresh, and model selection | [OAuth](../../src/agent/codex-auth.ts), [model controller](../../src/main/model-controller.ts) | [OAuth tests](../../tests/unit/codex-auth.test.ts), [model tests](../../tests/unit/model-controller.test.ts) |
 | Chat, dialogs, cat, visual tokens | [App](../../src/renderer/src/App.tsx), [Options](../../src/renderer/src/OptionsDialog.tsx), [Pet](../../src/renderer/src/Pet.tsx), [tokens](../../src/renderer/src/tokens.css) | [XP design](../windows-xp-design.md), [desktop smoke](../../tests/smoke/desktop.spec.ts) |
+| Local voice, permissions, downloads, native supervision | [Controller](../../src/main/voice/controller.ts), [capture](../../src/renderer/src/voice/capture.ts), [native evidence](../implementation/whisper/native-evidence.md) | [Voice smoke](../../tests/smoke/voice.spec.ts), [native checks](../../native/whisper-helper/tests/check.mjs) |
 | Builds and release artifacts | [Build](../../electron.vite.config.ts), [packaging](../../electron-builder.yml), [CI](../../.github/workflows/ci.yml) | [Release workflow](../../.github/workflows/release.yml) |
 
 ## Not implemented
 
-Screen capture, computer control, external MCP connections, selected-fact user memory, voice,
+Screen capture, computer control, external MCP connections, selected-fact user memory, speech output,
 credential settings for other providers, code signing, and automatic app updates remain
 future work. The [research plan](../research-and-build-plan.md) discusses these; it is not a
 completion checklist. A worker process isolates crashes but is not an OS security sandbox.
-
-Future user memory needs a storage design with inspection/deletion, retention, migrations,
-corruption recovery, and tests for context selection. Conversation history is a separate feature.
 
 See [handoffs](handoffs/README.md) for unfinished work.

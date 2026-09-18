@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
-import { sendAndWaitForReply } from "./chat";
+import { sendAndWaitForReply, showCatControls } from "./chat";
 
 async function launch(userData: string) {
   const env = Object.fromEntries(
@@ -221,13 +221,12 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     expect(switched.model).toBe("gpt-5.6-sol");
     expect(switched.reasoning).toBe("medium");
     expect(JSON.stringify(switched.input)).toContain("fixture-file-content");
+    await showCatControls(app.pet);
     await app.pet.getByRole("button", { name: "Choose model" }).click();
     const picker = page.getByRole("dialog", { name: "Choose model" });
     await picker.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-terra");
     await picker.getByRole("button", { name: "Done", exact: true }).click();
-    await expect(app.pet.getByRole("button", { name: "Choose model" })).toContainText(
-      "gpt-5.6-terra",
-    );
+    await expect(app.pet.locator(".pet-model")).toContainText("gpt-5.6-terra");
     await page.getByRole("button", { name: "New conversation" }).click();
     await expect(page.locator(".statusbar")).toContainText("gpt-5.6-sol");
     await input.fill("trigger-provider-error");

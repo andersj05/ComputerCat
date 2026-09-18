@@ -7,11 +7,16 @@ import {
   type PetPreferences,
 } from "../../shared/contracts";
 import { activeModelInfo } from "../../shared/models";
+import { voiceMessages } from "../../shared/voice";
 import { HistoryDialog } from "./HistoryDialog";
 import { Icon } from "./Icon";
+import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
+import { PetVoice } from "./voice/PetVoice";
+import { useVoice } from "./voice/useVoice";
+import { VoiceControls, voiceStatus } from "./voice/VoiceControls";
 import { WindowCaption } from "./WindowCaption";
 
 const prompts = [
@@ -30,11 +35,36 @@ export function App() {
     draftRevision.current++;
     setTextState(value);
   }
+  const voice = useVoice(isPet, {
+    conversationId: snapshot.conversationId,
+    text,
+    revision: draftRevision.current,
+    insert: setText,
+  });
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [petVoiceOpen, setPetVoiceOpen] = useState(false);
+  async function startPetVoice() {
+    setError("");
+    try {
+      await window.computerCat.setPetVoiceOpen(true);
+      setPetVoiceOpen(true);
+      if (text || voice.review || voice.busy) return;
+      const result = await window.computerCat.voiceStart();
+      if (!result.ok) setError(voiceMessages[result.code]);
+    } catch {
+      setError("Couldn't start voice input. Try again.");
+    }
+  }
+  async function closePetVoice() {
+    if (voice.busy && voice.snapshot.owner === "pet" && voice.snapshot.sessionId)
+      await window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
+    await window.computerCat.setPetVoiceOpen(false);
+    setPetVoiceOpen(false);
+  }
   const [maximized, setMaximized] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [optionsTab, setOptionsTab] = useState<"cat" | "models">("cat");
+  const [optionsTab, setOptionsTab] = useState<"cat" | "models" | "voice">("cat");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
   const drafts = useRef(new Map<string, string>());
@@ -55,9 +85,9 @@ export function App() {
     let receivedPreferences = false;
     let receivedWindow = false;
     let latestModels: AppInfo["models"] | undefined;
-    const unsubscribeOptions = window.computerCat.onOptionsRequested(() => {
+    const unsubscribeOptions = window.computerCat.onOptionsRequested((tab) => {
       if (!isPet) {
-        setOptionsTab("cat");
+        setOptionsTab(tab ?? "cat");
         setModelsOpen(false);
         setHistoryOpen(false);
         setOptionsOpen(true);
@@ -138,7 +168,17 @@ export function App() {
     }
   }
 
+  useEffect(() => {
+    if (
+      (optionsOpen || historyOpen || modelsOpen || confirmClear) &&
+      voice.snapshot.sessionId &&
+      voice.busy
+    )
+      void window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
+  }, [optionsOpen, historyOpen, modelsOpen, confirmClear, voice.busy, voice.snapshot.sessionId]);
+
   async function send() {
+    if (voice.busy) return;
     if (!text.trim() || snapshot.busy || pendingSend.current || clearing || !info) return;
     const draft = text;
     const revision = draftRevision.current;
@@ -169,6 +209,7 @@ export function App() {
       else {
         setError("");
         setText("");
+        if (snapshot.conversationId) voice.dropReview(snapshot.conversationId);
         followReply.current = true;
       }
     } catch {
@@ -181,7 +222,7 @@ export function App() {
 
   function newChat() {
     if (snapshot.busy || sending || clearing || !info) return;
-    if (text.trim()) setConfirmClear(true);
+    if (text.trim() || voice.review.trim()) setConfirmClear(true);
     else {
       setError("");
       void clear();
@@ -193,7 +234,7 @@ export function App() {
   const desktop = () =>
     void action(() => window.computerCat.hideChat(), "Couldn't hide the chat window.");
   const ready = Boolean(info);
-  const working = snapshot.busy || sending;
+  const working = snapshot.busy || sending || voice.busy;
   const modeLabel = !info
     ? "Connecting…"
     : info.mode === "demo"
@@ -215,6 +256,27 @@ export function App() {
         modelLabel={info?.mode === "demo" ? "Local demo" : (info?.model ?? "Choose model")}
         openModels={() =>
           void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
+        }
+        voiceStatus={voiceStatus(voice.snapshot)}
+        voiceBusy={voice.busy}
+        talk={() => void startPetVoice()}
+        voicePanel={
+          petVoiceOpen ? (
+            <PetVoice
+              state={voice.snapshot}
+              chat={snapshot}
+              text={text}
+              setText={setText}
+              review={voice.review}
+              setReview={voice.setReview}
+              send={() => void send()}
+              sending={sending}
+              error={error}
+              close={() => void closePetVoice()}
+              start={() => void startPetVoice()}
+              options={() => void window.computerCat.openOptions("voice")}
+            />
+          ) : undefined
         }
         stop={stop}
       />
@@ -351,14 +413,18 @@ export function App() {
                   <span className="message-name">
                     {message.role === "assistant" ? "Computer Cat" : "You"}:
                   </span>
-                  <p>
-                    {message.text ||
-                      (message.state === "streaming"
-                        ? "…"
-                        : message.state === "stopped"
-                          ? "Reply stopped."
-                          : "No reply received. Try again.")}
-                  </p>
+                  {message.role === "assistant" && message.text ? (
+                    <MarkdownMessage text={message.text} />
+                  ) : (
+                    <p>
+                      {message.text ||
+                        (message.state === "streaming"
+                          ? "…"
+                          : message.state === "stopped"
+                            ? "Reply stopped."
+                            : "No reply received. Try again.")}
+                    </p>
+                  )}
                   {message.tools?.length ? (
                     <ul className="tool-activity" aria-label="Tool activity">
                       {message.tools.map((tool) => (
@@ -382,6 +448,22 @@ export function App() {
           )}
           <div ref={end} />
         </section>
+        <VoiceControls
+          state={voice.snapshot}
+          busy={voice.busy}
+          agentBusy={snapshot.busy || sending}
+          review={voice.review}
+          onReview={voice.setReview}
+          onInsert={() => {
+            const combined = text ? `${text.trimEnd()} ${voice.review}` : voice.review;
+            if (combined.length > 6000) {
+              setError("Edit the transcript so the combined message fits 6,000 characters.");
+              return;
+            }
+            setText(combined);
+            voice.setReview("");
+          }}
+        />
         <form
           className="composer"
           onSubmit={(event) => {
@@ -413,7 +495,7 @@ export function App() {
               {text.length > 5500 && <span>{text.length.toLocaleString()} / 6,000</span>}
             </div>
           </div>
-          {snapshot.busy ? (
+          {snapshot.busy || voice.busy ? (
             <button
               type="button"
               className="xp-button send-button"
@@ -426,7 +508,7 @@ export function App() {
             <button
               type="submit"
               className="xp-button default-button send-button"
-              disabled={!text.trim() || sending || clearing || !ready}
+              disabled={!text.trim() || sending || clearing || voice.busy || !ready}
               aria-label="Send message"
             >
               Send
@@ -452,6 +534,7 @@ export function App() {
           info={info}
           busy={snapshot.busy}
           preferences={preferences}
+          voice={voice.snapshot}
           onApply={(next) => window.computerCat.updatePreferences(next)}
           onClose={() => setOptionsOpen(false)}
           onShowPet={() => window.computerCat.showPet()}
@@ -474,6 +557,7 @@ export function App() {
           }}
           onDeleted={(id) => {
             drafts.current.delete(id);
+            voice.dropReview(id);
             if (id === snapshot.conversationId) setText("");
           }}
         />

@@ -1,8 +1,7 @@
 # Shared project memory
 
-This is the versioned memory for agents and people developing Computer Cat. It survives new
-sessions, clones, and client changes through Git. It contains reviewed project knowledge;
-the desktop application's conversation history is a separate feature.
+Versioned development memory travels through Git across sessions and clients. The desktop
+application's conversation history is a separate feature.
 
 ## Read just enough to start
 
@@ -20,6 +19,7 @@ does not establish that a different revision passes.
 | A recurring failure and its remedy | [Known pitfalls](gotchas.md) | A remedy is verified or becomes obsolete |
 | Resume unfinished work | [Handoffs](handoffs/README.md) | A task pauses or transfers ownership |
 | Original proposals and alternatives | [Research plan](../research-and-build-plan.md) | New research is explicitly undertaken |
+| Speech and desktop work | [Research](../voice-and-desktop-research.md), [Whisper plan](../implementation/whisper/README.md) | Approach changes |
 | Findings from the setup audit | [Memory audit](../audits/2026-09-17-agent-memory.md) | The audit's validation results are recorded |
 
 For targeted retrieval, use `rg -n 'topic' docs/memory docs/architecture.md`, then inspect the

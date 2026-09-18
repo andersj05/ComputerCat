@@ -22,3 +22,8 @@ owner, who reconciles conflicting observations and integrates durable changes.
 Before finishing, promote useful facts into their topic documents and remove the resolved
 handoff in the same change. Git preserves its history. Search this directory for a named task;
 do not infer all current work from the files present in one branch.
+
+## Release qualification
+
+- [Local Whisper speech input](2026-09-17-local-whisper.md): Windows CPU implementation and automated tests
+  are complete on `feat/local-whisper-input`; microphone/clean-machine release qualification remains.

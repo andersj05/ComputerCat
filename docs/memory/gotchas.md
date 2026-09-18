@@ -119,3 +119,20 @@ history switch completes. See [Playwright actionability](https://playwright.dev/
 A disabled Apply button and a cleared error can also mean a save is in flight, not finished.
 After retrying a failed preference write, poll the persisted preference before asserting the
 new state. The packaged Windows run exposed this in the Options retry smoke test.
+
+
+## Speech model CDN and Windows native paths
+
+Reviewed: 2026-09-18. Scope: local Whisper input.
+
+Hugging Face redirects the pinned base.en asset to us.aws.cdn.hf.co. An allowlist that only
+includes older LFS/Xet hosts rejects the download before receiving bytes. Adding this exact
+observed host fixed real cancel/retry/verification/offline-reuse checks; continue to reject
+arbitrary redirect destinations and verify SHA-256. See [model storage](../../src/main/voice/model-store.ts).
+
+Upstream narrow-path file initialization cannot cover all Windows usernames. The
+[native helper](../../native/whisper-helper/src/main.cpp) uses the model-loader API backed by
+UTF-8-to-wide Windows file opening. Real inference from Unicode/space paths passes with a
+minimal PATH. Portable Turbo can exceed the inference deadline; guarded AVX2 improves CPU
+performance, and the smaller model remains an explicit choice. See
+[native evidence](../implementation/whisper/native-evidence.md).

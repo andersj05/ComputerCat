@@ -1,4 +1,22 @@
+import type { VoiceAPI as importVoiceAPI } from "./voice";
 export const IPC = {
+  voiceSnapshot: "cat:voiceSnapshot",
+  voiceStart: "cat:voiceStart",
+  voiceCaptureStarted: "cat:voiceCaptureStarted",
+  voiceAppend: "cat:voiceAppend",
+  voiceRequestFinish: "cat:voiceRequestFinish",
+  voiceFinish: "cat:voiceFinish",
+  voiceCancel: "cat:voiceCancel",
+  voiceCaptureFailed: "cat:voiceCaptureFailed",
+  voiceCaptureReleased: "cat:voiceCaptureReleased",
+  voiceResultConsumed: "cat:voiceResultConsumed",
+  voiceUpdateSettings: "cat:voiceUpdateSettings",
+  voiceDownloadModel: "cat:voiceDownloadModel",
+  voiceCancelDownload: "cat:voiceCancelDownload",
+  voiceRemoveModel: "cat:voiceRemoveModel",
+  voiceChanged: "cat:voiceChanged",
+  voiceCaptureRequested: "cat:voiceCaptureRequested",
+  voiceCaptureStopped: "cat:voiceCaptureStopped",
   info: "cat:info",
   snapshot: "cat:snapshot",
   send: "cat:send",
@@ -14,6 +32,7 @@ export const IPC = {
   openOptions: "cat:open-options",
   optionsRequested: "cat:options-requested",
   dragPet: "cat:drag-pet",
+  petVoiceOpen: "cat:pet-voice-open",
   hideChat: "cat:hide-chat",
   minimizeChat: "cat:minimize-chat",
   toggleMaximizeChat: "cat:toggle-maximize-chat",
@@ -89,7 +108,7 @@ export const DEFAULT_PREFERENCES: PetPreferences = {
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
-export interface ComputerCatAPI {
+export interface ComputerCatAPI extends importVoiceAPI {
   info(): Promise<AppInfo>;
   snapshot(): Promise<ChatSnapshot>;
   send(request: SendRequest): Promise<ActionResult>;
@@ -102,9 +121,10 @@ export interface ComputerCatAPI {
   openModels(): Promise<void>;
   onModelsRequested(listener: () => void): () => void;
   openChat(): Promise<void>;
-  openOptions(): Promise<void>;
-  onOptionsRequested(listener: () => void): () => void;
+  openOptions(tab?: "voice"): Promise<void>;
+  onOptionsRequested(listener: (tab?: "voice") => void): () => void;
   dragPet(phase: "start" | "move" | "end" | "cancel"): Promise<{ moved: boolean }>;
+  setPetVoiceOpen(open: boolean): Promise<void>;
   hideChat(): Promise<void>;
   minimizeChat(): Promise<void>;
   toggleMaximizeChat(): Promise<void>;

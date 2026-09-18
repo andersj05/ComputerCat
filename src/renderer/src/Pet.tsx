@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
 import { PetArtwork } from "./PetArtwork";
 
@@ -11,6 +11,10 @@ export function Pet({
   openModels,
   modelLabel,
   stop,
+  talk,
+  voiceStatus,
+  voiceBusy,
+  voicePanel,
 }: {
   snapshot: ChatSnapshot;
   preferences: PetPreferences;
@@ -20,7 +24,22 @@ export function Pet({
   openModels: () => void;
   modelLabel: string;
   stop: () => void;
+  talk: () => void;
+  voiceStatus: string;
+  voiceBusy: boolean;
+  voicePanel?: ReactNode;
 }) {
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const catButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const hide = () => setControlsVisible(false);
+    window.addEventListener("blur", hide);
+    return () => window.removeEventListener("blur", hide);
+  }, []);
+  function act(action: () => void) {
+    setControlsVisible(false);
+    action();
+  }
   const pointer = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [dragError, setDragError] = useState("");
@@ -34,8 +53,8 @@ export function Pet({
   }
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
   const status =
-    error || dragError
-      ? error || dragError
+    error || dragError || voiceStatus
+      ? error || dragError || voiceStatus
       : snapshot.busy
         ? "Thinking…"
         : lastReply?.state === "error"
@@ -43,10 +62,24 @@ export function Pet({
           : "";
   return (
     <main
-      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""}`}
+      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
+      style={{
+        position: "absolute",
+        right: 0,
+        bottom: 0,
+        width: { small: 148, medium: 188, large: 228 }[preferences.size],
+        height: { small: 244, medium: 298, large: 352 }[preferences.size],
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setControlsVisible(false);
+          catButton.current?.focus();
+        }
+      }}
     >
+      {voicePanel}
       <div className="pet-status-slot" role="status">
-        {status && (
+        {!voicePanel && (controlsVisible || voiceBusy) && status && (
           <span className="pet-bubble">
             {snapshot.busy && !error && !dragError && (
               <span className="thinking-dot" aria-hidden="true" />
@@ -58,8 +91,11 @@ export function Pet({
       <button
         type="button"
         className="pet-button"
+        ref={catButton}
+        aria-expanded={controlsVisible}
+        aria-controls="pet-controls"
         onClick={(event) => {
-          if (event.detail === 0) openChat();
+          if (event.detail === 0) setControlsVisible((visible) => !visible);
         }}
         onPointerDown={(event) => {
           if (event.button !== 0 || pointer.current !== null) return;
@@ -78,7 +114,7 @@ export function Pet({
           event.currentTarget.releasePointerCapture(event.pointerId);
           setDragging(false);
           void drag("end").then(({ moved }) => {
-            if (!moved) openChat();
+            if (!moved) setControlsVisible((visible) => !visible);
           });
         }}
         onLostPointerCapture={() => {
@@ -87,32 +123,50 @@ export function Pet({
           setDragging(false);
           void drag("cancel");
         }}
-        aria-label="Open Computer Cat chat"
-        title="Click to chat · Drag to move"
+        aria-label="Show cat controls"
+        title="Click for controls; drag to move"
       >
         <PetArtwork />
       </button>
-      <div className="pet-dock">
-        <div className="pet-handle" title="Drag to move your cat">
-          <span aria-hidden="true" />
-        </div>
-        <button type="button" className="xp-button pet-chat" onClick={openChat}>
+      <div
+        id="pet-controls"
+        className="pet-dock"
+        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+      >
+        <button type="button" className="xp-button pet-chat" onClick={() => act(openChat)}>
           Chat
         </button>
         <button
           type="button"
           className="xp-button pet-options"
-          onClick={openOptions}
+          onClick={() => act(openOptions)}
           aria-label="Cat options"
           title="Cat options"
         >
           ⋯
         </button>
-        {snapshot.busy && (
+        <button
+          type="button"
+          className="xp-button pet-talk"
+          onClick={() => act(talk)}
+          disabled={snapshot.busy || voiceBusy}
+        >
+          <svg width="11" height="13" viewBox="0 0 12 16" aria-hidden="true" className="mic-icon">
+            <rect x="4" y="1" width="4" height="8" rx="2" fill="currentColor" />
+            <path
+              d="M2 7v1a4 4 0 0 0 8 0V7M6 12v3M3 15h6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>{" "}
+          Talk
+        </button>
+        {(snapshot.busy || voiceBusy) && (
           <button
             type="button"
             className="xp-button pet-stop"
-            onClick={stop}
+            onClick={() => act(stop)}
             aria-label="Stop reply"
           >
             Stop
@@ -122,7 +176,8 @@ export function Pet({
       <button
         type="button"
         className="xp-button pet-model"
-        onClick={openModels}
+        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+        onClick={() => act(openModels)}
         aria-label="Choose model"
         title={`Change model: ${modelLabel}`}
       >

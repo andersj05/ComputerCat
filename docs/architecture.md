@@ -2,11 +2,39 @@
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
 a local demo mode that works without credentials. Screen capture, mouse/keyboard control,
-external MCP servers, selected-fact user memory, and voice are later features, not implicit privileges.
+external MCP servers and selected-fact user memory are later features, not implicit privileges.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
 not supply the app’s conversation history. Keep these two forms of memory separate when adding features.
+
+Local speech input (reviewed 2026-09-18) follows the
+[Whisper design](implementation/whisper/README.md). The trusted main frame that starts Talk (chat or cat) owns an
+AudioWorklet and microphone grant. A [main controller](../src/main/voice/controller.ts)
+serializes sessions against Send/history/model changes, validates PCM and releases capture
+before final inference. Both Electron permission handlers require the exact initiating window URL, main frame,
+audio-only request and active grant. Capture IPC also verifies the initiating window.
+A missing cleanup acknowledgment crashes/reloads the
+capture renderer after two seconds; this can lose unsent drafts, like an ordinary renderer crash.
+
+The [supervisor](../src/main/voice/whisper-runtime.ts) starts a persistent native helper over
+private pipes with an allowlisted environment. Portable and guarded AVX2 CPU builds share
+whisper.cpp 1.9.4; no CUDA backend is distributed. The helper resets linguistic context,
+performs Silero VAD and returns bounded text. During recording the controller runs at most one
+provisional pass at a time, after four seconds of new audio. Finish waits for that pass before
+final recognition; cancellation suppresses both results. It has no microphone, credentials or network
+service. stdin EOF triggers cooperative abort and a hard exit deadline. Main also enforces
+load/inference timeouts and waits for exit before replacement. Enabled, installed models preload
+at startup and after voice settings are applied without opening a microphone. Idle models unload after five minutes.
+
+[Model storage](../src/main/voice/model-store.ts) streams explicit, bounded HTTPS downloads,
+checks fixed catalogue lengths and SHA-256, then renames a same-volume partial. Installed
+files are verified once per run. Symlinks/junction ancestors are rejected. Voice preferences
+live in voice.json, disabled by default. Audio is memory-only; main retains a transcript until
+React commits composer/review ownership. Pet snapshots exclude settings, downloads and chat-origin text.
+The existing text-only agent protocol and Codex authentication remain unchanged. See
+[native evidence](implementation/whisper/native-evidence.md) for verified behavior and remaining
+real-microphone/clean-machine gates.
 
 ```text
 Sandboxed React renderer
@@ -28,8 +56,9 @@ Sandboxed React renderer
 
 The renderer is sandboxed with context isolation and no Node integration. It can request
 only named application operations. Main validates both sender identity and arguments. Remote
-navigation, new windows, and browser permission requests are denied. Model output is rendered
-as plain text. The app never imports extensions or instructions discovered in arbitrary folders.
+navigation and new windows are denied. Browser permissions are denied except the narrow
+session-owner microphone grant described above. Model output is rendered as Markdown through React elements, with raw HTML skipped,
+images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools, and native Pi sessions are saved per conversation.
@@ -88,7 +117,7 @@ chat window. Only the chat renderer can request those controls or change compani
 The companion can open chat or Options, stop a reply, and request a drag phase. Only the pet
 renderer can initiate dragging; main validates the phase, reads desktop cursor coordinates,
 uses a five-DIP movement threshold, and clamps its own window to a display work area. Cancellation,
-hide, blur, reload, and a thirty-second gesture limit prevent stale drags from opening chat.
+hide, blur, reload, and a thirty-second gesture limit prevent stale drags from revealing controls.
 No generic window or IPC interface is exposed.
 
 Pet size, always-on-top, and animation are saved in their own preference file. Main validates a strict
@@ -101,7 +130,7 @@ failure leaves the draft available to retry without changing the live cat.
 
 The cat retains its original transparent silhouette. Size changes stay within the current
 display work area. The cat body uses pointer capture and the narrow drag bridge; native drag
-regions remain on its grip and the chat caption. Renderer code never accesses the OS. Find cat
+regions remain on the chat caption. Renderer code never accesses the OS. Find cat
 places the pet inside the display under the pointer and shows it without activating it. Display
 changes re-clamp its bounds. Position is session-only.
 

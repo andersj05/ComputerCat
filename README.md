@@ -18,8 +18,10 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the pixel cat to open chat, or drag the cat itself to move it. Its grip still works too.
-- The buttons beneath the cat open Chat and Options; Stop appears during a reply.
+- Click the pixel cat to make it glow and reveal Chat, Options, and model controls; Stop is
+  available during replies. Click again, press Escape, or choose an action to hide the controls.
+- Drag the cat itself to move it. Otherwise, only the cat is visible.
+- Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
 - The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
   the system reduced-motion setting control motion.
 - Always on top keeps the cat above ordinary windows without taking keyboard focus.
@@ -39,8 +41,45 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
 computer control, external MCP connections, and long-term memory are not implemented yet.**
+Local Whisper speech input is available on Windows x64; see setup below and the
+[implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Local voice input (Windows x64)
+
+1. Open **Options → Voice**, choose Turbo (multilingual, 1.51 GiB) or Base English (141 MiB),
+   and click **Download model**. A small Silero speech detector is included. Download and
+   Remove take effect immediately; downloads can be cancelled and restarted.
+2. Check **Enable voice input**, choose English or automatic detection for Turbo, and Apply.
+   Voice starts disabled. Installed weights prepare in the background when enabled and on startup;
+   this never opens the microphone. The model unloads after five minutes idle.
+3. Click **Talk** on the cat to open its speech bubble without opening chat. Wait for **Listening**,
+   speak, then choose **Finish recording**. Provisional text updates during recording as local
+   recognition completes. Recordings are limited to two minutes.
+4. Edit the transcript and **Send message** (or Enter) in the bubble; the reply appears there too.
+   Closing the bubble cancels recording and keeps an already reviewed draft for this app run.
+   **Talk** in chat still places the transcript in its composer. Concurrent edits use **Insert**
+   or **Discard**. Nothing is sent automatically.
+
+**Cancel recording**, Escape, Stop, or hiding/minimizing the recording's window discards active recognition.
+Conversation/model changes, Options, sleep, screen lock and quit also stop capture.
+Audio and unsent transcripts remain in memory. Sent text follows normal chat retention.
+Speech is transcribed on this computer; sending the text uses the selected connection.
+
+Auto uses a CPU helper, selecting the AVX2 build when the CPU and Windows support it.
+CUDA is not included in this build. Turbo can be slow on CPU; choose Base English for a
+smaller, faster English option. Previews arrive in passes after at least four seconds of audio;
+they may lag on slower CPUs and can change when you finish. A portable Turbo trial exceeded the two-minute transcription
+limit; the selected model is never silently replaced. Real microphone accuracy, clean-machine
+installation, and broader latency evaluation remain [release checks](docs/memory/handoffs/2026-09-17-local-whisper.md).
+
+Developers need CMake and Visual Studio C++ Build Tools with the Windows SDK, then run
+`npm run voice:build` once before using voice or packaging. The build verifies pinned source
+archives and stages private executables; end users need no compiler, Python, FFmpeg, CUDA
+kit or speech API key. `npm run voice:test-native` tests native framing and cancellation
+without model downloads. Weights are explicitly installed through Options and are excluded
+from source control and the installer.
 
 ## Connect your Codex subscription
 
@@ -108,6 +147,8 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run verify` | Memory checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
 | `npm run format` | Apply formatting and safe lint fixes |
+| `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
+| `npm run voice:test-native` | Offline native protocol and cancellation tests |
 | `npm run package:dir` | Build an unpacked desktop application |
 | `npm run package:win` | Build an unsigned Windows NSIS installer |
 

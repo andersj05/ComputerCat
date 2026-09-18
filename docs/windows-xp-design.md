@@ -16,9 +16,10 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 - One status bar reports activity and the current mode. Put details in Options instead of
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
-- The desktop cat shows no idle caption. Click it to chat; drag its body or grip to move it.
-  Keep Chat and Options buttons beneath it, with Stop alongside them during a reply.
-  A narrow model button beneath the dock shows the current model and opens its selector.
+- The desktop shows only the cat until clicked. Clicking toggles a silhouette glow and reveals
+  Chat, Talk, Options, Stop during replies or recording, and the model selector. Escape, window blur, or choosing
+  an action hides the controls. Drag the body to move it; there is no separate grip.
+  Keep the artwork size and position stable when controls appear.
 - Animate the original artwork with planted boots, gentle breathing, head movement, and blinks.
   Thinking has a distinct pose and status indicator. Pause motion while dragging; disable it
   for reduced motion or when Animate cat is unchecked. Preview staged animation in Options.
@@ -29,7 +30,7 @@ Use the same blue caption, cream buttons, dotted keyboard focus, green checks, b
 legends, and orange selected-tab edge throughout. Caption buttons perform native window
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
-Options is an XP property sheet with Desktop cat, Models, and General tabs. Stage changes until Apply
+Options is an XP property sheet with Desktop cat, Models, Voice, and General tabs. Stage changes until Apply
 or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
 keep the dialog and draft open, show the error there, and leave the running cat unchanged.
 Models uses native select controls for the default connection, model, and reasoning. Saving a
@@ -47,6 +48,23 @@ with the same immediate selectors as the chat window; Connections opens Options 
 The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep a stable height.
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
+
+Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
+Finish recording and Cancel recording; a persistent Listening label appears on both chat
+and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
+Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Download/Remove are explicit
+immediate operations with size/progress. The panel scrolls within the existing property sheet.
+See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
+[smoke coverage](../tests/smoke/voice.spec.ts).
+
+Talk on the desktop cat opens a cream speech balloon above the original artwork, keeping
+chat hidden and the cat's size/foot position stable except when fitting the display work area.
+Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
+Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
+Finish releases the microphone and produces an editable message; only Send submits it.
+The reply stays in the balloon. Close cancels capture but keeps an already reviewed draft
+in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
+Installed weights prepare in the background when enabled; first-run downloads remain explicit.
 
 ## References
 

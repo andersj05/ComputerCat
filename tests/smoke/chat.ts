@@ -22,3 +22,9 @@ export async function sendAndWaitForReply(page: Page, text: string) {
   await expect(page.getByRole("textbox", { name: "Message Computer Cat" })).toHaveValue("");
   return reply;
 }
+
+export async function showCatControls(pet: Page) {
+  const toggle = pet.getByRole("button", { name: "Show cat controls" });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}

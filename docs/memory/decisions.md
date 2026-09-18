@@ -132,3 +132,47 @@ license granted in LICENSE. Dependencies retain their own licenses.
 
 Evidence: [license](../../LICENSE), [package metadata](../../package.json),
 [lockfile](../../package-lock.json), and [packaging](../../electron-builder.yml).
+
+## D009: Use local Whisper for the first speech input
+
+Status: implemented for Windows CPU; reviewed 2026-09-18. Supersedes the cloud-first input
+proposal in [voice research](../voice-and-desktop-research.md). Release evaluation is incomplete.
+
+Use Whisper `large-v3-turbo` through `whisper.cpp` for local transcription with no speech API
+key or per-minute service charge. Keep existing Pi/Codex reasoning and authentication. The
+reason is the user's choice of a free local input method after comparing speech options.
+
+The [implementation](../implementation/whisper/README.md) uses a persistent, supervised
+native helper, bounded session-owned microphone capture, explicit verified model downloads and
+editable transcripts sent through the existing composer. whisper.cpp 1.9.4, weights and
+Silero 6.2.0 are pinned by full revisions and verified SHA-256. The CPU build has a portable
+fallback plus a CPUID/OS-guarded AVX2 variant: portable Turbo exceeded the inference deadline
+in a local trial, while AVX2 completed. CPU is the actual backend in Auto. CUDA configuration
+failed without a toolkit and is explicitly unsupported in this distribution. The tradeoff
+preserves offline use without installing drivers or tools on end-user machines. See
+[native evidence](../implementation/whisper/native-evidence.md); broad accuracy/latency and
+clean-machine tests remain release gates.
+
+Consequences: native Windows build/distribution and sizeable model downloads become project
+responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation
+retention. Speech output, screenshots and desktop control remain independent future scope.
+No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
+[contracts](../implementation/whisper/contracts.md) and [delivery gates](../implementation/whisper/delivery.md).
+
+## D010: Keep desktop voice beside the cat
+
+Status: adopted 2026-09-18. Supersedes the pet-to-chat routing in the initial Whisper plan.
+
+The user's Talk gesture chooses the trusted capture window. Cat-origin voice stays in a
+compact balloon with provisional text, Finish/Cancel, an editable draft, explicit Send and
+the assistant's reply. This avoids the context switch into chat while preserving review
+before the agent acts. Each renderer retains its own unsent drafts; only sent text is shared.
+Previews serialize with final inference and never become an agent message automatically.
+
+Installed, enabled weights preload on startup and after applying voice settings without a
+microphone grant. Keep the five-minute idle unload to bound memory use, so Talk after a long
+idle can still require preparation. No automatic download, model replacement, cloud fallback
+or always-listening mode is introduced. CPU recognition latency remains model-dependent.
+
+Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/renderer/src/voice/PetVoice.tsx),
+[boundary tests](../../tests/unit/voice-controller.test.ts) and [Electron checks](../../tests/smoke/voice.spec.ts).

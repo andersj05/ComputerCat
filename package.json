@@ -28,13 +28,17 @@
     "test:smoke": "npm run build && playwright test",
     "verify": "npm run memory:check && npm run lint && npm run typecheck && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
-    "package:win": "npm run build && electron-builder --win nsis --publish never"
+    "package:win": "npm run build && electron-builder --win nsis --publish never",
+    "voice:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-whisper-helper.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-whisper-helper.ps1 -Avx2",
+    "voice:test-native": "node native/whisper-helper/tests/check.mjs && node native/whisper-helper/tests/lifecycle.mjs"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "0.85.1",
     "@earendil-works/pi-coding-agent": "0.85.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
