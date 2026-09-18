@@ -44,3 +44,10 @@ minimum-size options, and existing Codex/history/pet workflows. Native injected-
 tests exercise cancellation during load/decoding and EOF during uncooperative loading.
 The test engine is a separate executable excluded from the installer. No live microphone
 was opened. These checks do not establish a clean-machine install or corpus-level accuracy.
+
+Final verification at implementation commit bd7f0c8: 91 offline tests pass across 19 files,
+with lint/types/build/memory checks. The source and unpacked-app desktop suites each passed
+12 tests; both packaged voice flows were rechecked after application fixes. Native malformed
+frame tests keep stdin open to prove rejection, including sample-count overflow. A real Turbo
+load-cancel trial (abort at 100 ms) completed cleanup by 874 ms from start; active inference
+cancellation completed in 109 ms from abort. No p50/p95 claim follows from these single trials.

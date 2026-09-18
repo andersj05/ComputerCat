@@ -4,7 +4,7 @@ Status: Windows CPU implementation and automated integration complete; release q
 Updated: 2026-09-18
 Branch: `feat/local-whisper-input`
 Base: current `origin/dev` at `2acff1b`; preparation commits through `494f8b7` integrated explicitly
-Implementation commits: `b36a684` through `7434ff0`, followed by documentation/verification commits
+Implementation commits: `b36a684` through `bd7f0c8`, followed by the final verification note
 
 ## Implemented
 
@@ -46,6 +46,21 @@ Check Git status and the final verification summary before resuming; do not trea
 as proof that subsequent changes pass. Build outputs and models are ignored, never committed.
 No PR, remote push, merge, release publication, user microphone grant or global configuration
 change is implied by this handoff.
+
+## Final verification recorded 2026-09-18
+
+- npm run verify: passed; memory, lint, TypeScript, 91 tests across 19 files, production build.
+- npm run test:smoke: passed all 12 source-build desktop tests.
+- npm run voice:build and npm run voice:test-native: passed for portable/AVX2 CPU helpers
+  and the separate injected-inference test target. Malformed frames must terminate the helper
+  without closing its stdin; oversized sample counts are checked before multiplication.
+- npm run package:dir: passed. All 12 desktop tests passed against the unpacked application;
+  both voice tests were rerun after the final application fixes, including Talk from the pet.
+  The final native-only parser fix was rebuilt, copied into the unpacked resources and checked
+  there with malformed frames and real base.en transcription, silence and cancellation.
+- Real Turbo runtime cancellation: a load aborted at 100 ms had finished cleanup by 874 ms
+  from start; active inference stopped in 109 ms after abort. These are single local trials.
+- No live microphone, paid model API, clean-machine installer or CUDA inference was tested.
 
 ## Remaining release gates and next action
 

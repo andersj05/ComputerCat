@@ -121,14 +121,14 @@ Suggested commit: `feat: add local dictation controls and transcript review`.
   repository's pinned action/dependency conventions. Keep helper resources outside ASAR.
 - [x] Add packaged native protocol smoke tests without real model downloads and UI smoke tests
   using synthetic capture. Smoke mode must not touch the host microphone or user model cache.
-- [ ] Run the documented project verification commands. Fix regressions in ordinary chat,
+- [x] Run the documented project verification commands. Fix regressions in ordinary chat,
   Codex fixtures, preferences/history, pet controls and shutdown.
 - [ ] Perform the separate real-engine and microphone evaluation below with a user-controlled
   test session. Record exact engine/model/backend and measured latency; do not infer a result
   from a GPU model name or generic benchmark.
 - [ ] Check an unpacked build and installer on clean Windows x64 without developer tools;
   verify CPU, model download cancellation/retry, offline reuse, upgrade and uninstall behavior.
-- [ ] Update README setup/use, architecture, current state, XP guide, third-party notices,
+- [x] Update README setup/use, architecture, current state, XP guide, third-party notices,
   decisions and supported-platform limitations to match shipped behavior. Resolve/remove the
   task handoff only after useful remaining findings have moved into durable docs.
 
