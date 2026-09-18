@@ -4,6 +4,10 @@ This is historical research and a proposed sequence, not the current implementat
 See the maintained [current-state snapshot](memory/current-state.md) and [architecture](architecture.md)
 for delivered capabilities and boundaries.
 
+Follow-up research reviewed 2026-09-17: [voice, screen context, and computer control](voice-and-desktop-research.md).
+It compares speech providers and local alternatives, maps implementation gaps, and refines the
+proposed Cua integration choice using current SDK guidance. Both documents remain proposals.
+
 Research date: September 16, 2026. Assumption: Windows is the first target, with other operating systems possible later. This is an architecture recommendation based on official documentation, source files, and release notes. No framework or desktop driver was installed or benchmarked during this research.
 
 Build Computer Cat as its own Electron/TypeScript application, embed Pi through its supported SDK, and initially connect Cua Driver through a small MCP client bridge. Keep the desktop driver replaceable and test Windows-MCP as the fallback. Own the cat interface, screen-context selection, permissions, memory, and integration modules. Consume upstream packages without maintaining a product fork.
