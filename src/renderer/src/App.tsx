@@ -9,6 +9,7 @@ import {
 import { activeModelInfo } from "../../shared/models";
 import { HistoryDialog } from "./HistoryDialog";
 import { Icon } from "./Icon";
+import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
@@ -351,14 +352,18 @@ export function App() {
                   <span className="message-name">
                     {message.role === "assistant" ? "Computer Cat" : "You"}:
                   </span>
-                  <p>
-                    {message.text ||
-                      (message.state === "streaming"
-                        ? "…"
-                        : message.state === "stopped"
-                          ? "Reply stopped."
-                          : "No reply received. Try again.")}
-                  </p>
+                  {message.role === "assistant" && message.text ? (
+                    <MarkdownMessage text={message.text} />
+                  ) : (
+                    <p>
+                      {message.text ||
+                        (message.state === "streaming"
+                          ? "…"
+                          : message.state === "stopped"
+                            ? "Reply stopped."
+                            : "No reply received. Try again.")}
+                    </p>
+                  )}
                   {message.tools?.length ? (
                     <ul className="tool-activity" aria-label="Tool activity">
                       {message.tools.map((tool) => (

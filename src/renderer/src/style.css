@@ -326,6 +326,72 @@ label,
   margin: 3px 0 0;
   white-space: pre-wrap;
 }
+.markdown-message > :first-child {
+  margin-top: 3px;
+}
+.markdown-message > :last-child {
+  margin-bottom: 0;
+}
+.markdown-message p {
+  margin: 6px 0;
+}
+.markdown-message ul,
+.markdown-message ol {
+  margin: 6px 0;
+  padding-left: 24px;
+}
+.markdown-message li + li {
+  margin-top: 3px;
+}
+.markdown-message h1,
+.markdown-message h2,
+.markdown-message h3,
+.markdown-message h4,
+.markdown-message h5,
+.markdown-message h6 {
+  margin: 12px 0 5px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.markdown-message blockquote {
+  margin: 8px 0;
+  padding-left: 10px;
+  border-left: 3px solid #9ab7d7;
+  color: #505050;
+}
+.markdown-message code {
+  font-family: Consolas, monospace;
+  background: #f4f2e8;
+  padding: 1px 3px;
+}
+.markdown-message pre {
+  max-width: 100%;
+  overflow: auto;
+  padding: 8px;
+  background: #f4f2e8;
+  border: 1px solid #d8d4c3;
+  white-space: pre;
+}
+.markdown-message pre code {
+  padding: 0;
+}
+.markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.markdown-table table {
+  border-collapse: collapse;
+}
+.markdown-table th,
+.markdown-table td {
+  border: 1px solid #d8d4c3;
+  padding: 4px 8px;
+  text-align: left;
+}
+.markdown-table th {
+  background: #f4f2e8;
+}
 .message-note {
   display: block;
   margin-top: 5px;

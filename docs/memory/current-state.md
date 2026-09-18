@@ -12,6 +12,8 @@ SDK behind an application-owned runtime interface. Use the Node version in
 - The transparent cat supports click-to-chat, body/grip dragging, Chat/Options/Stop controls,
   blinking, and separate idle/thinking motion. Tray actions and shortcuts show chat and stop replies.
 - Always on top recovers z-order without focus; Find cat brings it to the pointer’s display.
+- Assistant replies render Markdown (including lists, emphasis, code, and tables) without active
+  HTML, remote images, or navigation; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Connections supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.

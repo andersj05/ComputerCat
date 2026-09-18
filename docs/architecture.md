@@ -28,8 +28,8 @@ Sandboxed React renderer
 
 The renderer is sandboxed with context isolation and no Node integration. It can request
 only named application operations. Main validates both sender identity and arguments. Remote
-navigation, new windows, and browser permission requests are denied. Model output is rendered
-as plain text. The app never imports extensions or instructions discovered in arbitrary folders.
+navigation, new windows, and browser permission requests are denied. Model output is rendered as Markdown through React elements, with raw HTML skipped,
+images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools, and native Pi sessions are saved per conversation.
