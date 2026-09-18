@@ -23,6 +23,13 @@ export function useVoice(
   const owner = useRef<{ id: string; capture: VoiceCapture } | undefined>(undefined);
   const beginnings = useRef(new Map<string, number>());
   const consumed = useRef(new Set<string>());
+  const acknowledgments = useRef(new Set<string>());
+  useEffect(() => {
+    for (const sessionId of acknowledgments.current) {
+      acknowledgments.current.delete(sessionId);
+      void window.computerCat.voiceResultConsumed({ sessionId });
+    }
+  });
   useEffect(() => {
     let alive = true;
     const update = (value: VoiceSnapshot) => {
@@ -52,7 +59,7 @@ export function useVoice(
               ? `${previous[value.conversationId as string]}\n${value.transcript}`
               : (value.transcript as string),
           }));
-        void window.computerCat.voiceResultConsumed({ sessionId: value.sessionId });
+        acknowledgments.current.add(value.sessionId);
       }
     };
     const off = window.computerCat.onVoiceChanged(update);

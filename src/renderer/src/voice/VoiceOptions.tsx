@@ -122,7 +122,7 @@ export function VoiceOptions({
         </button>
       </fieldset>
       <div className="voice-assets">
-        <span>
+        <span className="voice-install-status">
           {installed ? "Model installed" : "Model not installed"} · includes 865 KiB speech detector
         </span>
         {download ? (

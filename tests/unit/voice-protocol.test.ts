@@ -12,6 +12,17 @@ describe("Whisper frame boundary", () => {
     expect(parser.push(Buffer.concat([bytes, bytes]))).toHaveLength(2);
     parser.end();
   });
+  it("preserves quoted transcript text containing colons", () => {
+    const result = {
+      kind: "result",
+      requestId: "00000000-0000-4000-8000-000000000000",
+      text: 'Say "key": one, "key": two.',
+      language: "en",
+      audioMs: 1000,
+      inferenceMs: 5,
+    };
+    expect(new FrameParser().push(frame(result))[0]).toEqual({ ...result, version: 1 });
+  });
   it("rejects oversized, truncated, noisy and nonzero payload frames", () => {
     for (const bytes of [
       Buffer.from([255, 255, 255, 127]),

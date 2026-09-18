@@ -47,9 +47,18 @@ export function frame(control: object, payload: Uint8Array = new Uint8Array()): 
 function parseControl(bytes: Buffer): HelperMessage {
   const raw = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   const value: unknown = JSON.parse(raw);
-  const names = [...raw.matchAll(/"((?:[^"\\]|\\.)*)"\s*:/g)].map(
-    (m) => JSON.parse(`"${m[1]}"`) as string,
-  );
+  const names: string[] = [];
+  // Consume every complete JSON string token, including values, before looking for a colon.
+  const tokens = /"(?:[^"\\]|\\.)*"/g;
+  for (const token of raw.matchAll(tokens)) {
+    if (
+      raw
+        .slice((token.index ?? 0) + token[0].length)
+        .trimStart()
+        .startsWith(":")
+    )
+      names.push(JSON.parse(token[0]));
+  }
   if (new Set(names).size !== names.length) throw new VoiceError("protocol-error");
   return helperMessage.parse(value);
 }

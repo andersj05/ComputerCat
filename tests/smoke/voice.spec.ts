@@ -87,3 +87,129 @@ test("local voice records synthetic audio, reviews text, and cancels without sen
 async function checkCleanup(dir: string): Promise<void> {
   if (!dir.startsWith(join(tmpdir(), "computercat-voice-smoke-"))) throw Error("Unsafe cleanup");
 }
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("voice permissions, hidden pet indicator and window cancellation stay isolated", async ({}, testInfo) => {
+  test.setTimeout(60000);
+  const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
+  await writeFile(
+    join(dir, "voice.json"),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+  );
+  const env: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    COMPUTERCAT_RUNTIME: "demo",
+    COMPUTERCAT_SMOKE_TEST: "1",
+    COMPUTERCAT_TEST_USER_DATA: dir,
+    COMPUTERCAT_VOICE_FIXTURE: "1",
+  };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const executable = process.env.COMPUTERCAT_PACKAGED_EXECUTABLE;
+  const app = await _electron.launch({
+    ...(executable ? { executablePath: executable, args: [] } : { args: [resolve(".")] }),
+    env,
+  });
+  try {
+    await expect.poll(() => app.windows().length).toBe(2);
+    const page = app.windows().find((p) => p.url().includes("view=chat"));
+    const pet = app.windows().find((p) => p.url().includes("view=pet"));
+    if (!page || !pet) throw Error("Missing windows");
+    await page.evaluate(() => {
+      const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      const tracks: MediaStreamTrack[] = [];
+      Reflect.set(window, "testVoiceTracks", tracks);
+      navigator.mediaDevices.getUserMedia = async (options) => {
+        const stream = await original(options);
+        tracks.push(...stream.getTracks());
+        return stream;
+      };
+    });
+    expect(
+      await page.evaluate(() =>
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(
+          (s) => {
+            s.getTracks().forEach((t) => {
+              t.stop();
+            });
+            return "allowed";
+          },
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    expect(
+      await pet.evaluate(() =>
+        window.computerCat
+          .voiceUpdateSettings({
+            version: 1,
+            enabled: true,
+            modelId: "base.en",
+            language: "en",
+            backend: "cpu",
+          })
+          .then(
+            () => "allowed",
+            () => "denied",
+          ),
+      ),
+    ).toBe("denied");
+    expect(
+      await pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings),
+    ).toBeUndefined();
+    await page.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect(page.locator(".voice-controls")).toContainText("Listening");
+    await expect(pet.locator(".pet-bubble")).toContainText("Listening");
+    expect(
+      await page.evaluate(() =>
+        navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(
+          (s) => {
+            s.getTracks().forEach((t) => {
+              t.stop();
+            });
+            return "allowed";
+          },
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    const send = await page.evaluate(() =>
+      window.computerCat.send({ id: crypto.randomUUID(), text: "must not send" }),
+    );
+    expect(send.ok).toBe(false);
+    await page.getByRole("button", { name: "Minimize window" }).click();
+    await expect
+      .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase))
+      .toBe("idle");
+    expect(
+      await page.evaluate(() =>
+        (Reflect.get(window, "testVoiceTracks") as MediaStreamTrack[]).every(
+          (t) => t.readyState === "ended",
+        ),
+      ),
+    ).toBe(true);
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().includes("view=chat"),
+      );
+      win?.restore();
+      win?.setSize(500, 420);
+    });
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByRole("tab", { name: "Voice", exact: true }).click();
+    await expect(page.getByRole("button", { name: "OK", exact: true })).toBeInViewport();
+    await page.screenshot({ path: testInfo.outputPath("voice-options-small.png") });
+    await page.getByLabel("Enable voice input").uncheck();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(
+      await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.enabled),
+    ).toBe(true);
+  } finally {
+    await app.close();
+    await checkCleanup(dir);
+    await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  }
+});

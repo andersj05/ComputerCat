@@ -203,6 +203,9 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(page.getByRole("button", { name: "Sign in with ChatGPT" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("options-models.png") });
     await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Enable voice input")).not.toBeChecked();
+    await page.keyboard.press("ArrowRight");
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeFocused();
     await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
     await expect(

@@ -186,7 +186,14 @@ export class VoiceController {
   append(input: unknown): void {
     const p = appendSchema.safeParse(input);
     if (!p.success) {
-      if (this.session) void this.fail(this.session, "capture-overrun");
+      if (
+        this.session &&
+        typeof input === "object" &&
+        input !== null &&
+        "sessionId" in input &&
+        input.sessionId === this.session.id
+      )
+        void this.fail(this.session, "capture-overrun");
       throw new VoiceError("protocol-error");
     }
     const s = this.current(p.data.sessionId);

@@ -1282,7 +1282,7 @@ input:focus-visible + span {
 .voice-assets {
   margin-top: 8px;
 }
-.voice-assets span {
+.voice-assets > .voice-install-status {
   width: 100%;
 }
 .voice-review {
