@@ -20,7 +20,7 @@
     "testedCompiler": "MSVC 19.51.36248.0",
     "testedWindowsSdk": "10.0.26100.0",
     "runtime": "static MSVC /MT",
-    "cpu": "portable x64; native tuning, AVX, AVX2, FMA, F16C and OpenMP disabled",
+    "cpu": "portable x64 plus AVX2/FMA/F16C/BMI2 variant guarded by CPUID and OS XSTATE checks; native tuning and OpenMP disabled",
     "cuda": "not distributed until a toolkit build and redistributable inventory are verified"
   }
 }

@@ -27,9 +27,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - run: npm run voice:build
+      - run: npm run voice:test-native
       - run: npm run package:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - run: node native/whisper-helper/tests/check.mjs "release/win-unpacked/resources/voice/bin/cpu/computercat-whisper.exe"
       - run: npx playwright test
         env:
           COMPUTERCAT_PACKAGED_EXECUTABLE: release/win-unpacked/Computer Cat.exe

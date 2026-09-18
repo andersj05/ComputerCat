@@ -1,6 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { VOICE, VoiceError, type VoiceSettings } from "../../shared/voice";
 import { FrameParser, frame, type HelperMessage } from "./helper-protocol";
 
@@ -34,17 +35,21 @@ export class WhisperRuntime implements SpeechRecognizer {
   private readyModel: string | undefined;
   private idle: ReturnType<typeof setTimeout> | undefined;
   private disposing: Promise<void> | undefined;
+  private currentExecutable: string;
   constructor(
-    executable: string,
+    private readonly executable: string,
     private readonly launch = () =>
-      spawn(executable, [], {
-        cwd: dirname(executable),
+      spawn(this.currentExecutable, [], {
+        cwd: dirname(this.currentExecutable),
         shell: false,
         windowsHide: true,
         env: helperEnvironment(process.env),
         stdio: "pipe",
       }),
-  ) {}
+  ) {
+    const optimized = join(dirname(dirname(executable)), "cpu-avx2", "computercat-whisper.exe");
+    this.currentExecutable = existsSync(optimized) ? optimized : executable;
+  }
 
   private fail(error: Error): void {
     this.pending?.reject(error);
@@ -59,9 +64,9 @@ export class WhisperRuntime implements SpeechRecognizer {
     const child = this.launch();
     this.child = child;
     this.exited = new Promise((resolve) => {
-      child.once("close", () => {
+      child.once("close", (code) => {
         if (this.child === child) {
-          this.fail(new VoiceError("helper-crashed"));
+          this.fail(new VoiceError(code === 86 ? "backend-unavailable" : "helper-crashed"));
           this.child = undefined;
         }
         resolve();
@@ -137,7 +142,19 @@ export class WhisperRuntime implements SpeechRecognizer {
     clearTimeout(this.idle);
     if (settings.backend === "cuda") throw new VoiceError("backend-unavailable");
     try {
-      await this.start(signal);
+      try {
+        await this.start(signal);
+      } catch (error) {
+        if (
+          this.currentExecutable === this.executable ||
+          !(error instanceof VoiceError) ||
+          error.code !== "backend-unavailable"
+        )
+          throw error;
+        await this.dispose();
+        this.currentExecutable = this.executable;
+        await this.start(signal);
+      }
       if (this.readyModel === model.modelPath) return;
       const requestId = randomUUID();
       const reply = await this.wait(

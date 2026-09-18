@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <fcntl.h>
 #include <io.h>
+#include <intrin.h>
 #endif
 
 using json = nlohmann::json;
@@ -144,7 +145,7 @@ struct ModelFile {
         if (n <= 0) return;
         std::wstring wide(n, L'\0');
         MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.c_str(), -1, wide.data(), n);
-        file = _wfopen(wide.c_str(), L"rb");
+        _wfopen_s(&file, wide.c_str(), L"rb");
 #else
         file = fopen(path.c_str(), "rb");
 #endif
@@ -159,6 +160,13 @@ struct ModelFile {
 };
 
 int main() {
+#if defined(COMPUTERCAT_AVX2) && defined(_WIN32)
+    int cpu[4]; __cpuid(cpu, 1);
+    const unsigned required = (1u<<27) | (1u<<28) | (1u<<12) | (1u<<29);
+    if ((static_cast<unsigned>(cpu[2]) & required) != required || (_xgetbv(0) & 6) != 6) return 86;
+    __cpuidex(cpu, 7, 0);
+    if ((cpu[1] & (1<<5)) == 0 || (cpu[1] & (1<<8)) == 0) return 86;
+#endif
 #ifdef _WIN32
     SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
     _setmode(_fileno(stdin), _O_BINARY);
@@ -187,6 +195,14 @@ int main() {
         auto elapsed = [&] { return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - started).count(); };
         json response;
         try {
+#ifdef COMPUTERCAT_TEST_ENGINE
+            if (request["kind"] == "load" && request["modelPath"] == "hang") {
+                while (!closing) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            for (int i = 0; i < 50 && !aborted && !closing; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            if (request["kind"] == "load") response = {{"kind", "ready"}, {"modelId", request["modelId"]}, {"backend", "cpu"}, {"loadMs", elapsed()}};
+            else response = {{"kind", "result"}, {"text", "fixture"}, {"language", "en"}, {"audioMs", pcm.size()/32}, {"inferenceMs", elapsed()}};
+#else
             if (request["kind"] == "load") {
                 if (ctx) { whisper_free(ctx); ctx = nullptr; }
                 if (vad) { whisper_vad_free(vad); vad = nullptr; }
@@ -247,6 +263,7 @@ int main() {
                     response = {{"kind", "result"}, {"text", text}, {"language", whisper_lang_str(whisper_full_lang_id(ctx))}, {"audioMs", samples.size() / 16}, {"inferenceMs", elapsed()}};
                 }
             }
+#endif
         } catch (const std::exception& ex) {
             std::string code = ex.what();
             if (code != "model-load-failed" && code != "text-too-long" && code != "protocol-error") code = "model-load-failed";

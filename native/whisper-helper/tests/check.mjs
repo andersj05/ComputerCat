@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
-import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { copyFile, link, mkdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 const executable = resolve(process.argv[2] ?? "resources/voice/bin/cpu/computercat-whisper.exe");
-function frame(value, pcm = Buffer.alloc(0)) {
+export function frame(value, pcm = Buffer.alloc(0)) {
   const data = Buffer.from(JSON.stringify({ version: 1, ...value }));
   const result = Buffer.alloc(data.length + pcm.length + 8);
   result.writeUInt32LE(data.length);
@@ -15,9 +15,9 @@ function frame(value, pcm = Buffer.alloc(0)) {
   pcm.copy(result, data.length + 8);
   return result;
 }
-function launch() {
-  const child = spawn(executable, [], {
-    cwd: dirname(executable),
+export function launch(path = executable) {
+  const child = spawn(path, [], {
+    cwd: dirname(path),
     shell: false,
     windowsHide: true,
     env: { SystemRoot: process.env.SystemRoot, PATH: `${process.env.SystemRoot}/System32` },
@@ -108,7 +108,11 @@ if (process.argv[3]) {
   const dir = resolve(".local/whisper/Unpacked app é/voice");
   await mkdir(dir, { recursive: true });
   await copyFile(executable, resolve(dir, "computercat-whisper.exe"));
-  const p = launch();
+  for (const name of [`ggml-${modelId}.bin`, "ggml-silero-v6.2.0.bin"])
+    await link(resolve(root, name), resolve(dir, name)).catch((error) => {
+      if (error.code !== "EEXIST") throw error;
+    });
+  const p = launch(resolve(dir, "computercat-whisper.exe"));
   await p.next();
   const id = randomUUID();
   p.child.stdin.write(
@@ -116,8 +120,8 @@ if (process.argv[3]) {
       kind: "load",
       requestId: id,
       modelId,
-      modelPath: resolve(root, `ggml-${modelId}.bin`),
-      vadPath: resolve(root, "ggml-silero-v6.2.0.bin"),
+      modelPath: resolve(dir, `ggml-${modelId}.bin`),
+      vadPath: resolve(dir, "ggml-silero-v6.2.0.bin"),
       backend: "cpu",
       threads: 6,
     }),
