@@ -1,7 +1,9 @@
 # Whisper delivery checklist and evaluation
 
-Reviewed: 2026-09-17. Status: all implementation slices below are pending. This is the work
-breakdown for the [design](README.md) and [contracts](contracts.md), not a record of passing tests.
+Reviewed: 2026-09-18. The CPU implementation spans W0-W4, with automated tests and native builds.
+The original checklist below remains the full acceptance specification; unchecked items are
+not implied passes. Consult [native evidence](native-evidence.md) and the updated
+[handoff](../../memory/handoffs/2026-09-17-local-whisper.md) for verification and remaining gates.
 Complete a narrow end-to-end slice before adding more model choices or voice polish.
 
 ## Prerequisites and branch handling
@@ -27,21 +29,21 @@ Electron/Pi or add a paid speech service merely to implement local transcription
 
 ### W0. Freeze artifacts and prove the native approach
 
-- [ ] Read the candidate `whisper.cpp` v1.9.4 release/header/build instructions; resolve the tag
+- [x] Read the candidate `whisper.cpp` v1.9.4 release/header/build instructions; resolve the tag
   to a full immutable commit. Record compiler, CMake, Windows x64 target, backend build flags,
   native JSON dependency, runtime DLLs and notices in the planned dependency lock.
-- [ ] Identify exact GGML Turbo, `base.en`, and supported Silero VAD revisions. Download only
+- [x] Identify exact GGML Turbo, `base.en`, and supported Silero VAD revisions. Download only
   through explicit setup/development actions. Record exact sizes and independently compute
   SHA-256. Do not copy upstream SHA-1 labels into SHA-256 fields or commit weight files.
-- [ ] Prove local CPU inference on a consented/public licensed sample using the pinned upstream
+- [x] Prove local CPU inference on a consented/public licensed sample using the pinned upstream
   CLI. Attempt CUDA using the same model and record the actual selected backend. This spike
   is a measurement aid; no voice UI or runtime dependency on an external CLI should be shipped.
-- [ ] Produce a native helper build that can say hello, load a model and transcribe over private
+- [x] Produce a native helper build that can say hello, load a model and transcribe over private
   pipes. Check inherited environment contains no app/provider credentials. Exercise stop
   during loading and inference, parent exit and child crash.
-- [ ] Stage the helper beneath an unpacked application directory and run it from a path with
+- [x] Stage the helper beneath an unpacked application directory and run it from a path with
   spaces/non-ASCII characters. Check dependent DLL resolution without developer PATH entries.
-- [ ] Review the notices for weights, VAD, GGML and redistributed runtimes. Do not claim a
+- [x] Review the notices for weights, VAD, GGML and redistributed runtimes. Do not claim a
   specific CUDA minimum driver or redistributable set until the chosen build proves it.
 
 Exit: versioned dependency/model manifests with real reviewed hashes, reproducible CPU build,
@@ -53,14 +55,14 @@ Suggested commit: `build: pin Whisper artifacts and add native helper foundation
 
 ### W1. Implement supervised inference and model storage
 
-- [ ] Implement the binary frame parser, strict control schemas and version handshake in both
+- [x] Implement the binary frame parser, strict control schemas and version handshake in both
   TypeScript and C++. Keep one model context and serialized inference; reset text context per
   utterance. Input reading remains responsive while loading/decoding.
-- [ ] Add runtime prepare/transcribe/dispose with AbortSignal, forced-stop deadline, process
+- [x] Add runtime prepare/transcribe/dispose with AbortSignal, forced-stop deadline, process
   exit observation, bounded output, clean environment and no shell launch.
-- [ ] Implement the validated catalogue and cancellable, atomic model installation/removal.
+- [x] Implement the validated catalogue and cancellable, atomic model installation/removal.
   Download and hash in streams rather than loading gigabyte models into JavaScript memory.
-- [ ] Implement versioned voice preferences using the repository's atomic-save pattern. Disabled
+- [x] Implement versioned voice preferences using the repository's atomic-save pattern. Disabled
   is the default and also the recoverable fallback after malformed preferences.
 - [ ] Inject filesystem/network/process/clock dependencies. Build the fake helper and downloader
   fixtures. Tests do not invoke real models, microphones, the network or a user's credentials.
@@ -73,18 +75,18 @@ Suggested commits: `feat: supervise local Whisper inference` and
 
 ### W2. Add capture lifecycle and the privileged boundary
 
-- [ ] Implement shared voice schemas/constants, main controller and serialized coordination
+- [x] Implement shared voice schemas/constants, main controller and serialized coordination
   with Send, conversation transitions, model changes, disconnect and app shutdown.
-- [ ] Add role-restricted named IPC/preload methods, snapshots and event subscriptions. Keep
+- [x] Add role-restricted named IPC/preload methods, snapshots and event subscriptions. Keep
   audio/text out of pet projections. Check sequence/session/cumulative limits before copying.
-- [ ] Implement both Electron permission handlers for short-lived audio-only chat grants.
+- [x] Implement both Electron permission handlers for short-lived audio-only chat grants.
   Use installed Electron types and actual permission events, not only latest website examples.
-- [ ] Add the local AudioWorklet, sample-rate conversion, downmix, chunk acknowledgments,
+- [x] Add the local AudioWorklet, sample-rate conversion, downmix, chunk acknowledgments,
   backpressure, graph heartbeat, final flush and cleanup acknowledgment.
-- [ ] Wire Finish separately from Cancel. Extend all existing Stop entry points: chat button,
+- [x] Wire Finish separately from Cancel. Extend all existing Stop entry points: chat button,
   pet button, tray action and global shortcut. Cancel voice before hide/minimize/reload,
   lock/suspend, relevant modal/conversation transitions and quit.
-- [ ] Close late-created MediaStreams after canceled permission requests. Escalate an
+- [x] Close late-created MediaStreams after canceled permission requests. Escalate an
   unresponsive capture owner as specified; never leave the microphone live behind an idle UI.
 
 Exit: synthetic capture can reach a fake recognizer and end safely across races, without any
@@ -95,17 +97,17 @@ Suggested commits: `feat: add bounded microphone capture and voice IPC` and
 
 ### W3. Connect the XP interface and draft flow
 
-- [ ] Add Voice to Options, preserving staged Apply/OK/Cancel behavior. Expose model sizes,
+- [x] Add Voice to Options, preserving staged Apply/OK/Cancel behavior. Expose model sizes,
   explicit download/cancel/remove, actual backend and actionable recoverable errors.
-- [ ] Add Talk/Finish/Cancel and visible listening status to chat; route the pet's Talk action
+- [x] Add Talk/Finish/Cancel and visible listening status to chat; route the pet's Talk action
   to chat. Keep cat dragging, glow, model controls, dimensions and reduced-motion behavior.
-- [ ] Transfer text to the composer with session and draft revision guards. Preserve concurrent
+- [x] Transfer text to the composer with session and draft revision guards. Preserve concurrent
   typing and pending review text when switching drafts. Never submit without normal Send.
 - [ ] Handle no speech, too-short, denied/device-lost, model-missing, warm-up, out-of-memory,
   helper errors and oversized combined drafts with clear status, leaving typing usable.
-- [ ] Disable only conflicting actions while voice is active; enforce the same rule in main.
+- [x] Disable only conflicting actions while voice is active; enforce the same rule in main.
   No new global voice hotkey is required for this milestone.
-- [ ] Inspect real Electron windows at default/minimum size with keyboard navigation and a
+- [x] Inspect real Electron windows at default/minimum size with keyboard navigation and a
   reduced-motion setting. Confirm the recording indicator is visible when pet controls hide.
 
 Exit: click Talk, finish, edit and Send works in demo mode using fixture audio and a fake
@@ -115,9 +117,9 @@ Suggested commit: `feat: add local dictation controls and transcript review`.
 
 ### W4. Package, evaluate and finish the feature
 
-- [ ] Wire Windows native build/staging into packaging and release jobs, maintaining the
+- [x] Wire Windows native build/staging into packaging and release jobs, maintaining the
   repository's pinned action/dependency conventions. Keep helper resources outside ASAR.
-- [ ] Add packaged native protocol smoke tests without real model downloads and UI smoke tests
+- [x] Add packaged native protocol smoke tests without real model downloads and UI smoke tests
   using synthetic capture. Smoke mode must not touch the host microphone or user model cache.
 - [ ] Run the documented project verification commands. Fix regressions in ordinary chat,
   Codex fixtures, preferences/history, pet controls and shutdown.

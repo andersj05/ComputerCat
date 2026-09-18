@@ -1,9 +1,9 @@
 # Local Whisper implementation specification
 
-Reviewed: 2026-09-17. Status: implementation preparation; no speech feature is implemented.
-Code inspected at `a8bba11`, based on `dev` at `2acff1b`. The user selected local Whisper
-and requested a detailed repository structure and implementation handoff. The architecture
-below is the proposed implementation of that selection; performance remains unmeasured.
+Reviewed: 2026-09-18. Status: Windows CPU implementation is present. The original design
+below describes the intended contracts; [native evidence](native-evidence.md) records actual
+builds and measurements. Auto currently selects portable/AVX2 CPU, not CUDA. Live microphone
+accuracy and clean-machine release qualification remain outstanding.
 
 Read this specification, the [boundary contracts](contracts.md), and the
 [delivery checklist](delivery.md) together. The task-specific
@@ -38,11 +38,11 @@ the selected reasoning connection retains its existing usage limits and costs.
 
 ## Engine and model choices
 
-Use a Computer Cat-owned native helper linked against `whisper.cpp`. Inspect and freeze
-**v1.9.4** as the starting candidate, then record its full source commit and build inputs in
-the implementation lock manifest. The [release](https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.4)
-was available when reviewed; this is a researched candidate, not an installed or tested dependency.
-Resolve any newer-version proposal deliberately rather than building a floating branch.
+The Computer Cat-owned native helper links whisper.cpp **1.9.4**, frozen at full commit
+927cfce34f31707e17f2bff35c349632fb9e2c3a in the
+[dependency lock](../../../native/whisper-helper/dependencies.lock.json). The
+[release](https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.4) has no attached native
+binaries; the project builds its own helper. Upgrades require deliberate source review.
 
 | Item | Initial selection | Qualification |
 | --- | --- | --- |
@@ -50,19 +50,21 @@ Resolve any newer-version proposal deliberately rather than building a floating 
 | Smaller CPU option | `base.en` | English-only, explicitly selected; upstream lists about 142 MiB |
 | Quantization experiment | `large-v3-turbo-q5_0` | About 547 MiB; compare command fidelity before offering/defaulting it |
 | Language | English initially; Auto for multilingual Turbo | Never enable translation; reject Auto/non-English with `base.en` |
-| Acceleration | Auto: attempt packaged CUDA backend, then CPU | Report actual backend; no driver/toolkit installation at runtime |
-| Voice activity detection | Pin the supported Silero GGML VAD artifact | Detect no-speech captures locally before decoding; preserve speech edges |
+| Acceleration | Auto: guarded AVX2 CPU, otherwise portable CPU | CUDA is unsupported in this build; no driver/toolkit installation at runtime |
+| Voice activity detection | Pinned Silero 6.2.0 GGML artifact | Detect no-speech captures locally before decoding; preserve speech edges |
 
 Sizes are download/storage estimates, not RAM/VRAM requirements. Model names, formats, sizes,
 and quantization come from the [versioned model catalogue](https://github.com/ggml-org/whisper.cpp/blob/v1.9.4/models/README.md).
 The [Whisper Turbo model card](https://huggingface.co/openai/whisper-large-v3-turbo) identifies
 the weights as MIT-licensed. Preserve upstream notices and separately inventory the engine,
 VAD, GGML, native JSON library, and redistributed GPU/runtime libraries before packaging.
-No native binary, model checksum, CUDA compatibility, or latency has been verified here.
+CPU builds, hashes and single-sample latency are verified in [native evidence](native-evidence.md).
+CUDA compatibility and broad accuracy/latency qualification remain unverified.
 
 Do not silently replace a selected model with a smaller one. If Turbo is too slow or cannot
 load, explain the failure and offer the smaller download. Backend fallback may keep the same
-model: before capture, try CPU once after GPU initialization fails, publish the actual backend,
+model. A future GPU implementation must try CPU once after initialization failure and publish
+the actual backend,
 and remain local. An inference-time failure should return an error and let the user retry;
 avoid looping expensive retries while preserving audio indefinitely.
 
@@ -86,8 +88,9 @@ or change speech settings. The helper has no microphone, credentials, Pi imports
 or network server. It receives a model path selected by main and audio over inherited pipes.
 Process separation contains inference crashes; it is not an OS security sandbox.
 
-Paths below are **planned files**, not existing modules. Create them as the corresponding
-slice is implemented; do not ship empty stubs or a UI that reports unsupported functionality.
+The module map below is the implementation guide. Shared validation currently lives in
+voice.ts; no separate voice-validation.ts file is needed. CPU build/staging and offline
+fixtures are implemented; CUDA and broader release evaluation remain unsupported/pending.
 
 ```text
 src/shared/voice.ts                         Serializable settings, states, results, error codes
@@ -220,7 +223,8 @@ an Electron native addon. This keeps the model loaded, avoids an Electron ABI co
 gives main a process it can terminate. Prototype with upstream CLI only to establish artifacts
 and baseline performance; a per-recording CLI launch is not the final warm-session architecture.
 
-Build CPU and CUDA variants against the same frozen upstream source. Launch with `shell: false`,
+Build CPU variants against the same frozen upstream source. Future CUDA builds require their
+own runtime/license inventory before distribution. Launch with `shell: false`,
 an absolute app-owned executable path, `windowsHide: true`, and an allowlisted environment
 without credentials. Load private DLLs from the packaged helper directory, not the Desktop or
 an uncontrolled working directory. The native process must detect stdin EOF/parent loss; main
@@ -243,5 +247,5 @@ Record full commits, artifact hashes, Windows architecture, compiler/CMake/CUDA 
 build flags, linked runtime dependencies and notices. Model/VAD catalog entries need immutable
 upstream revisions, exact byte lengths and SHA-256 values verified from downloaded bytes.
 The current upstream model table includes 40-character hashes; do not copy them into a SHA-256
-field. Artifact acquisition, hashes, and native viability are **open implementation gates**.
-This preparation deliberately installs/downloads no speech runtime or weights.
+field. Artifact acquisition and CPU native viability have been demonstrated;
+[release qualification](../../memory/handoffs/2026-09-17-local-whisper.md) remains open.

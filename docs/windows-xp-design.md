@@ -17,7 +17,7 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
 - The desktop shows only the cat until clicked. Clicking toggles a silhouette glow and reveals
-  Chat, Options, Stop during replies, and the model selector. Escape, window blur, or choosing
+  Chat, Talk, Options, Stop during replies or recording, and the model selector. Escape, window blur, or choosing
   an action hides the controls. Drag the body to move it; there is no separate grip.
   Keep the artwork size and position stable when controls appear.
 - Animate the original artwork with planted boots, gentle breathing, head movement, and blinks.
@@ -30,7 +30,7 @@ Use the same blue caption, cream buttons, dotted keyboard focus, green checks, b
 legends, and orange selected-tab edge throughout. Caption buttons perform native window
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
-Options is an XP property sheet with Desktop cat, Models, and General tabs. Stage changes until Apply
+Options is an XP property sheet with Desktop cat, Models, Voice, and General tabs. Stage changes until Apply
 or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
 keep the dialog and draft open, show the error there, and leave the running cat unchanged.
 Models uses native select controls for the default connection, model, and reasoning. Saving a
@@ -49,9 +49,13 @@ The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 
-Planned voice controls and a Voice tab are defined in the
-[Whisper implementation specification](implementation/whisper/README.md#ux-and-lifecycle).
-They are not current UI capabilities; retain the conventions above when implementing them.
+Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
+Finish recording and Cancel recording; a persistent Listening label appears on both chat
+and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
+Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Download/Remove are explicit
+immediate operations with size/progress. The panel scrolls within the existing property sheet.
+See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
+[smoke coverage](../tests/smoke/voice.spec.ts).
 
 ## References
 

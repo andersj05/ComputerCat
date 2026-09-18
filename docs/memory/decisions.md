@@ -135,20 +135,23 @@ Evidence: [license](../../LICENSE), [package metadata](../../package.json),
 
 ## D009: Use local Whisper for the first speech input
 
-Status: input direction selected by the user; implementation specification prepared 2026-09-17.
-No speech runtime or capture feature is implemented. Supersedes the cloud-first input proposal
-in [voice research](../voice-and-desktop-research.md), not the current application architecture.
+Status: implemented for Windows CPU; reviewed 2026-09-18. Supersedes the cloud-first input
+proposal in [voice research](../voice-and-desktop-research.md). Release evaluation is incomplete.
 
 Use Whisper `large-v3-turbo` through `whisper.cpp` for local transcription with no speech API
 key or per-minute service charge. Keep existing Pi/Codex reasoning and authentication. The
 reason is the user's choice of a free local input method after comparing speech options.
 
-The [implementation specification](../implementation/whisper/README.md) proposes a persistent,
-supervised native helper, bounded chat-owned microphone capture, CPU fallback, explicit model
-downloads and editable transcripts sent through the existing composer. These are engineering
-defaults for implementation, not already delivered features or additional user mandates.
-The candidate engine is v1.9.4; artifact hashes, packaging, native cancellation and accuracy/
-latency remain implementation gates. Do not represent a proposed model as installed or tested.
+The [implementation](../implementation/whisper/README.md) uses a persistent, supervised
+native helper, bounded chat-owned microphone capture, explicit verified model downloads and
+editable transcripts sent through the existing composer. whisper.cpp 1.9.4, weights and
+Silero 6.2.0 are pinned by full revisions and verified SHA-256. The CPU build has a portable
+fallback plus a CPUID/OS-guarded AVX2 variant: portable Turbo exceeded the inference deadline
+in a local trial, while AVX2 completed. CPU is the actual backend in Auto. CUDA configuration
+failed without a toolkit and is explicitly unsupported in this distribution. The tradeoff
+preserves offline use without installing drivers or tools on end-user machines. See
+[native evidence](../implementation/whisper/native-evidence.md); broad accuracy/latency and
+clean-machine tests remain release gates.
 
 Consequences: native Windows build/distribution and sizeable model downloads become project
 responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation

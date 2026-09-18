@@ -40,11 +40,41 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   The model button beneath the desktop cat opens the same controls; **Connections** opens sign-in.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
-computer control, external MCP connections, long-term memory, and voice are not implemented yet.**
-Local Whisper speech input has an [implementation specification](docs/implementation/whisper/README.md)
-and [handoff](docs/memory/handoffs/2026-09-17-local-whisper.md); these describe planned work.
+computer control, external MCP connections, and long-term memory are not implemented yet.**
+Local Whisper speech input is available on Windows x64; see setup below and the
+[implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Local voice input (Windows x64)
+
+1. Open **Options → Voice**, choose Turbo (multilingual, 1.51 GiB) or Base English (141 MiB),
+   and click **Download model**. A small Silero speech detector is included. Download and
+   Remove take effect immediately; downloads can be cancelled and restarted.
+2. Check **Enable voice input**, choose English or automatic detection for Turbo, and Apply.
+   Voice starts disabled. Enabling it does not open the microphone.
+3. Click **Talk** in chat or on the cat. Wait for **Listening**, speak, then choose
+   **Finish recording**. Recordings are limited to two minutes.
+4. Edit the transcript in the composer and press normal **Send**. If you typed during
+   recognition, use the transcript's **Insert** or **Discard** controls instead.
+
+**Cancel recording**, Escape, Stop, or hiding/minimizing chat discards active recognition.
+Conversation/model changes, Options, sleep, screen lock and quit also stop capture.
+Audio and unsent transcripts remain in memory. Sent text follows normal chat retention.
+Speech is transcribed on this computer; sending the text uses the selected connection.
+
+Auto uses a CPU helper, selecting the AVX2 build when the CPU and Windows support it.
+CUDA is not included in this build. Turbo can be slow on CPU; choose Base English for a
+smaller, faster English option. A portable Turbo trial exceeded the two-minute transcription
+limit; the selected model is never silently replaced. Real microphone accuracy, clean-machine
+installation, and broader latency evaluation remain [release checks](docs/memory/handoffs/2026-09-17-local-whisper.md).
+
+Developers need CMake and Visual Studio C++ Build Tools with the Windows SDK, then run
+`npm run voice:build` once before using voice or packaging. The build verifies pinned source
+archives and stages private executables; end users need no compiler, Python, FFmpeg, CUDA
+kit or speech API key. `npm run voice:test-native` tests native framing and cancellation
+without model downloads. Weights are explicitly installed through Options and are excluded
+from source control and the installer.
 
 ## Connect your Codex subscription
 
@@ -112,6 +142,8 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run verify` | Memory checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
 | `npm run format` | Apply formatting and safe lint fixes |
+| `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
+| `npm run voice:test-native` | Offline native protocol and cancellation tests |
 | `npm run package:dir` | Build an unpacked desktop application |
 | `npm run package:win` | Build an unsigned Windows NSIS installer |
 

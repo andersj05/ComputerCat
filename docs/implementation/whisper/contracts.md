@@ -1,7 +1,8 @@
 # Whisper boundary contracts
 
-Reviewed: 2026-09-17. Status: proposed contracts for the
-[local Whisper implementation](README.md). Nothing here is an existing preload API.
+Reviewed: 2026-09-18. These contracts guide the implemented
+[local Whisper input](README.md). See the actual [preload API](../../../src/shared/voice.ts)
+and [evidence](native-evidence.md). CUDA is unsupported in this CPU-only distribution.
 Implement schemas and boundary tests with each slice; keep the named operations narrow.
 
 ## Shared limits and state

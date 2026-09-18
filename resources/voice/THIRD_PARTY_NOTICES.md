@@ -12,4 +12,5 @@ the installer. CUDA libraries are not distributed.
 
 The helper links the MSVC runtime statically; it needs no separately copied VC runtime DLLs.
 The native build and dependency inspection must be repeated when changing compiler or flags.
+
 - Silero VAD 6.2.0 weights: [MIT notice](licenses/silero.txt), upstream notice revision 60b7ffa243625ebdc1070275a29f18c87843786a.

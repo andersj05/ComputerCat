@@ -21,9 +21,26 @@ was collected. An eleven-second excerpt retained the phrase "ask not" in both mo
 Upstream CLI (AVX2, six threads) measured base.en total 1.57 seconds and Turbo total 20.51
 seconds, including loads of 0.27 and 2.61 seconds. The portable helper (no AVX2) measured
 base.en load 0.11 seconds and inference 14.13 seconds. These are single local trials, not
-p50/p95 results or accuracy qualification. Portable Turbo latency remains to be measured.
+p50/p95 results or accuracy qualification. Portable Turbo exceeded the 120-second deadline.
+The guarded AVX2 helper measured base.en load 0.10 seconds/inference 1.16 seconds and Turbo
+load 0.59 seconds/inference 17.17 seconds on the same excerpt. The executables and model
+paths included spaces and non-ASCII characters, with only Windows System32 on PATH.
+Both helper builds depend only on KERNEL32.dll and ADVAPI32.dll.
 
-CUDA is not distributed: the installed GPU has a driver, but no CUDA toolkit was found.
+CUDA is not distributed: CMake configuration with GGML_CUDA=ON explicitly failed with
+CUDA Toolkit not found. The installed GPU/driver alone cannot supply a build toolchain.
 Auto currently chooses CPU; explicit CUDA returns backend-unavailable. A GPU name is not
 proof of a working native backend. CPU inference, real model verification and offline
 runtime/store boundary tests are established; full W0-W4 acceptance remains in progress.
+
+The real model-store client was also tested with base.en: cancel after partial download,
+retry, complete SHA-256 verification and reuse with the network client disabled all passed.
+The immutable Hugging Face URL redirected to us.aws.cdn.hf.co; this exact host is now in
+the reviewed allowlist. Unreviewed redirect hosts are still rejected before contact.
+
+Packaged desktop verification passed all 12 tests, including synthetic microphone capture,
+camera denial, pet sender restrictions, transcript/draft review, tracks ending on minimize,
+minimum-size options, and existing Codex/history/pet workflows. Native injected-inference
+tests exercise cancellation during load/decoding and EOF during uncooperative loading.
+The test engine is a separate executable excluded from the installer. No live microphone
+was opened. These checks do not establish a clean-machine install or corpus-level accuracy.
