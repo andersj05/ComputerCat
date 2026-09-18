@@ -1,10 +1,17 @@
 # Voice, screen context, and computer control
 
-Reviewed: 2026-09-17. Status: research and implementation proposal, not an adopted decision or
-delivered feature. Repository baseline: `dev` at `2acff1b`, with a clean working tree before
+Reviewed: 2026-09-17. Status: broad research and proposals; local Whisper speech input was
+subsequently selected for implementation preparation. No voice/desktop feature is delivered.
+Repository baseline: `dev` at `2acff1b`, with a clean working tree before
 this documentation change. Research used current primary documentation and the installed
 Pi 0.85.1 declarations. No speech provider or desktop driver was installed, called, or
 benchmarked. Vendor capabilities are distinguished below from our proposed behavior.
+
+The user selected free local Whisper after this comparison. The maintained
+[Whisper implementation specification](implementation/whisper/README.md) and
+[D009](memory/decisions.md#d009-use-local-whisper-for-the-first-speech-input) supersede the
+original cloud-first input recommendation and put speech input first in the next build sequence.
+Cloud speech output and desktop drivers below remain unselected proposals.
 
 ## Recommendation
 
@@ -17,20 +24,21 @@ replaceable desktop driver. Prove this experience first:
    short answer while displaying the full answer in chat.
 4. Ask it to perform a small task. It observes, acts, checks the result, and reports what happened.
 
-The recommendation assumes optional cloud processing is acceptable; this is not a recorded
-user preference. Local speech alternatives are included below. Local capture or local speech
-does not make the selected reasoning model local.
+The long-term experience above includes several independent features. The next implementation
+is local speech input into an editable chat draft. Sending still uses the selected reasoning
+connection. Cloud speech output has not been selected or authorized by that input choice.
 
 | Capability | First implementation to evaluate | Reason |
 | --- | --- | --- |
-| Hear the user | OpenAI `gpt-transcribe`, behind a speech-recognition interface | Current general-purpose transcription recommendation; straightforward completed push-to-talk turns |
-| Speak replies | OpenAI `gpt-4o-mini-tts`, streamed | Controllable delivery, one speech provider to integrate initially |
+| Hear the user | Local Whisper `large-v3-turbo` through `whisper.cpp` | Selected free input method; native Windows helper, CPU fallback, editable transcripts |
+| Speak replies | Compare installed Windows voices, Kokoro and cloud TTS | Separate decision; no speech-output provider selected |
 | Understand and plan | Existing Pi runtime with a verified image-capable model | Reuses conversations, model selection, and the agent loop |
 | See the current app | Scoped screenshot plus window identity and accessibility text | Supplies visual context and readable controls together |
 | Operate apps | Cua Driver behind a Computer Cat-owned adapter | Reuses native inspection and input; test Windows-MCP as the fallback |
-| Offline speech option | `whisper.cpp` for input; installed Windows voices or Kokoro for output | Keeps speech processing local, with hardware and packaging tradeoffs |
+| Smaller local input | Explicitly selected `base.en` | English-only CPU option; evaluate accuracy and latency |
 
-These are choices to test, not measured winners. The current OpenAI
+These have not been benchmarked in Computer Cat. Local Whisper is the selected input direction;
+other rows remain proposals. For comparison, the current OpenAI
 [transcription guide](https://developers.openai.com/api/docs/guides/speech-to-text) recommends
 `gpt-transcribe` for new general-purpose transcription. The
 [TTS guide](https://developers.openai.com/api/docs/guides/text-to-speech) documents streaming
@@ -84,8 +92,8 @@ the reasoning model. This is a fit judgment based on the existing app, consisten
 
 | Option | Where it fits | Tradeoff to evaluate |
 | --- | --- | --- |
-| OpenAI transcription and TTS | Initial cloud speech pipeline | Network and metered API usage; existing Codex sign-in is a separate connection |
-| `whisper.cpp` | Local recognition | CPU/GPU load, cold start, model size, microphone/noise accuracy |
+| OpenAI transcription and TTS | Optional future cloud speech pipeline | Network and metered API usage; existing Codex sign-in is a separate connection |
+| `whisper.cpp` | Selected local recognition implementation | CPU/GPU load, cold start, model size, microphone/noise accuracy remain test gates |
 | Installed Windows voices | Simple local speaking fallback | Voice availability and character vary by installation; use a narrow native adapter |
 | Kokoro-82M | Local neural voice candidate | Open weights; test runtime, pronunciation, warm-up, and packaged dependencies |
 | ElevenLabs | Audition for a distinctive cat voice | Compare expressive conversational and Flash voices on the same lines; separate provider |
@@ -284,11 +292,12 @@ installer. No automatic switch to a paid provider after an error.
 
 | Stage | Deliverable | Acceptance gate |
 | --- | --- | --- |
-| 1. Ask about a window | Typed question plus explicit window snapshot, readable context, and text answer | Correct pre-cat target; image reaches model as an image; unsupported models/surfaces handled; retention decision tested |
-| 2. Add voice | Push-to-talk, transcript, streamed spoken replies, volume/mute/Stop | Denied mic, silence, unplugged device, provider errors, canceled/stale audio, and echo handled |
-| 3. Do a desktop task | Small desktop tool set through Cua or fallback | Real app outcome verified; wrong/stale target rejected; user interruption and Stop prevent further input |
-| 4. Refine daily use | Local speech option, chosen voice, measured latency and cost | Clean-machine packaging, sleep/resume, multi-display/DPI tests, and resource use acceptable |
-| 5. Natural conversation | Evaluate GPT-Live/client delegation or Realtime | Corrections while work runs, audible interruptions, and backend cancellation stay consistent |
+| 1. Local speech input | Whisper capture, editable transcript, normal Send and unified Stop | Follow the detailed [delivery checklist](implementation/whisper/delivery.md); packaged native inference and bounded cancellation |
+| 2. Ask about a window | Explicit snapshot, readable context, and text answer | Correct pre-cat target; image-capable model; retention and unsupported surfaces handled |
+| 3. Add spoken replies | Select synthesis, playback, volume/mute/Stop | Voice quality, cancellation, retention, and echo tested; funding/provider decided separately |
+| 4. Do a desktop task | Small desktop tool set through Cua or fallback | Real outcome verified; wrong/stale target rejected; Stop prevents further input |
+| 5. Refine daily use | Measured latency, resource use, and costs | Clean-machine packaging, sleep/resume, multi-display/DPI behavior acceptable |
+| 6. Natural conversation | Evaluate GPT-Live/client delegation or Realtime | Corrections while work runs, audible interruptions, and backend cancellation stay consistent |
 
 Do not require always-listening, wake words, whole-computer indexing, or a general MCP marketplace
 to finish the first useful experience. Screen context and voice are independent enough that

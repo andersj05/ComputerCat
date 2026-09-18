@@ -132,3 +132,26 @@ license granted in LICENSE. Dependencies retain their own licenses.
 
 Evidence: [license](../../LICENSE), [package metadata](../../package.json),
 [lockfile](../../package-lock.json), and [packaging](../../electron-builder.yml).
+
+## D009: Use local Whisper for the first speech input
+
+Status: input direction selected by the user; implementation specification prepared 2026-09-17.
+No speech runtime or capture feature is implemented. Supersedes the cloud-first input proposal
+in [voice research](../voice-and-desktop-research.md), not the current application architecture.
+
+Use Whisper `large-v3-turbo` through `whisper.cpp` for local transcription with no speech API
+key or per-minute service charge. Keep existing Pi/Codex reasoning and authentication. The
+reason is the user's choice of a free local input method after comparing speech options.
+
+The [implementation specification](../implementation/whisper/README.md) proposes a persistent,
+supervised native helper, bounded chat-owned microphone capture, CPU fallback, explicit model
+downloads and editable transcripts sent through the existing composer. These are engineering
+defaults for implementation, not already delivered features or additional user mandates.
+The candidate engine is v1.9.4; artifact hashes, packaging, native cancellation and accuracy/
+latency remain implementation gates. Do not represent a proposed model as installed or tested.
+
+Consequences: native Windows build/distribution and sizeable model downloads become project
+responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation
+retention. Speech output, screenshots and desktop control remain independent future scope.
+No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
+[contracts](../implementation/whisper/contracts.md) and [delivery gates](../implementation/whisper/delivery.md).
