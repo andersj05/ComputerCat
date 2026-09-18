@@ -353,10 +353,14 @@ export class VoiceController {
     const id = randomUUID();
     this.state.download = { id, modelId, received: 0, total: 0 };
     this.publish();
+    let lastProgress = 0;
     const task = this.store
       .install(modelId, abort.signal, (received, total) => {
         this.state.download = { id, modelId, received, total };
-        this.publish();
+        if (received === total || this.now() - lastProgress >= 100) {
+          lastProgress = this.now();
+          this.publish();
+        }
       })
       .catch((e) => {
         this.state.error = e instanceof VoiceError ? e.code : "download-failed";

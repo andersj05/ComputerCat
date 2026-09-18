@@ -188,6 +188,7 @@ export function App() {
       else {
         setError("");
         setText("");
+        if (snapshot.conversationId) voice.dropReview(snapshot.conversationId);
         followReply.current = true;
       }
     } catch {
@@ -200,7 +201,7 @@ export function App() {
 
   function newChat() {
     if (snapshot.busy || sending || clearing || !info) return;
-    if (text.trim()) setConfirmClear(true);
+    if (text.trim() || voice.review.trim()) setConfirmClear(true);
     else {
       setError("");
       void clear();

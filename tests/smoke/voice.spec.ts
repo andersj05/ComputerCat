@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
@@ -76,6 +76,13 @@ test("local voice records synthetic audio, reviews text, and cancels without sen
     await expect(page.getByLabel("Enable voice input")).toBeChecked();
     await page.screenshot({ path: testInfo.outputPath("voice-options.png") });
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    const beforeSend = await readdir(join(dir, "conversations")).catch(() => []);
+    expect(beforeSend.filter((name) => name.endsWith(".json"))).toEqual([]);
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.locator(".message.user")).toContainText(
+      "Typed while listening. Do not delete the folder.",
+    );
+    await expect(page.locator('.message.assistant[data-state="complete"]')).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
     await app.close();
