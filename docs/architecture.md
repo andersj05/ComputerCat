@@ -2,11 +2,35 @@
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
 a local demo mode that works without credentials. Screen capture, mouse/keyboard control,
-external MCP servers, selected-fact user memory, and voice are later features, not implicit privileges.
+external MCP servers and selected-fact user memory are later features, not implicit privileges.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
 not supply the app’s conversation history. Keep these two forms of memory separate when adding features.
+
+Local speech input (reviewed 2026-09-18) follows the
+[Whisper design](implementation/whisper/README.md). The trusted chat main frame owns an
+AudioWorklet and microphone grant. A [main controller](../src/main/voice/controller.ts)
+serializes sessions against Send/history/model changes, validates PCM and releases capture
+before inference. Both Electron permission handlers require an exact chat URL, main frame,
+audio-only request and active grant. A missing cleanup acknowledgment crashes/reloads the
+capture renderer after two seconds; this can lose unsent drafts, like an ordinary renderer crash.
+
+The [supervisor](../src/main/voice/whisper-runtime.ts) starts a persistent native helper over
+private pipes with an allowlisted environment. Portable and guarded AVX2 CPU builds share
+whisper.cpp 1.9.4; no CUDA backend is distributed. The helper resets linguistic context,
+performs Silero VAD and returns bounded text. It has no microphone, credentials or network
+service. stdin EOF triggers cooperative abort and a hard exit deadline. Main also enforces
+load/inference timeouts and waits for exit before replacement. Idle models unload after five minutes.
+
+[Model storage](../src/main/voice/model-store.ts) streams explicit, bounded HTTPS downloads,
+checks fixed catalogue lengths and SHA-256, then renames a same-volume partial. Installed
+files are verified once per run. Symlinks/junction ancestors are rejected. Voice preferences
+live in voice.json, disabled by default. Audio is memory-only; main retains a transcript until
+React commits composer/review ownership. Pet snapshots exclude settings, downloads and text.
+The existing text-only agent protocol and Codex authentication remain unchanged. See
+[native evidence](implementation/whisper/native-evidence.md) for verified behavior and remaining
+real-microphone/clean-machine gates.
 
 ```text
 Sandboxed React renderer
@@ -28,7 +52,8 @@ Sandboxed React renderer
 
 The renderer is sandboxed with context isolation and no Node integration. It can request
 only named application operations. Main validates both sender identity and arguments. Remote
-navigation, new windows, and browser permission requests are denied. Model output is rendered as Markdown through React elements, with raw HTML skipped,
+navigation and new windows are denied. Browser permissions are denied except the narrow
+chat microphone grant described above. Model output is rendered as Markdown through React elements, with raw HTML skipped,
 images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,

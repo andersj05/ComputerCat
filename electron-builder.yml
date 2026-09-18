@@ -6,10 +6,19 @@ files:
   - out/**/*
   - package.json
 extraResources:
+  - from: resources/voice
+    to: voice
+    filter:
+      - bin/cpu/*.exe
+      - bin/cpu-avx2/*.exe
+      - licenses/*
+      - THIRD_PARTY_NOTICES.md
+      - models.json
   - from: LICENSE
     to: LICENSE
   - from: assets/computer_cat.png
     to: computer_cat.png
+beforePack: scripts/check-voice-package.cjs
 asar: true
 npmRebuild: true
 win:

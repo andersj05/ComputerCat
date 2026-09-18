@@ -132,3 +132,29 @@ license granted in LICENSE. Dependencies retain their own licenses.
 
 Evidence: [license](../../LICENSE), [package metadata](../../package.json),
 [lockfile](../../package-lock.json), and [packaging](../../electron-builder.yml).
+
+## D009: Use local Whisper for the first speech input
+
+Status: implemented for Windows CPU; reviewed 2026-09-18. Supersedes the cloud-first input
+proposal in [voice research](../voice-and-desktop-research.md). Release evaluation is incomplete.
+
+Use Whisper `large-v3-turbo` through `whisper.cpp` for local transcription with no speech API
+key or per-minute service charge. Keep existing Pi/Codex reasoning and authentication. The
+reason is the user's choice of a free local input method after comparing speech options.
+
+The [implementation](../implementation/whisper/README.md) uses a persistent, supervised
+native helper, bounded chat-owned microphone capture, explicit verified model downloads and
+editable transcripts sent through the existing composer. whisper.cpp 1.9.4, weights and
+Silero 6.2.0 are pinned by full revisions and verified SHA-256. The CPU build has a portable
+fallback plus a CPUID/OS-guarded AVX2 variant: portable Turbo exceeded the inference deadline
+in a local trial, while AVX2 completed. CPU is the actual backend in Auto. CUDA configuration
+failed without a toolkit and is explicitly unsupported in this distribution. The tradeoff
+preserves offline use without installing drivers or tools on end-user machines. See
+[native evidence](../implementation/whisper/native-evidence.md); broad accuracy/latency and
+clean-machine tests remain release gates.
+
+Consequences: native Windows build/distribution and sizeable model downloads become project
+responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation
+retention. Speech output, screenshots and desktop control remain independent future scope.
+No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
+[contracts](../implementation/whisper/contracts.md) and [delivery gates](../implementation/whisper/delivery.md).

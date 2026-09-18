@@ -13,6 +13,8 @@ import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
+import { useVoice } from "./voice/useVoice";
+import { VoiceControls, voiceStatus } from "./voice/VoiceControls";
 import { WindowCaption } from "./WindowCaption";
 
 const prompts = [
@@ -31,6 +33,12 @@ export function App() {
     draftRevision.current++;
     setTextState(value);
   }
+  const voice = useVoice(isPet, {
+    conversationId: snapshot.conversationId,
+    text,
+    revision: draftRevision.current,
+    insert: setText,
+  });
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [maximized, setMaximized] = useState(false);
@@ -139,7 +147,17 @@ export function App() {
     }
   }
 
+  useEffect(() => {
+    if (
+      (optionsOpen || historyOpen || modelsOpen || confirmClear) &&
+      voice.snapshot.sessionId &&
+      voice.busy
+    )
+      void window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
+  }, [optionsOpen, historyOpen, modelsOpen, confirmClear, voice.busy, voice.snapshot.sessionId]);
+
   async function send() {
+    if (voice.busy) return;
     if (!text.trim() || snapshot.busy || pendingSend.current || clearing || !info) return;
     const draft = text;
     const revision = draftRevision.current;
@@ -170,6 +188,7 @@ export function App() {
       else {
         setError("");
         setText("");
+        if (snapshot.conversationId) voice.dropReview(snapshot.conversationId);
         followReply.current = true;
       }
     } catch {
@@ -182,7 +201,7 @@ export function App() {
 
   function newChat() {
     if (snapshot.busy || sending || clearing || !info) return;
-    if (text.trim()) setConfirmClear(true);
+    if (text.trim() || voice.review.trim()) setConfirmClear(true);
     else {
       setError("");
       void clear();
@@ -194,7 +213,7 @@ export function App() {
   const desktop = () =>
     void action(() => window.computerCat.hideChat(), "Couldn't hide the chat window.");
   const ready = Boolean(info);
-  const working = snapshot.busy || sending;
+  const working = snapshot.busy || sending || voice.busy;
   const modeLabel = !info
     ? "Connecting…"
     : info.mode === "demo"
@@ -216,6 +235,13 @@ export function App() {
         modelLabel={info?.mode === "demo" ? "Local demo" : (info?.model ?? "Choose model")}
         openModels={() =>
           void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
+        }
+        voiceStatus={voiceStatus(voice.snapshot)}
+        voiceBusy={voice.busy}
+        talk={() =>
+          void window.computerCat.voiceStart().then((result) => {
+            if (!result.ok) void window.computerCat.openOptions();
+          })
         }
         stop={stop}
       />
@@ -387,6 +413,22 @@ export function App() {
           )}
           <div ref={end} />
         </section>
+        <VoiceControls
+          state={voice.snapshot}
+          busy={voice.busy}
+          agentBusy={snapshot.busy || sending}
+          review={voice.review}
+          onReview={voice.setReview}
+          onInsert={() => {
+            const combined = text ? `${text.trimEnd()} ${voice.review}` : voice.review;
+            if (combined.length > 6000) {
+              setError("Edit the transcript so the combined message fits 6,000 characters.");
+              return;
+            }
+            setText(combined);
+            voice.setReview("");
+          }}
+        />
         <form
           className="composer"
           onSubmit={(event) => {
@@ -418,7 +460,7 @@ export function App() {
               {text.length > 5500 && <span>{text.length.toLocaleString()} / 6,000</span>}
             </div>
           </div>
-          {snapshot.busy ? (
+          {snapshot.busy || voice.busy ? (
             <button
               type="button"
               className="xp-button send-button"
@@ -431,7 +473,7 @@ export function App() {
             <button
               type="submit"
               className="xp-button default-button send-button"
-              disabled={!text.trim() || sending || clearing || !ready}
+              disabled={!text.trim() || sending || clearing || voice.busy || !ready}
               aria-label="Send message"
             >
               Send
@@ -457,6 +499,7 @@ export function App() {
           info={info}
           busy={snapshot.busy}
           preferences={preferences}
+          voice={voice.snapshot}
           onApply={(next) => window.computerCat.updatePreferences(next)}
           onClose={() => setOptionsOpen(false)}
           onShowPet={() => window.computerCat.showPet()}
@@ -479,6 +522,7 @@ export function App() {
           }}
           onDeleted={(id) => {
             drafts.current.delete(id);
+            voice.dropReview(id);
             if (id === snapshot.conversationId) setText("");
           }}
         />

@@ -8,6 +8,44 @@ import {
 import type { ModelState } from "../shared/models";
 
 const api: ComputerCatAPI = {
+  voiceSnapshot: () => ipcRenderer.invoke(IPC.voiceSnapshot),
+  voiceStart: () => ipcRenderer.invoke(IPC.voiceStart),
+  voiceCaptureStarted: (request) => ipcRenderer.invoke(IPC.voiceCaptureStarted, request),
+  voiceAppend: (request) => ipcRenderer.invoke(IPC.voiceAppend, request),
+  voiceRequestFinish: (request) => ipcRenderer.invoke(IPC.voiceRequestFinish, request),
+  voiceFinish: (request) => ipcRenderer.invoke(IPC.voiceFinish, request),
+  voiceCancel: (request) => ipcRenderer.invoke(IPC.voiceCancel, request),
+  voiceCaptureFailed: (request) => ipcRenderer.invoke(IPC.voiceCaptureFailed, request),
+  voiceCaptureReleased: (request) => ipcRenderer.invoke(IPC.voiceCaptureReleased, request),
+  voiceResultConsumed: (request) => ipcRenderer.invoke(IPC.voiceResultConsumed, request),
+  voiceUpdateSettings: (request) => ipcRenderer.invoke(IPC.voiceUpdateSettings, request),
+  voiceDownloadModel: (request) => ipcRenderer.invoke(IPC.voiceDownloadModel, request),
+  voiceCancelDownload: (request) => ipcRenderer.invoke(IPC.voiceCancelDownload, request),
+  voiceRemoveModel: (request) => ipcRenderer.invoke(IPC.voiceRemoveModel, request),
+  onVoiceChanged: (listener) => {
+    const receive = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/voice").VoiceSnapshot,
+    ) => listener(value);
+    ipcRenderer.on(IPC.voiceChanged, receive);
+    return () => ipcRenderer.removeListener(IPC.voiceChanged, receive);
+  },
+  onVoiceCaptureRequested: (listener) => {
+    const receive = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/voice").CaptureRequest,
+    ) => listener(value);
+    ipcRenderer.on(IPC.voiceCaptureRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.voiceCaptureRequested, receive);
+  },
+  onVoiceCaptureStopped: (listener) => {
+    const receive = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/voice").CaptureStop,
+    ) => listener(value);
+    ipcRenderer.on(IPC.voiceCaptureStopped, receive);
+    return () => ipcRenderer.removeListener(IPC.voiceCaptureStopped, receive);
+  },
   info: () => ipcRenderer.invoke(IPC.info),
   snapshot: () => ipcRenderer.invoke(IPC.snapshot),
   send: (request) => ipcRenderer.invoke(IPC.send, request),

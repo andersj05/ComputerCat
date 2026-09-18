@@ -11,6 +11,9 @@ export function Pet({
   openModels,
   modelLabel,
   stop,
+  talk,
+  voiceStatus,
+  voiceBusy,
 }: {
   snapshot: ChatSnapshot;
   preferences: PetPreferences;
@@ -20,6 +23,9 @@ export function Pet({
   openModels: () => void;
   modelLabel: string;
   stop: () => void;
+  talk: () => void;
+  voiceStatus: string;
+  voiceBusy: boolean;
 }) {
   const [controlsVisible, setControlsVisible] = useState(false);
   const catButton = useRef<HTMLButtonElement>(null);
@@ -45,8 +51,8 @@ export function Pet({
   }
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
   const status =
-    error || dragError
-      ? error || dragError
+    error || dragError || voiceStatus
+      ? error || dragError || voiceStatus
       : snapshot.busy
         ? "Thinking…"
         : lastReply?.state === "error"
@@ -63,7 +69,7 @@ export function Pet({
       }}
     >
       <div className="pet-status-slot" role="status">
-        {controlsVisible && status && (
+        {(controlsVisible || voiceBusy) && status && (
           <span className="pet-bubble">
             {snapshot.busy && !error && !dragError && (
               <span className="thinking-dot" aria-hidden="true" />
@@ -129,7 +135,15 @@ export function Pet({
         >
           ⋯
         </button>
-        {snapshot.busy && (
+        <button
+          type="button"
+          className="xp-button pet-talk"
+          onClick={() => act(talk)}
+          disabled={snapshot.busy || voiceBusy}
+        >
+          Talk
+        </button>
+        {(snapshot.busy || voiceBusy) && (
           <button
             type="button"
             className="xp-button pet-stop"
