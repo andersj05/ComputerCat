@@ -55,6 +55,14 @@ let quitting = false;
 let shutdownComplete = false;
 let controller: ChatController;
 let voice: VoiceController;
+function captureWindow(): BrowserWindow | undefined {
+  return voice?.snapshot().owner === "pet" ? pet : chat;
+}
+function assertCaptureSender(event: IpcMainInvokeEvent): void {
+  assertSender(event);
+  if (event.sender.id !== captureWindow()?.webContents.id)
+    throw new Error("Not the active capture owner.");
+}
 function stopAll(): void {
   controller.stop();
   void voice?.cancel();
@@ -324,7 +332,10 @@ else {
         {
           conversation: () => controller.snapshot().conversationId ?? "",
           agentBusy: () => controller.snapshot().busy || disconnecting || quitting,
-          visible: () => !!chat && !chat.isDestroyed() && chat.isVisible() && !chat.isMinimized(),
+          visible: () => {
+            const win = captureWindow();
+            return !!win && !win.isDestroyed() && win.isVisible() && !win.isMinimized();
+          },
           changed: () => {
             for (const win of BrowserWindow.getAllWindows())
               if (!win.isDestroyed())
@@ -333,13 +344,15 @@ else {
                   voice.snapshot(trusted.get(win.webContents.id)?.role === "chat"),
                 );
           },
-          capture: (request) => chat.webContents.send(IPC.voiceCaptureRequested, request),
+          capture: (request) =>
+            captureWindow()?.webContents.send(IPC.voiceCaptureRequested, request),
           stop: (request) => {
-            if (chat && !chat.isDestroyed())
-              chat.webContents.send(IPC.voiceCaptureStopped, request);
+            const win = captureWindow();
+            if (win && !win.isDestroyed()) win.webContents.send(IPC.voiceCaptureStopped, request);
           },
           terminateCapture: () => {
-            if (chat && !chat.isDestroyed()) chat.webContents.forcefullyCrashRenderer();
+            const win = captureWindow();
+            if (win && !win.isDestroyed()) win.webContents.forcefullyCrashRenderer();
           },
         },
       );
@@ -353,16 +366,18 @@ else {
               mainFrame: true,
             }
           : null;
-      const chatPermission = () =>
-        chat && !chat.isDestroyed()
-          ? { id: chat.webContents.id, url: trusted.get(chat.webContents.id)?.url ?? "" }
+      const capturePermission = () => {
+        const win = captureWindow();
+        return win && !win.isDestroyed()
+          ? { id: win.webContents.id, url: trusted.get(win.webContents.id)?.url ?? "" }
           : undefined;
+      };
       session.defaultSession.setPermissionRequestHandler(
         (contents, permission, callback, details) =>
           callback(
             allowMicrophone(
               permissionOwner(contents),
-              chatPermission(),
+              capturePermission(),
               voice.permissionGranted,
               permission,
               details,
@@ -373,7 +388,7 @@ else {
       session.defaultSession.setPermissionCheckHandler((contents, permission, _origin, details) =>
         allowMicrophone(
           permissionOwner(contents),
-          chatPermission(),
+          capturePermission(),
           voice.permissionGranted,
           permission,
           details,
@@ -386,39 +401,38 @@ else {
       });
       ipcMain.handle(IPC.voiceStart, (event) => {
         assertSender(event);
-        showChat();
-        return voice.action(() => voice.start());
+        return voice.action(() => voice.start(trusted.get(event.sender.id)?.role));
       });
       ipcMain.handle(IPC.voiceCancel, (event, request: unknown) => {
         assertSender(event);
         return voice.action(() => voice.cancel(sessionSchema.parse(request).sessionId));
       });
       ipcMain.handle(IPC.voiceCaptureStarted, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.captureStarted(request));
       });
       ipcMain.handle(IPC.voiceAppend, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.append(request));
       });
       ipcMain.handle(IPC.voiceRequestFinish, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.requestFinish(request));
       });
       ipcMain.handle(IPC.voiceFinish, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.finish(request));
       });
       ipcMain.handle(IPC.voiceCaptureFailed, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.captureFailed(request));
       });
       ipcMain.handle(IPC.voiceCaptureReleased, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.released(request));
       });
       ipcMain.handle(IPC.voiceResultConsumed, (event, request: unknown) => {
-        assertSender(event, true);
+        assertCaptureSender(event);
         return voice.action(() => voice.consumed(request));
       });
       ipcMain.handle(IPC.voiceUpdateSettings, (event, request: unknown) => {
@@ -481,7 +495,7 @@ else {
         return controller.snapshot();
       });
       ipcMain.handle(IPC.send, (event, request: unknown) => {
-        assertSender(event, true);
+        assertSender(event);
         if (disconnecting)
           return { ok: false, message: "Wait for the connection change to finish." };
         if (voice.busy) return { ok: false, message: "Finish or cancel recording first." };
@@ -617,14 +631,21 @@ else {
         !smoke && globalShortcut.register("CommandOrControl+Shift+Escape", stopAll);
       chat = await createWindow("chat");
       pet = await createWindow("pet");
-      chat.on("hide", () => void voice.cancel());
-      chat.on("minimize", () => void voice.cancel());
-      chat.webContents.on("did-start-loading", () => void voice.cancel());
-      chat.webContents.on("render-process-gone", () => {
-        void voice.cancel().then(() => {
-          if (!quitting && !chat.isDestroyed()) chat.reload();
+      for (const win of [chat, pet]) {
+        const cancelOwned = () => {
+          if (captureWindow() === win) void voice.cancel();
+        };
+        win.on("hide", cancelOwned);
+        win.on("minimize", cancelOwned);
+        win.webContents.on("did-start-loading", cancelOwned);
+        win.webContents.on("render-process-gone", () => {
+          const cleanup = captureWindow() === win ? voice.cancel() : Promise.resolve();
+          void cleanup.then(() => {
+            if (!quitting && !win.isDestroyed()) win.reload();
+          });
         });
-      });
+      }
+      void voice.warm();
       powerMonitor.on("suspend", () => void voice.dispose());
       powerMonitor.on("lock-screen", () => void voice.dispose());
       pet.on("blur", () => {

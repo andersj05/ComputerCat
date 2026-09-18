@@ -53,6 +53,7 @@ export class VoiceController {
   private transitions = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private download: { id: string; abort: AbortController; task: Promise<void> } | undefined;
+  private warming: { abort: AbortController; task: Promise<void> } | undefined;
   constructor(
     readonly settings: VoiceSettingsStore,
     private readonly store: Pick<VoiceModelStore, "installed" | "prepare" | "install" | "remove">,
@@ -77,13 +78,52 @@ export class VoiceController {
     const {
       settings: _settings,
       transcript: _transcript,
+      partial: _partial,
       installed: _installed,
       download: _download,
       ...status
     } = this.state;
     return chat
       ? structuredClone({ ...this.state, settings: this.settings.snapshot() })
-      : { ...status };
+      : {
+          ...status,
+          ...(this.state.owner === "pet" ? { transcript: _transcript, partial: _partial } : {}),
+        };
+  }
+  /** Prepare installed weights without granting access to the microphone. */
+  async warm(): Promise<void> {
+    if (this.warming) return this.warming.task;
+    const settings = this.settings.snapshot();
+    if (
+      !settings.enabled ||
+      this.busy ||
+      this.transitions ||
+      this.download ||
+      !this.state.installed?.includes(settings.modelId)
+    )
+      return;
+    const abort = new AbortController();
+    this.state.availability = "preparing";
+    const task = (async () => {
+      try {
+        const model = await this.store.prepare(settings.modelId, abort.signal);
+        await this.runtime.prepare(model, settings, abort.signal);
+        if (!abort.signal.aborted) this.state.availability = "ready";
+      } catch {
+        if (!abort.signal.aborted) this.state.availability = "unavailable";
+      } finally {
+        this.warming = undefined;
+        this.publish();
+      }
+    })();
+    this.warming = { abort, task };
+    this.publish();
+    await task;
+  }
+  private async stopWarm(): Promise<void> {
+    const warming = this.warming;
+    warming?.abort.abort();
+    await warming?.task;
   }
   get busy(): boolean {
     return !!this.session && this.state.phase !== "review";
@@ -99,6 +139,7 @@ export class VoiceController {
   transition<T>(run: () => Promise<T> | T): Promise<T> {
     this.transitions++;
     const task = this.queue.then(async () => {
+      await this.stopWarm();
       await this.cancel();
       return run();
     });
@@ -119,7 +160,7 @@ export class VoiceController {
       return { ok: false, code: e instanceof VoiceError ? e.code : "protocol-error" };
     }
   }
-  async start(): Promise<void> {
+  async start(owner: "chat" | "pet" = "chat"): Promise<void> {
     if (this.busy || this.transitions || this.download || this.hooks.agentBusy())
       throw new VoiceError("busy");
     const settings = this.settings.snapshot();
@@ -145,10 +186,13 @@ export class VoiceController {
       sessionId: s.id,
       conversationId: s.conversationId,
       elapsedMs: 0,
+      owner,
     };
     delete this.state.error;
     this.publish();
     try {
+      await this.warming?.task;
+      if (s.abort.signal.aborted) return;
       const model = await this.store.prepare(settings.modelId, s.abort.signal);
       await this.runtime.prepare(model, settings, s.abort.signal);
       if (this.session !== s || s.abort.signal.aborted) return;
@@ -311,6 +355,7 @@ export class VoiceController {
     this.state.phase = "cancelling";
     this.publish();
     this.queueCleanup = (async () => {
+      await this.stopWarm();
       const cleanup = s.released
         ? Promise.resolve()
         : new Promise<void>((resolve) => {
@@ -345,6 +390,7 @@ export class VoiceController {
       await this.runtime.dispose();
       await this.refresh();
     });
+    void this.warm();
   }
   async downloadModel(input: unknown): Promise<void> {
     const { modelId } = modelIdSchema.parse(input);
@@ -387,6 +433,7 @@ export class VoiceController {
     });
   }
   async dispose(): Promise<void> {
+    await this.stopWarm();
     this.download?.abort.abort();
     await this.cancel();
     await this.download?.task;

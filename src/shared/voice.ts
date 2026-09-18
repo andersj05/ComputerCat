@@ -124,6 +124,8 @@ export interface VoiceSnapshot {
   error?: VoiceErrorCode;
   settings?: VoiceSettings;
   transcript?: string;
+  partial?: string;
+  owner?: "chat" | "pet";
   installed?: string[];
   download?: { id: string; modelId: string; received: number; total: number };
 }

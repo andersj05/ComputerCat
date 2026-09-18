@@ -9,10 +9,10 @@ through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resourc
 not supply the app’s conversation history. Keep these two forms of memory separate when adding features.
 
 Local speech input (reviewed 2026-09-18) follows the
-[Whisper design](implementation/whisper/README.md). The trusted chat main frame owns an
+[Whisper design](implementation/whisper/README.md). The trusted main frame that starts Talk (chat or cat) owns an
 AudioWorklet and microphone grant. A [main controller](../src/main/voice/controller.ts)
 serializes sessions against Send/history/model changes, validates PCM and releases capture
-before inference. Both Electron permission handlers require an exact chat URL, main frame,
+before final inference. Both Electron permission handlers require the exact initiating window URL, main frame,
 audio-only request and active grant. A missing cleanup acknowledgment crashes/reloads the
 capture renderer after two seconds; this can lose unsent drafts, like an ordinary renderer crash.
 
@@ -21,13 +21,14 @@ private pipes with an allowlisted environment. Portable and guarded AVX2 CPU bui
 whisper.cpp 1.9.4; no CUDA backend is distributed. The helper resets linguistic context,
 performs Silero VAD and returns bounded text. It has no microphone, credentials or network
 service. stdin EOF triggers cooperative abort and a hard exit deadline. Main also enforces
-load/inference timeouts and waits for exit before replacement. Idle models unload after five minutes.
+load/inference timeouts and waits for exit before replacement. Enabled, installed models preload
+at startup and after voice settings are applied without opening a microphone. Idle models unload after five minutes.
 
 [Model storage](../src/main/voice/model-store.ts) streams explicit, bounded HTTPS downloads,
 checks fixed catalogue lengths and SHA-256, then renames a same-volume partial. Installed
 files are verified once per run. Symlinks/junction ancestors are rejected. Voice preferences
 live in voice.json, disabled by default. Audio is memory-only; main retains a transcript until
-React commits composer/review ownership. Pet snapshots exclude settings, downloads and text.
+React commits composer/review ownership. Pet snapshots exclude settings, downloads and chat-origin text.
 The existing text-only agent protocol and Codex authentication remain unchanged. See
 [native evidence](implementation/whisper/native-evidence.md) for verified behavior and remaining
 real-microphone/clean-machine gates.

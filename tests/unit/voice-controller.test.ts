@@ -52,6 +52,30 @@ function setup() {
 }
 afterEach(() => vi.useRealTimers());
 describe("voice session boundary", () => {
+  it("preloads without a microphone grant and shares an in-flight load with Talk", async () => {
+    const { voice, runtime, capture } = setup();
+    await voice.refresh();
+    let ready!: () => void;
+    runtime.prepare.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          ready = resolve;
+        }),
+    );
+    const warming = voice.warm();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(voice.permissionGranted).toBe(false);
+    expect(capture).not.toHaveBeenCalled();
+    const start = voice.start("pet");
+    expect(voice.snapshot().owner).toBe("pet");
+    ready();
+    await warming;
+    await start;
+    expect(capture).toHaveBeenCalledOnce();
+    expect(voice.permissionGranted).toBe(true);
+    voice.released({ sessionId: voice.snapshot().sessionId });
+    await voice.dispose();
+  });
   it("requires released capture and exact sequence before inference, returns review without Send", async () => {
     const { voice, runtime, advance } = setup();
     await voice.start();

@@ -155,7 +155,11 @@ export class WhisperRuntime implements SpeechRecognizer {
         this.currentExecutable = this.executable;
         await this.start(signal);
       }
-      if (this.readyModel === model.modelPath) return;
+      if (this.readyModel === model.modelPath) {
+        this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
+        this.idle.unref();
+        return;
+      }
       const requestId = randomUUID();
       const reply = await this.wait(
         requestId,
@@ -168,6 +172,8 @@ export class WhisperRuntime implements SpeechRecognizer {
       if (reply.kind !== "ready" || reply.modelId !== model.modelId)
         throw new VoiceError("protocol-error");
       this.readyModel = model.modelPath;
+      this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
+      this.idle.unref();
     } catch (error) {
       await this.dispose();
       throw error;
