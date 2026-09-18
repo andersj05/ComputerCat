@@ -8,6 +8,14 @@ Developer context is maintained separately in [shared project memory](memory/REA
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
 not supply the app’s conversation history. Keep these two forms of memory separate when adding features.
 
+The next speech-input implementation is specified in the
+[local Whisper design](implementation/whisper/README.md), with separate
+[contracts](implementation/whisper/contracts.md) and [delivery gates](implementation/whisper/delivery.md).
+This is a planned extension: trusted chat microphone capture, a main-owned voice controller,
+and a supervised native helper will produce editable text for the existing Send path. No
+audio provider, permission exception, model download, or new runtime interface exists yet.
+The implemented architecture below remains the baseline until those changes land.
+
 ```text
 Sandboxed React renderer
   -> typed, allowlisted preload API

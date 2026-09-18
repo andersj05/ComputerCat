@@ -19,6 +19,7 @@ argument, process ID, or model-provider credential.
 | Minimum utterance | 300 ms / 9,600 bytes | Return too-short without inference |
 | Capture startup deadline | 15 seconds after grant | Revoke grant, stop any late stream |
 | Capture heartbeat | At least one chunk every 2 seconds | Cancel an unhealthy graph even when audio is silent |
+| Finish/flush deadline | 2 seconds after main requests capture stop | Cancel and discard if tracks/chunks do not settle |
 | Queue | At most four unacknowledged chunks | Abort visibly on overrun; never drop samples silently |
 | Helper startup / model load | 60 seconds | Cancel loading, terminate if needed, keep typed chat usable |
 | Transcription deadline | 120 seconds after final audio received | Abort, then enforce shutdown deadline |
@@ -60,6 +61,7 @@ role, session ownership and current state for every call, even if UI controls ar
 | `voiceStart()` | None | Chat or pet; main binds active conversation, ensures readiness, opens chat, issues grant |
 | `voiceCaptureStarted()` | `{ sessionId }` | Chat capture owner; acknowledges live graph, transitions to recording |
 | `voiceAppend()` | `{ sessionId, sequence, pcm }` | Chat owner; sequence starts at zero, `pcm` is copied/validated Uint8Array; acknowledges next sequence |
+| `voiceRequestFinish()` | `{ sessionId }` | Chat only; main enters finalizing, starts flush deadline and requests track stop |
 | `voiceFinish()` | `{ sessionId, nextSequence }` | Chat owner after stopping tracks and flushing acknowledged chunks; transitions once to transcription |
 | `voiceCancel()` | `{ sessionId }` | Chat or pet; invalidates the matching active session, discards buffers; idempotent |
 | `voiceCaptureFailed()` | `{ sessionId, code }` | Chat owner; bounded microphone/capture error enum, no browser error stack |
@@ -83,7 +85,12 @@ Main-to-renderer event subscriptions:
   records its draft revision before opening the microphone. Duplicate session events do not
   create multiple streams. Re-check session validity when async microphone acquisition resolves.
 - `onVoiceCaptureStopped`: chat-only `{ sessionId, reason }`; close tracks/graph and discard
-  queues on cancel. A duration-limit reason finishes/flushes a healthy recording instead.
+  queues on cancel. A finish/duration-limit reason flushes a healthy recording instead.
+
+The main duration timer uses the same finalizing transition as `voiceRequestFinish`. Permit
+only the bounded queued tail in finalizing, within remaining total-byte and flush-time limits.
+Require `voiceCaptureReleased` and the final acknowledged sequence before recognition starts.
+A capture timeout must never create an indefinitely waiting finalization state.
 
 Subscribe before requesting a snapshot. Reconcile the snapshot with incoming revisions so
 startup races cannot lose a result. Unsubscribe and stop tracks on component disposal. Only
@@ -100,8 +107,9 @@ Permit only audio input, only for the registered chat webContents and its exact 
 main-frame URL, and only in the starting/recording state for its current session. Reject
 unregistered/destroyed contents, null contents, subframes, wrong URLs, pet requests, video,
 screen capture, and unrelated permission types. Inspect the actual pinned Electron 44.4.1
-declarations: request details use optional `mediaTypes`; check details use their own media
-discriminator. Missing/ambiguous media information must not be treated as approval for camera.
+declarations: request details use optional `mediaTypes`; check details use optional
+`mediaType: audio | video | unknown`, `requestingUrl`, and `isMainFrame`. Missing/ambiguous
+media information must not be treated as approval for camera.
 Test both dev HTTP and packaged file URLs; an origin such as `file://` alone is insufficient.
 
 Revoking the grant stops future permission grants, but does not terminate an already-open

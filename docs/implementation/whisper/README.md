@@ -7,7 +7,7 @@ below is the proposed implementation of that selection; performance remains unme
 
 Read this specification, the [boundary contracts](contracts.md), and the
 [delivery checklist](delivery.md) together. The task-specific
-[handoff index](../../memory/handoffs/README.md) records unfinished implementation work.
+[handoff](../../memory/handoffs/2026-09-17-local-whisper.md) records branch state and verification.
 Decision [D009](../../memory/decisions.md#d009-use-local-whisper-for-the-first-speech-input)
 supersedes the earlier cloud-first speech-input recommendation.
 

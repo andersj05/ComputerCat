@@ -40,7 +40,9 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   The model button beneath the desktop cat opens the same controls; **Connections** opens sign-in.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
-computer control, external MCP connections, and long-term memory are not implemented yet.**
+computer control, external MCP connections, long-term memory, and voice are not implemented yet.**
+Local Whisper speech input has an [implementation specification](docs/implementation/whisper/README.md)
+and [handoff](docs/memory/handoffs/2026-09-17-local-whisper.md); these describe planned work.
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
 

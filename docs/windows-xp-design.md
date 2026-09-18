@@ -49,6 +49,10 @@ The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 
+Planned voice controls and a Voice tab are defined in the
+[Whisper implementation specification](implementation/whisper/README.md#ux-and-lifecycle).
+They are not current UI capabilities; retain the conventions above when implementing them.
+
 ## References
 
 - [Microsoft's Windows interface text guidance](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/bb246446(v=vs.85)) informs concise labels and restrained descriptions.

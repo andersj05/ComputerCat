@@ -6,7 +6,9 @@ for delivered capabilities and boundaries.
 
 Follow-up research reviewed 2026-09-17: [voice, screen context, and computer control](voice-and-desktop-research.md).
 It compares speech providers and local alternatives, maps implementation gaps, and refines the
-proposed Cua integration choice using current SDK guidance. Both documents remain proposals.
+proposed Cua integration choice using current SDK guidance. The user subsequently selected
+local Whisper speech input: follow the [implementation specification](implementation/whisper/README.md)
+and its delivery order for that work. Other undelivered capabilities remain proposals.
 
 Research date: September 16, 2026. Assumption: Windows is the first target, with other operating systems possible later. This is an architecture recommendation based on official documentation, source files, and release notes. No framework or desktop driver was installed or benchmarked during this research.
 
