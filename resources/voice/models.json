@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "engine": "whisper.cpp-1.9.4",
+  "reviewed": "2026-09-18",
+  "redirectHosts": [
+    "huggingface.co",
+    "cdn-lfs.huggingface.co",
+    "cdn-lfs-us-1.huggingface.co",
+    "cas-bridge.xethub.hf.co"
+  ],
+  "assets": [
+    {
+      "id": "large-v3-turbo",
+      "label": "Whisper Turbo (multilingual)",
+      "family": "whisper",
+      "format": "ggml",
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "filename": "ggml-large-v3-turbo.bin",
+      "bytes": 1624555275,
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin",
+      "languages": ["en", "auto"],
+      "vad": "silero-v6.2.0",
+      "license": "MIT",
+      "source": "https://huggingface.co/openai/whisper-large-v3-turbo"
+    },
+    {
+      "id": "base.en",
+      "label": "Whisper Base (English, smaller)",
+      "family": "whisper",
+      "format": "ggml",
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "filename": "ggml-base.en.bin",
+      "bytes": 147964211,
+      "sha256": "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.en.bin",
+      "languages": ["en"],
+      "vad": "silero-v6.2.0",
+      "license": "MIT",
+      "source": "https://huggingface.co/openai/whisper-base.en"
+    },
+    {
+      "id": "silero-v6.2.0",
+      "label": "Silero voice activity detection",
+      "family": "silero",
+      "format": "ggml",
+      "revision": "9ffd54a1e1ee413ddf265af9913beaf518d1639b",
+      "filename": "ggml-silero-v6.2.0.bin",
+      "bytes": 885098,
+      "sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+      "url": "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin",
+      "languages": [],
+      "license": "MIT",
+      "source": "https://github.com/snakers4/silero-vad"
+    }
+  ]
+}

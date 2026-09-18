@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "buildId": "computercat-whisper-1",
+  "whisper": {
+    "version": "1.9.4",
+    "commit": "927cfce34f31707e17f2bff35c349632fb9e2c3a",
+    "url": "https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/927cfce34f31707e17f2bff35c349632fb9e2c3a",
+    "sha256": "41b664fee09e79176ac277b5237debec34f8d74af3c7d71f333f1ec67989ecde"
+  },
+  "json": {
+    "version": "3.12.0",
+    "commit": "55f93686c01528224f448c19128836e7df245f72",
+    "url": "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.12.0",
+    "sha256": "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
+  },
+  "target": "windows-x64",
+  "toolchain": {
+    "cmakeMinimum": "3.24",
+    "testedCmake": "4.3.1-msvc1",
+    "testedCompiler": "MSVC 19.51.36248.0",
+    "testedWindowsSdk": "10.0.26100.0",
+    "runtime": "static MSVC /MT",
+    "cpu": "portable x64; native tuning, AVX, AVX2, FMA, F16C and OpenMP disabled",
+    "cuda": "not distributed until a toolkit build and redistributable inventory are verified"
+  }
+}
