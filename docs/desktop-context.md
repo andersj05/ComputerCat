@@ -32,6 +32,9 @@ Text-only models automatically omit images. Screenshots are bounded to 1920 × 1
 as image content, not base64 text. Snapshot timestamps distinguish an observation from a
 live feed. Opaque source IDs are valid for the same turn only, at most sixty seconds, and
 until the next listing or cancellation. A changed/closed source requires a fresh observation.
+When capture fails, the broker remembers that source for the reply. Relisting does not trigger
+another capture of the same failed source. The agent can use text, selection, tabs or another
+source; a new user message permits a fresh attempt. Available text survives a capture failure.
 Region capture crops the source frame before downsizing, so details can remain readable
 without sending another full-window image. Rectangles must fit entirely inside the source.
 
@@ -85,7 +88,8 @@ actual Electron utility process, returns generated text/image context to an offl
 and checks locking and automatic recovery without sharing UI or real desktop capture.
 
 [Native capture smoke](../tests/smoke/native-capture.spec.ts) verifies actual pixels from an
-owned generated window with all source enumeration disabled, plus cancellation and media
+owned generated window in a separate Electron process, with source enumeration disabled,
+plus cancellation and media
 renderer cleanup. [Capture boundary tests](../tests/unit/source-capture.test.ts) exercise
 permissions, renderer failures, deadline, cancellation, image limits and invalid IDs.
 Native coverage also checks a region's pixel content, focused selection/tab reads and

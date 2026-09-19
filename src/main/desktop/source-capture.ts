@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { BrowserWindow } from "electron";
 import { z } from "zod";
 import { type DesktopRegion, desktopRegionSchema } from "../../shared/desktop";
+import { CaptureError } from "./capture-error";
 
 export const captureImageSchema = z.strictObject({
   data: z
@@ -15,20 +16,6 @@ export const captureImageSchema = z.strictObject({
   height: z.number().int().min(1).max(1080),
 });
 export type CapturedImage = z.infer<typeof captureImageSchema>;
-export class CaptureError extends Error {
-  constructor(readonly code: "unavailable" | "timeout" | "cancelled" | "busy") {
-    super(
-      {
-        unavailable:
-          "The selected source could not provide a frame. It may be minimized, closed, or capture-protected. Use readable text or choose another source.",
-        timeout:
-          "The selected source did not provide a frame in time. Use readable text or choose another source.",
-        cancelled: "Screen capture was cancelled.",
-        busy: "Another screen capture is still stopping. Wait for it to finish.",
-      }[code],
-    );
-  }
-}
 
 // Fixed code in an isolated, invisible media renderer. The app's chat/pet renderers
 // never receive a capture permission, source ID, media stream, or raw image.

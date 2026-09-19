@@ -203,3 +203,19 @@ retain user privileges. Input control and complete background browser access rem
 Evidence: [desktop design](../desktop-context.md), [broker](../../src/main/desktop/controller.ts),
 [Pi tools](../../src/agent/desktop-tools.ts), [prompt](../../src/agent/runtime.ts), and
 [boundary tests](../../tests/unit/desktop-controller.test.ts).
+
+## D013: Capture one source and keep focused context tools
+
+Status: adopted and implemented, reviewed 2026-09-19. Refines D012 after real WGC error reports.
+
+Use metadata-only listings and a short-lived isolated media renderer for one selected source.
+Bulk thumbnails attempted unrelated uncapturable windows before JavaScript could filter them.
+Do not globally hide Chromium errors or bypass protected sources. Cancel/deadline destroys
+the media owner. Known capture failures are remembered for the reply, across source relisting;
+the next turn can retry. Preserve readable text when an image fails.
+
+Selection and tab tools skip full-page text collection and screenshots; region capture crops
+before resizing for small details. Keep these read-only and within the same source/turn rules.
+Evidence: [capture boundary](../../src/main/desktop/source-capture.ts),
+[broker](../../src/main/desktop/controller.ts), [tool definitions](../../src/agent/desktop-tools.ts),
+and [native verification](../../tests/smoke/native-capture.spec.ts).

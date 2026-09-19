@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { _electron, expect, test } from "@playwright/test";
+import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 
 async function cleanup(path: string) {
   if (!path.startsWith(join(tmpdir(), "computercat-capture-")))
@@ -18,16 +18,25 @@ test("captures pixels from one owned window without thumbnail enumeration and st
     ),
   );
   delete env.ELECTRON_RUN_AS_NODE;
-  const electron = await _electron.launch({
-    args: [
-      resolve("tests/fixtures/native-capture.mjs"),
-      resolve("out/main/desktop-capture.js"),
-      resolve("out/renderer/desktop-capture.html"),
-      `--user-data-dir=${userData}`,
-    ],
-    env,
-  });
+  const launch = (directory: string) =>
+    _electron.launch({
+      args: [
+        resolve("tests/fixtures/native-capture.mjs"),
+        resolve("out/main/desktop-capture.js"),
+        resolve("out/renderer/desktop-capture.html"),
+        `--user-data-dir=${directory}`,
+      ],
+      env,
+    });
+  const electron = await launch(join(userData, "observer"));
+  let target: ElectronApplication | undefined;
   try {
+    target = await launch(join(userData, "target"));
+    const targetApp = target;
+    await expect
+      .poll(() => targetApp.evaluate(() => typeof Reflect.get(globalThis, "captureSourceFixture")))
+      .toBe("function");
+    const sourceId = await target.evaluate(() => Reflect.get(globalThis, "captureSourceFixture")());
     await expect
       .poll(() => electron.evaluate(() => typeof Reflect.get(globalThis, "captureFixture")))
       .toBe("function");
@@ -36,7 +45,10 @@ test("captures pixels from one owned window without thumbnail enumeration and st
         throw new Error("Native capture must not enumerate thumbnails or other windows");
       };
     });
-    const result = await electron.evaluate(() => Reflect.get(globalThis, "captureFixture")());
+    const result = await electron.evaluate(
+      (_, id) => Reflect.get(globalThis, "captureFixture")(undefined, id),
+      sourceId,
+    );
     expect(result.width).toBeGreaterThan(100);
     expect(result.height).toBeGreaterThan(100);
     // Native video conversion may shift a channel slightly (RGB -> YUV -> RGB).
@@ -47,8 +59,10 @@ test("captures pixels from one owned window without thumbnail enumeration and st
       for (let channel = 0; channel < 3; channel++)
         expect(Math.abs(actual[channel] - (expected[channel] ?? 0))).toBeLessThanOrEqual(3);
     expect(result.windows).toBe(1);
-    const crop = await electron.evaluate(() =>
-      Reflect.get(globalThis, "captureFixture")({ x: 0.5, y: 0, width: 0.5, height: 1 }),
+    const crop = await electron.evaluate(
+      (_, id) =>
+        Reflect.get(globalThis, "captureFixture")({ x: 0.5, y: 0, width: 0.5, height: 1 }, id),
+      sourceId,
     );
     expect(crop.width).toBe(Math.ceil(result.width / 2));
     expect(crop.height).toBe(result.height);
@@ -63,6 +77,7 @@ test("captures pixels from one owned window without thumbnail enumeration and st
       await electron.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
     ).toBe(1);
   } finally {
+    await target?.close();
     await electron.close();
     await cleanup(userData);
   }

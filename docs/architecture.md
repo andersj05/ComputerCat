@@ -128,6 +128,8 @@ in a separate memory-only session, requests only the chosen source, returns one 
 then destroys the renderer. Its six-second deadline also destroys stalled media requests.
 Only its fixed main frame can request desktop media; physical camera/audio, navigation and
 network requests are denied. The app UI gets no new permission. No all-window thumbnails run.
+Capture failure messages are sanitized and remembered per native source for the current reply,
+preventing a relist/retry loop while preserving text and permitting recovery on the next turn.
 [Windows reading](../src/main/desktop/windows-reader.ts) uses fixed, hidden PowerShell code,
 validated numeric window handles, an isolated environment and a bounded UI Automation traversal.
 It does not focus, copy, click or change selection. Text, tab names and selection depend on the

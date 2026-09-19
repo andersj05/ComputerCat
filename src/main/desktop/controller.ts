@@ -8,6 +8,7 @@ import {
   desktopRequestSchema,
   desktopResultSchema,
 } from "../../shared/desktop";
+import { CaptureError } from "./capture-error";
 
 export interface DesktopSource {
   id: string;
@@ -45,6 +46,8 @@ export class DesktopController {
     { source: DesktopSource; expires: number; turn: AbortSignal }
   >();
   private busy = false;
+  private captureTurn: AbortSignal | undefined;
+  private readonly failedCaptures = new Set<string>();
 
   constructor(
     private readonly provider: DesktopProvider,
@@ -55,6 +58,8 @@ export class DesktopController {
     this.epoch.abort();
     this.epoch = new AbortController();
     this.sources.clear();
+    this.failedCaptures.clear();
+    this.captureTurn = undefined;
   }
   setBlocked(reason: "locked" | "suspended" | "closing", value: boolean): void {
     if (value) {
@@ -69,6 +74,20 @@ export class DesktopController {
     return id;
   }
 
+  private async captureSource(source: DesktopSource, signal: AbortSignal, region?: DesktopRegion) {
+    const identity = JSON.stringify([source.id, source.name]);
+    if (this.failedCaptures.has(identity)) throw new CaptureError("already-failed");
+    try {
+      return await this.provider.capture(source, signal, region);
+    } catch (error) {
+      signal.throwIfAborted();
+      if (error instanceof CaptureError && (error.code === "busy" || error.code === "cancelled"))
+        throw error;
+      this.failedCaptures.add(identity);
+      throw error instanceof CaptureError ? error : new CaptureError("unavailable");
+    }
+  }
+
   async execute(input: unknown, turnSignal: AbortSignal): Promise<DesktopResult> {
     const parsed = desktopRequestSchema.safeParse(input);
     if (!parsed.success) return desktopError("Invalid desktop tool request.");
@@ -79,6 +98,10 @@ export class DesktopController {
     if (turnSignal.aborted) return desktopError("Desktop request cancelled.");
     if (this.busy)
       return desktopError("Another desktop observation is still running. Wait for it to finish.");
+    if (this.captureTurn !== turnSignal) {
+      this.captureTurn = turnSignal;
+      this.failedCaptures.clear();
+    }
     const request = parsed.data;
     const sourceId = request.operation === "list" ? undefined : request.sourceId;
     const issued = sourceId ? this.sources.get(sourceId) : undefined;
@@ -183,11 +206,13 @@ export class DesktopController {
         if (request.screenshot) {
           signal.throwIfAborted();
           try {
-            capture = await this.provider.capture(source, signal);
-          } catch {
+            capture = await this.captureSource(source, signal);
+          } catch (error) {
             signal.throwIfAborted();
             screenshotUnavailable =
-              "The screenshot is unavailable; the window may have changed or be protected. Re-observe or list windows for a fresh source.";
+              error instanceof CaptureError
+                ? error.message
+                : "The screenshot is unavailable. Use readable text or another source.";
           }
         }
         signal.throwIfAborted();
@@ -216,7 +241,7 @@ export class DesktopController {
       if (!issued) return desktopError("List windows again.");
       if (request.operation === "capture" || request.operation === "capture-region") {
         const region = request.operation === "capture-region" ? request.region : undefined;
-        const capture = await this.provider.capture(issued.source, signal, region);
+        const capture = await this.captureSource(issued.source, signal, region);
         signal.throwIfAborted();
         return {
           content: [
@@ -270,7 +295,8 @@ export class DesktopController {
         : desktopError(
             "The desktop observation exceeded the supported size. Try a smaller window.",
           );
-    } catch {
+    } catch (error) {
+      if (!signal.aborted && error instanceof CaptureError) return desktopError(error.message);
       return desktopError(
         signal.aborted
           ? "Desktop observation stopped or timed out."

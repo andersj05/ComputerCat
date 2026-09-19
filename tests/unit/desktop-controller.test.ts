@@ -53,6 +53,27 @@ function setup() {
 afterEach(() => vi.useRealTimers());
 
 describe("on-demand desktop harness", () => {
+  it("does not recapture a failed native source after relisting, but allows a new turn", async () => {
+    const { controller, provider, abort, list, observe } = setup();
+    provider.capture.mockRejectedValue(new Error("private native error"));
+    const first = await observe();
+    expect(metadata(first).screenshotUnavailable).toContain("could not provide a frame");
+    expect(first.isError).toBeUndefined(); // useful text survives
+    const sourceId = (await list())[0]?.sourceId;
+    const repeated = await controller.execute({ operation: "capture", sourceId }, abort.signal);
+    expect(JSON.stringify(repeated)).toContain("already failed");
+    expect(provider.capture).toHaveBeenCalledOnce();
+    provider.capture.mockResolvedValue({ data: "cG5n", width: 100, height: 100 });
+    expect(
+      (
+        await controller.execute(
+          { operation: "observe", screenshot: true },
+          new AbortController().signal,
+        )
+      ).content[1]?.type,
+    ).toBe("image");
+    expect(provider.capture).toHaveBeenCalledTimes(2);
+  });
   it.each(["selection", "tabs"] as const)(
     "returns only %s from the current app or a listed window",
     async (operation) => {
@@ -139,7 +160,7 @@ describe("on-demand desktop harness", () => {
     const result = await observe();
     expect(result.isError).toBeUndefined();
     expect(metadata(result).window.text).toBe("Useful page text");
-    expect(metadata(result).screenshotUnavailable).toContain("unavailable");
+    expect(metadata(result).screenshotUnavailable).toContain("could not provide a frame");
     expect(JSON.stringify(result)).not.toContain("private native");
   });
   it("preserves screenshots when accessibility text fails, and reports total failure", async () => {
