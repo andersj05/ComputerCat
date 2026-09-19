@@ -20,9 +20,12 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
   Chat, Talk, Options, Stop during replies or recording, and the model selector. Escape, window blur, or choosing
   an action hides the controls. Drag the body to move it; there is no separate grip.
   Keep the artwork size and position stable when controls appear.
-- Animate the original artwork with planted boots, gentle breathing, head movement, and blinks.
-  Thinking has a distinct pose and status indicator. Pause motion while dragging; disable it
-  for reduced motion or when Animate cat is unchecked. Preview staged animation in Options.
+- Animate the original artwork with planted boots, articulated paws, expressive head movement,
+  blinks and an occasional wink. Use distinct poses and small pixel props for listening,
+  transcription, thinking, tool work, text replies, review and completion; see [cat motion](cat-motion.md).
+  Active status remains readable with controls hidden. Pause motion while dragging or hidden;
+  retain static poses for reduced motion or when Animate cat is unchecked. Options previews
+  each activity without changing the live cat or starting voice/model work. Reviewed 2026-09-19.
 
 ## Controls and dialogs
 

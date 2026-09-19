@@ -1,0 +1,515 @@
+/* All moving parts share the SVG's coordinate space. Static poses remain informative. */
+.pet-art .cat-body {
+  transform-origin: 554px 1300px;
+}
+.pet-art .cat-head {
+  transform-origin: 554px 752px;
+  transform: var(--head-pose, none);
+}
+.pet-art .cat-paw-left {
+  --paw-pose: var(--left-pose);
+  transform-origin: 378px 834px;
+  transform: var(--left-pose, none);
+}
+.pet-art .cat-paw-right {
+  --paw-pose: var(--right-pose);
+  transform-origin: 728px 832px;
+  transform: var(--right-pose, none);
+}
+.pet-art .cat-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0);
+}
+.pet-art .cat-mouth {
+  display: none;
+}
+.pet-art .cat-mouth-open {
+  transform-box: fill-box;
+  transform-origin: center top;
+}
+.pet-art .cat-signal {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pet-art .cat-hourglass {
+  transform-origin: 166px 845px;
+}
+.pet-art[data-activity="preparing"] {
+  --head-pose: rotate(-2deg);
+  --head-motion: cat-ready;
+  --head-duration: 3.2s;
+}
+.pet-art[data-activity="listening"] {
+  --head-pose: translate(14px, 5px) rotate(6deg);
+  --head-motion: cat-listen;
+  --head-duration: 4.8s;
+  --right-pose: rotate(-9deg);
+}
+.pet-art[data-activity="thinking"] {
+  --head-pose: translate(-9px, -6px) rotate(-5deg);
+  --head-motion: cat-think;
+  --head-duration: 5.6s;
+  --left-pose: rotate(-12deg);
+}
+.pet-art[data-activity="transcribing"] {
+  --head-pose: translateY(14px) rotate(3deg);
+  --head-motion: cat-read;
+  --head-duration: 3.2s;
+  --left-pose: rotate(-22deg);
+  --right-pose: rotate(22deg);
+}
+.pet-art[data-activity="review"] {
+  --head-pose: rotate(-3deg);
+  --head-motion: cat-review;
+  --head-duration: 7s;
+  --left-pose: rotate(-22deg);
+  --right-pose: rotate(22deg);
+}
+.pet-art[data-activity="working"] {
+  --head-pose: translateY(9px);
+  --head-motion: cat-type-nod;
+  --head-duration: 2.4s;
+  --left-pose: rotate(-18deg);
+  --right-pose: rotate(18deg);
+}
+.pet-art[data-activity="replying"] {
+  --head-pose: rotate(-2deg);
+  --head-motion: cat-talk;
+  --head-duration: 2.8s;
+  --right-pose: rotate(-12deg);
+}
+.pet-art[data-activity="happy"] {
+  --head-pose: translateY(-8px) rotate(-4deg);
+  --head-motion: cat-delight;
+  --head-duration: 2.4s;
+  --left-pose: rotate(9deg);
+  --right-pose: rotate(-14deg);
+}
+.pet-art[data-activity="stopping"] {
+  --head-pose: translateY(8px);
+  --head-motion: cat-settle;
+  --head-duration: 2s;
+}
+.pet-art[data-activity="error"] {
+  --head-pose: translateY(9px) rotate(7deg);
+  --head-motion: cat-puzzled;
+  --head-duration: 7s;
+}
+.pet-art[data-activity="replying"] .cat-mouth {
+  display: inline;
+}
+.pet-art[data-activity="happy"] .cat-blink {
+  transform: scaleY(1);
+}
+
+/* Motion is opt-in at the containing pet or staged Options preview. */
+.animated .pet-art .cat-body {
+  animation: cat-breathe 5.2s ease-in-out infinite;
+}
+.animated .pet-art .cat-head {
+  animation: var(--head-motion, cat-look) var(--head-duration, 14s) ease-in-out infinite;
+}
+.animated .pet-art .cat-blink {
+  animation: cat-blink 6.8s linear infinite;
+}
+.animated .pet-art[data-activity="idle"] .cat-eye-right {
+  animation: cat-wink 13.6s linear infinite;
+}
+.animated .pet-art[data-activity="idle"] .cat-paw-right {
+  animation: cat-fidget 14s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="listening"] .cat-signal {
+  animation: cat-listen-signal 1.8s ease-in-out infinite;
+}
+.animated .pet-art .cat-signal-two {
+  animation-delay: -0.45s;
+}
+.animated .pet-art .cat-signal-three {
+  animation-delay: -0.9s;
+}
+.animated .pet-art .cat-signal-four {
+  animation-delay: -1.35s;
+}
+.animated .pet-art[data-activity="thinking"] .cat-thought {
+  animation: cat-thought-hop 2.1s ease-in-out infinite;
+}
+.animated .pet-art .cat-thought-two {
+  animation-delay: 0.22s;
+}
+.animated .pet-art .cat-thought-three {
+  animation-delay: 0.44s;
+}
+.animated .pet-art[data-activity="preparing"] .cat-hourglass {
+  animation: cat-hourglass 3.2s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="transcribing"] .cat-paw-right {
+  animation: cat-scribble 1.6s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="working"] .cat-paw {
+  animation: cat-type 0.7s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="working"] .cat-paw-right {
+  animation-delay: -0.35s;
+}
+.animated .pet-art[data-activity="replying"] .cat-mouth-open {
+  animation: cat-speak 1.4s steps(1, end) infinite;
+}
+.animated .pet-art[data-activity="replying"] .cat-paw-right {
+  animation: cat-explain 2.8s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="happy"] .cat-blink {
+  animation: none;
+}
+.animated .pet-art[data-activity="happy"] .cat-paw-right {
+  animation: cat-wave 2.4s ease-in-out infinite;
+}
+.animated .pet-art[data-activity="happy"] .cat-sparkles {
+  animation: cat-sparkle 2.4s ease-out infinite;
+}
+.pet-wrap.animated:not(.dragging) .pet-button:hover .pet-art[data-activity="idle"] .cat-head {
+  animation: cat-hello 2.4s ease-in-out infinite;
+}
+.pet-wrap[data-motion-paused="true"] .pet-art * {
+  /* biome-ignore lint/complexity/noImportantStyles: Pause must override every activity's animation shorthand, including hover. */
+  animation-play-state: paused !important;
+}
+
+@keyframes cat-breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.009);
+  }
+}
+@keyframes cat-look {
+  0%,
+  18%,
+  52%,
+  100% {
+    transform: none;
+  }
+  25%,
+  36% {
+    transform: translate(-8px, -4px) rotate(-3deg);
+  }
+  66%,
+  76% {
+    transform: translate(8px, 2px) rotate(3deg);
+  }
+  84% {
+    transform: translateY(6px) rotate(1deg);
+  }
+}
+@keyframes cat-blink {
+  0%,
+  42%,
+  46%,
+  79%,
+  83%,
+  100% {
+    transform: scaleY(0);
+  }
+  44%,
+  81% {
+    transform: scaleY(1);
+  }
+}
+@keyframes cat-wink {
+  0%,
+  21%,
+  23%,
+  39.5%,
+  41.5%,
+  71%,
+  73%,
+  89.5%,
+  91.5%,
+  100% {
+    transform: scaleY(0);
+  }
+  22%,
+  40.5%,
+  72%,
+  90.5%,
+  94%,
+  96% {
+    transform: scaleY(1);
+  }
+  92%,
+  98% {
+    transform: scaleY(0);
+  }
+}
+@keyframes cat-fidget {
+  0%,
+  60%,
+  85%,
+  100% {
+    transform: none;
+  }
+  67%,
+  77% {
+    transform: rotate(-7deg);
+  }
+  72% {
+    transform: rotate(-3deg);
+  }
+}
+@keyframes cat-ready {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  45%,
+  65% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+@keyframes cat-listen {
+  0%,
+  100% {
+    transform: translate(14px, 5px) rotate(6deg);
+  }
+  38%,
+  65% {
+    transform: translate(20px, -3px) rotate(8deg);
+  }
+  80% {
+    transform: translate(15px, 9px) rotate(5deg);
+  }
+}
+@keyframes cat-think {
+  0%,
+  100% {
+    transform: translate(-9px, -6px) rotate(-5deg);
+  }
+  35%,
+  58% {
+    transform: translate(-15px, -12px) rotate(-8deg);
+  }
+  76%,
+  85% {
+    transform: translate(-3px, 0) rotate(-2deg);
+  }
+}
+@keyframes cat-read {
+  0%,
+  100% {
+    transform: translateY(14px) rotate(3deg);
+  }
+  35% {
+    transform: translate(5px, 20px) rotate(5deg);
+  }
+  70% {
+    transform: translate(-6px, 12px) rotate(1deg);
+  }
+}
+@keyframes cat-review {
+  0%,
+  40%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  60%,
+  74% {
+    transform: translateY(9px) rotate(1deg);
+  }
+}
+@keyframes cat-type-nod {
+  0%,
+  100% {
+    transform: translateY(9px) rotate(-1deg);
+  }
+  30%,
+  70% {
+    transform: translateY(15px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(7px);
+  }
+}
+@keyframes cat-talk {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+  48% {
+    transform: translateY(4px) rotate(1deg);
+  }
+  72% {
+    transform: translateY(-5px) rotate(-3deg);
+  }
+}
+@keyframes cat-delight {
+  0%,
+  100% {
+    transform: translateY(-8px) rotate(-4deg);
+  }
+  18% {
+    transform: translateY(5px) rotate(-2deg);
+  }
+  36%,
+  62% {
+    transform: translateY(-18px) rotate(4deg);
+  }
+  80% {
+    transform: translateY(-6px) rotate(-3deg);
+  }
+}
+@keyframes cat-settle {
+  0%,
+  100% {
+    transform: translateY(8px);
+  }
+  55% {
+    transform: translateY(12px) rotate(1deg);
+  }
+}
+@keyframes cat-puzzled {
+  0%,
+  30%,
+  100% {
+    transform: translateY(9px) rotate(7deg);
+  }
+  45%,
+  58% {
+    transform: translateY(6px) rotate(3deg);
+  }
+}
+@keyframes cat-hello {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-6deg);
+  }
+}
+@keyframes cat-listen-signal {
+  0%,
+  100% {
+    transform: scaleY(0.55);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@keyframes cat-thought-hop {
+  0%,
+  50%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateY(-17px);
+  }
+}
+@keyframes cat-hourglass {
+  0%,
+  65% {
+    transform: rotate(0);
+  }
+  85%,
+  100% {
+    transform: rotate(180deg);
+  }
+}
+@keyframes cat-scribble {
+  0%,
+  44%,
+  100% {
+    transform: rotate(22deg);
+  }
+  12%,
+  32% {
+    transform: translate(-10px, -5px) rotate(25deg);
+  }
+  22% {
+    transform: translate(5px, 3px) rotate(20deg);
+  }
+  62%,
+  78% {
+    transform: translate(0, -17px) rotate(18deg);
+  }
+}
+@keyframes cat-type {
+  0%,
+  100% {
+    transform: var(--paw-pose);
+  }
+  50% {
+    transform: translateY(-22px) var(--paw-pose);
+  }
+}
+@keyframes cat-speak {
+  0%,
+  32%,
+  61%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  10%,
+  42%,
+  76% {
+    transform: scaleY(1);
+  }
+  21%,
+  53%,
+  88% {
+    transform: scaleY(0.6);
+  }
+}
+@keyframes cat-explain {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  28%,
+  48% {
+    transform: rotate(-22deg);
+  }
+  70% {
+    transform: rotate(-6deg);
+  }
+}
+@keyframes cat-wave {
+  0%,
+  100% {
+    transform: rotate(-14deg);
+  }
+  30%,
+  60% {
+    transform: rotate(-34deg);
+  }
+  45%,
+  75% {
+    transform: rotate(-20deg);
+  }
+}
+@keyframes cat-sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(8px);
+  }
+  35%,
+  65% {
+    opacity: 1;
+    transform: translateY(-12px);
+  }
+}
+
+/* Cover every present and future SVG layer, including props and hover behavior. */
+@media (prefers-reduced-motion: reduce) {
+  .animated .pet-art,
+  .animated .pet-art * {
+    /* biome-ignore lint/complexity/noImportantStyles: Reduced motion is an invariant across all activity and hover selectors. */
+    animation: none !important;
+  }
+}

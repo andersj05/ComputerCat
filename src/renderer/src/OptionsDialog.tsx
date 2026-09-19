@@ -4,6 +4,7 @@ import { DEFAULT_MODEL_SETTINGS } from "../../shared/models";
 import { DEFAULT_VOICE, type VoiceSnapshot, voiceMessages } from "../../shared/voice";
 import { ModelOptions } from "./ModelOptions";
 import { PetArtwork } from "./PetArtwork";
+import { PET_ACTIVITIES, type PetActivity } from "./pet-activity";
 import { VoiceOptions } from "./voice/VoiceOptions";
 import { WindowCaption } from "./WindowCaption";
 
@@ -32,6 +33,7 @@ export function OptionsDialog({
   initialTab?: OptionTab;
 }) {
   const [tab, setTab] = useState<OptionTab>(initialTab);
+  const [previewActivity, setPreviewActivity] = useState<PetActivity>("idle");
   const [draft, setDraft] = useState(preferences);
   const [saved, setSaved] = useState(preferences);
   const [draftModels, setDraftModels] = useState(info?.models.defaults ?? DEFAULT_MODEL_SETTINGS);
@@ -328,9 +330,23 @@ export function OptionsDialog({
                 <div
                   className={`preview-surface preview-${draft.size} ${draft.animation ? "animated" : ""}`}
                 >
-                  <PetArtwork />
+                  <PetArtwork activity={previewActivity} />
                 </div>
-                <span className="preview-label">Preview</span>
+                <label className="preview-label" htmlFor="cat-activity-preview">
+                  Preview activity
+                </label>
+                <select
+                  id="cat-activity-preview"
+                  value={previewActivity}
+                  onChange={(event) => setPreviewActivity(event.target.value as PetActivity)}
+                  aria-describedby="cat-preview-description"
+                >
+                  {Object.entries(PET_ACTIVITIES).map(([value, { label }]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   className="xp-button"
@@ -379,10 +395,14 @@ export function OptionsDialog({
                     <span>Animate cat</span>
                   </label>
                 </fieldset>
+                <p className="option-note" id="cat-preview-description" aria-live="polite">
+                  {PET_ACTIVITIES[previewActivity].description}
+                </p>
               </div>
             </div>
             <p className="option-note">
-              Click for controls. Drag to move. Find cat brings it to the screen under your pointer.
+              Preview any activity here. Your cat follows the real conversation. Reduced motion uses
+              still poses.
             </p>
           </div>
           <div
