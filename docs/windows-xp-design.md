@@ -45,7 +45,13 @@ explicit deletion confirmation. Switching chats preserves their drafts for this 
 Return focus to the composer after dialogs close. The cat’s model button opens a small dialog
 with the same immediate selectors as the chat window; Connections opens Options on Models.
 
-The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep a stable height.
+The chat starts at 720 × 560 and remains usable at 500 × 420. Options uses a wider property
+sheet with a short introduction per tab, a fixed caption and action area, and independently
+scrolling content. Unsaved tabs have a dot and an accessible description; the footer reports
+pending changes and successful saves. The cat preview reflects staged size and animation.
+Reviewed 2026-09-19 against [Options](../src/renderer/src/OptionsDialog.tsx) and
+[styles](../src/renderer/src/style.css). Tab navigation follows the
+[WAI tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/), including focusable content panels.
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 

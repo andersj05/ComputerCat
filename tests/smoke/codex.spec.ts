@@ -153,9 +153,10 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
         .find((window) => window.webContents.getURL().includes("view=chat"))
         ?.setSize(500, 420),
     );
+    await page.getByLabel("Reasoning:", { exact: true }).scrollIntoViewIfNeeded();
     await expect(page.getByLabel("Reasoning:", { exact: true })).toBeInViewport();
     const panel = page.getByRole("tabpanel", { name: "Models", exact: true });
-    expect(await panel.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
+    expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
     await page.screenshot({ path: testInfo.outputPath("connected-models-small.png") });

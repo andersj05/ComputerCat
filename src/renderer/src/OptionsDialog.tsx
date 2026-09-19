@@ -40,6 +40,7 @@ export function OptionsDialog({
   const [savedVoice, setSavedVoice] = useState(draftVoice);
   const voiceTab = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
+  const [applied, setApplied] = useState(false);
   const [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const catTab = useRef<HTMLButtonElement>(null);
@@ -96,6 +97,7 @@ export function OptionsDialog({
     }
     pending.current = true;
     setSaving(true);
+    setApplied(false);
     setError("");
     try {
       if (dirtyPet) {
@@ -125,6 +127,7 @@ export function OptionsDialog({
         setSavedVoice(draftVoice);
       }
       if (closeAfter) await close();
+      else setApplied(true);
     } catch {
       setError("Couldn't save these settings. Try again.");
     } finally {
@@ -198,10 +201,16 @@ export function OptionsDialog({
               id="cat-tab"
               aria-controls="cat-options"
               aria-selected={tab === "cat"}
+              aria-describedby={dirtyPet ? "pending-settings" : undefined}
               tabIndex={tab === "cat" ? 0 : -1}
               onClick={() => setTab("cat")}
             >
               Desktop cat
+              {dirtyPet && (
+                <span className="tab-dirty" aria-hidden="true">
+                  •
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -210,10 +219,16 @@ export function OptionsDialog({
               id="models-tab"
               aria-controls="models-options"
               aria-selected={tab === "models"}
+              aria-describedby={dirtyModels ? "pending-settings" : undefined}
               tabIndex={tab === "models" ? 0 : -1}
               onClick={() => setTab("models")}
             >
               Models
+              {dirtyModels && (
+                <span className="tab-dirty" aria-hidden="true">
+                  •
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -222,10 +237,16 @@ export function OptionsDialog({
               id="voice-tab"
               aria-controls="voice-options"
               aria-selected={tab === "voice"}
+              aria-describedby={dirtyVoice ? "pending-settings" : undefined}
               tabIndex={tab === "voice" ? 0 : -1}
               onClick={() => setTab("voice")}
             >
               Voice
+              {dirtyVoice && (
+                <span className="tab-dirty" aria-hidden="true">
+                  •
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -245,8 +266,14 @@ export function OptionsDialog({
             role="tabpanel"
             id="voice-options"
             aria-labelledby="voice-tab"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI tabs pattern makes a panel with introductory content keyboard focusable.
+            tabIndex={0}
             hidden={tab !== "voice"}
           >
+            <div className="settings-intro">
+              <h2>Talk to your cat</h2>
+              <p>Set up speech input, then use Talk in chat or on your desktop cat.</p>
+            </div>
             <VoiceOptions
               draft={draftVoice}
               onChange={setDraftVoice}
@@ -259,8 +286,14 @@ export function OptionsDialog({
             role="tabpanel"
             id="models-options"
             aria-labelledby="models-tab"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI tabs pattern makes a panel with introductory content keyboard focusable.
+            tabIndex={0}
             hidden={tab !== "models"}
           >
+            <div className="settings-intro">
+              <h2>Models &amp; sign-in</h2>
+              <p>Connect an account and choose how new conversations start.</p>
+            </div>
             <ModelOptions
               state={info?.models}
               draft={draftModels}
@@ -274,13 +307,22 @@ export function OptionsDialog({
             role="tabpanel"
             id="cat-options"
             aria-labelledby="cat-tab"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI tabs pattern makes a panel with introductory content keyboard focusable.
+            tabIndex={0}
             hidden={tab !== "cat"}
           >
+            <div className="settings-intro">
+              <h2>Your desktop companion</h2>
+              <p>Adjust your cat's appearance and how it behaves on your desktop.</p>
+            </div>
             <div className="cat-options-layout">
               <div className="cat-preview">
-                <div className={`preview-surface ${draft.animation ? "animated" : ""}`}>
+                <div
+                  className={`preview-surface preview-${draft.size} ${draft.animation ? "animated" : ""}`}
+                >
                   <PetArtwork />
                 </div>
+                <span className="preview-label">Preview</span>
                 <button
                   type="button"
                   className="xp-button"
@@ -328,11 +370,15 @@ export function OptionsDialog({
                     />
                     <span>Animate cat</span>
                   </label>
+                  <p className="field-help">
+                    Keep your cat above other windows, or let it sit behind them.
+                  </p>
                 </fieldset>
               </div>
             </div>
             <p className="option-note">
-              Click your cat to chat. Drag it to move. Find cat brings it to this screen.
+              Click your cat to show its controls. Drag it to move. Find cat brings it to the screen
+              under your pointer.
             </p>
           </div>
           <div
@@ -340,8 +386,14 @@ export function OptionsDialog({
             role="tabpanel"
             id="general-options"
             aria-labelledby="general-tab"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI tabs pattern makes a panel with introductory content keyboard focusable.
+            tabIndex={0}
             hidden={tab !== "general"}
           >
+            <div className="settings-intro">
+              <h2>Chat &amp; app information</h2>
+              <p>Conversations save locally. Closing chat leaves your cat on the desktop.</p>
+            </div>
             <fieldset>
               <legend>Conversation</legend>
               <dl className="property-list">
@@ -391,14 +443,23 @@ export function OptionsDialog({
             </div>
           </div>
         </div>
+        <span id="pending-settings" className="sr-only">
+          Unsaved changes in this tab
+        </span>
         {error && (
           <p className="dialog-error" role="alert">
             {error}
           </p>
         )}
-        <div className="dialog-actions">
+        <div className="dialog-actions settings-actions">
           <span className="save-status" role="status">
-            {saving ? "Saving…" : ""}
+            {saving
+              ? "Saving changes…"
+              : dirty
+                ? "Unsaved changes · Apply saves all tabs."
+                : applied
+                  ? "Changes saved."
+                  : "No pending changes."}
           </span>
           <button type="submit" className="xp-button default-button" disabled={saving}>
             OK

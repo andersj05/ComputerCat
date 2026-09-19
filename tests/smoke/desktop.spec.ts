@@ -291,7 +291,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await page.screenshot({ path: testInfo.outputPath("welcome-small.png") });
     await page.getByRole("button", { name: "Options…" }).click();
     await expect(options.getByRole("button", { name: "OK", exact: true })).toBeInViewport();
-    for (const tab of ["Desktop cat", "Models", "General"]) {
+    for (const tab of ["Desktop cat", "Models", "Voice", "General"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       expect(
         await options.evaluate(
@@ -305,12 +305,14 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
       expect(
         await page
           .getByRole("tabpanel", { name: tab, exact: true })
-          .evaluate(
-            (element) =>
-              element.scrollWidth <= element.clientWidth &&
-              element.scrollHeight <= element.clientHeight,
-          ),
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
       ).toBe(true);
+      await page.getByRole("tabpanel", { name: tab, exact: true }).evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      for (const name of ["OK", "Cancel", "Apply"]) {
+        await expect(options.getByRole("button", { name, exact: true })).toBeInViewport();
+      }
     }
     await page.screenshot({ path: testInfo.outputPath("options-small.png") });
     expect(rendererErrors).toEqual([]);
