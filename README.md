@@ -33,6 +33,8 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 - Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
   locally; Cancel or Escape discards unapplied changes.
 - Options → Models connects your Codex subscription and saves a default model and reasoning level.
+- Options → Harness guide opens an offline, themed browser guide with an interactive map,
+  tool catalog and [guidance for extending the harness](docs/harness-guide.md).
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.

@@ -151,6 +151,13 @@ See [desktop context](desktop-context.md) for usage, limitations and verificatio
 
 ## Companion presentation and preferences
 
+The [Harness guide](harness-guide.md) is a self-contained HTML build artifact with an exhaustive
+typed tool catalog, shared XP tokens and no network or app bridge. A chat-only, no-argument IPC
+copies that fixed document out of the app bundle to user data and opens its HTML association.
+No arbitrary URL/path opener is exposed. The guide works without the app running once opened.
+Reviewed 2026-09-19 against [the opener](../src/main/harness-guide.ts) and
+[build plugin](../src/guide/build.ts).
+
 The XP caption bar uses named preload operations to minimize, maximize/restore, and hide the
 chat window. Only the chat renderer can request those controls or change companion settings.
 The companion can open chat or Options, stop a reply, and request a drag phase. Only the pet

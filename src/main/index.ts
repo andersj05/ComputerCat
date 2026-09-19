@@ -33,6 +33,7 @@ import { ConversationStore } from "./conversation-store";
 import { DesktopController } from "./desktop/controller";
 import { ElectronDesktopProvider } from "./desktop/electron-provider";
 import { desktopFixture } from "./desktop/fixture-provider";
+import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
 import { keepInWorkArea, PetDrag } from "./pet-window";
@@ -85,6 +86,11 @@ let stopShortcutRegistered = false;
 const petDrag = new PetDrag();
 let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
+const harnessGuide = new HarnessGuide(
+  join(here, "harness-guide.html"),
+  app.getPath("userData"),
+  (path) => shell.openPath(path),
+);
 const modelSettings = new ModelSettingsStore(join(app.getPath("userData"), "models.json"), {
   ...DEFAULT_MODEL_SETTINGS,
   source: config.mode === "pi" ? "environment" : "demo",
@@ -598,6 +604,11 @@ else {
         if (tab !== undefined && tab !== "voice") throw new Error("Invalid Options tab.");
         showChat();
         void voice.transition(() => chat.webContents.send(IPC.optionsRequested, tab));
+      });
+      ipcMain.handle(IPC.openHarnessGuide, (event, ...args: unknown[]) => {
+        assertSender(event, true);
+        if (args.length) throw new Error("The harness guide accepts no arguments.");
+        return harnessGuide.open();
       });
       ipcMain.handle(IPC.dragPet, (event, request: unknown) => {
         assertSender(event);

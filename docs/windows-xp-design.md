@@ -38,7 +38,7 @@ Use the same blue caption, cream buttons, dotted keyboard focus, green checks, b
 legends, and orange selected-tab edge throughout. Caption buttons perform native window
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
-Options is an XP property sheet with Desktop cat, Models, Voice, and General tabs. Stage changes until Apply
+Options is an XP property sheet with Desktop cat, Models, Voice, Harness guide, and General tabs. Stage changes until Apply
 or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If a pet
 preference save fails, keep the draft open and the running cat unchanged.
 When saving several tabs, keep successful saves, identify them in the error, and focus the
@@ -93,6 +93,12 @@ in that renderer until the app exits. Chat and cat retain separate drafts for ea
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.
 
 ## References
+
+The [Harness guide](harness-guide.md) opens in the user's browser as an offline XP Help and
+Support page. Keep its blue caption, cream toolbar, Tahoma text, inset navigation and orange
+selection accent consistent with the app. Its map and examples explain behavior without
+running tools; the catalog and extension pages expose technical detail deliberately. Opening
+the guide preserves staged Options changes. Reviewed 2026-09-19.
 
 - [Microsoft's Windows interface text guidance](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/bb246446(v=vs.85)) informs concise labels and restrained descriptions.
 - [XP.css's control reference](https://botoxparty.github.io/XP.css/) informs XP control proportions
