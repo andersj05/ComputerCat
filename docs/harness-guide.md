@@ -32,3 +32,8 @@ Future capabilities must remain labeled unimplemented until their actual tools e
 
 See [architecture](architecture.md), [desktop context](desktop-context.md),
 [XP presentation](windows-xp-design.md) and [opener checks](../tests/unit/harness-guide.test.ts).
+
+The [Electron guide smoke test](../tests/smoke/desktop.spec.ts) opens the exported file without
+a preload or server. It exercises the diagram, example-to-tool links, filtering, narrow layouts,
+printing, reload, network denial, launch failure/retry, sender restrictions and preserved settings
+drafts. It also supports `COMPUTERCAT_PACKAGED_EXECUTABLE` to check the same path from an app bundle.
