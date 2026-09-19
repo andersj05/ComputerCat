@@ -125,8 +125,11 @@ partial update, serializes atomic writes to `preferences.json` in Electron user 
 broadcasts successful updates to both renderers. Unknown fields, invalid values, and empty
 updates are rejected. Missing or corrupt files use defaults; save failures keep the previous
 settings and return a message without filesystem details. The Options dialog stages changes until
-Apply or OK succeeds. Cancel, Escape, or closing the dialog discards unapplied changes; a save
-failure leaves the draft available to retry without changing the live cat.
+Apply or OK succeeds. Cancel, Escape, or closing the dialog discards unapplied changes. A pet
+preference save failure keeps the live cat unchanged. Tabs save in sequence; if a later tab
+fails, Options identifies earlier successful saves and focuses the failed tab with its draft
+intact for retry. Reviewed 2026-09-19 against [Options](../src/renderer/src/OptionsDialog.tsx)
+and [partial-save coverage](../tests/smoke/desktop.spec.ts).
 
 The cat retains its original transparent silhouette. Size changes stay within the current
 display work area. The cat body uses pointer capture and the narrow drag bridge; native drag

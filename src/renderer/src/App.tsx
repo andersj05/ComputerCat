@@ -454,6 +454,10 @@ export function App() {
           agentBusy={snapshot.busy || sending}
           review={voice.review}
           onReview={voice.setReview}
+          onOptions={() => {
+            setOptionsTab("voice");
+            setOptionsOpen(true);
+          }}
           onInsert={() => {
             const combined = text ? `${text.trimEnd()} ${voice.review}` : voice.review;
             if (combined.length > 6000) {

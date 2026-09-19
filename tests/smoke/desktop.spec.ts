@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, rm, rmdir } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { IPC } from "../../src/shared/contracts";
+import { DEFAULT_VOICE } from "../../src/shared/voice";
 import { composeMessage, showCatControls } from "./chat";
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
@@ -291,7 +292,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await page.screenshot({ path: testInfo.outputPath("welcome-small.png") });
     await page.getByRole("button", { name: "Options…" }).click();
     await expect(options.getByRole("button", { name: "OK", exact: true })).toBeInViewport();
-    for (const tab of ["Desktop cat", "Models", "General"]) {
+    for (const tab of ["Desktop cat", "Models", "Voice", "General"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       expect(
         await options.evaluate(
@@ -305,12 +306,14 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
       expect(
         await page
           .getByRole("tabpanel", { name: tab, exact: true })
-          .evaluate(
-            (element) =>
-              element.scrollWidth <= element.clientWidth &&
-              element.scrollHeight <= element.clientHeight,
-          ),
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
       ).toBe(true);
+      await page.getByRole("tabpanel", { name: tab, exact: true }).evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      for (const name of ["OK", "Cancel", "Apply"]) {
+        await expect(options.getByRole("button", { name, exact: true })).toBeInViewport();
+      }
     }
     await page.screenshot({ path: testInfo.outputPath("options-small.png") });
     expect(rendererErrors).toEqual([]);
@@ -390,6 +393,114 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
     );
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
     await expect(page.getByRole("button", { name: "New conversation" })).toBeEnabled();
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("settings shortcuts preserve drafts and identify pending changes across tabs", async ({}, testInfo) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  await writeFile(
+    join(userData, "voice.json"),
+    JSON.stringify({ ...DEFAULT_VOICE, inputDeviceId: "saved-microphone-fixture" }),
+  );
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    const composer = page.getByRole("textbox", { name: "Message Computer Cat" });
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await composer.fill("Keep this draft while I set things up.");
+    await page.getByRole("button", { name: "Set up voice…", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("tabpanel", { name: "Voice", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Acceleration")).toBeHidden();
+    await page.getByLabel("Speech model", { exact: true }).selectOption("base.en");
+    await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+    await expect(page.getByRole("button", { name: "Download model", exact: true })).toBeEnabled();
+    await expect(page.locator(".settings-actions .save-status")).toContainText("Unsaved changes");
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toHaveAccessibleDescription(
+      "Unsaved changes in this tab",
+    );
+    // Opening settings and changing the draft never starts capture or a download.
+    expect(
+      await page.evaluate(async () => {
+        const voice = await window.computerCat.voiceSnapshot();
+        return { phase: voice.phase, download: voice.download, model: voice.settings?.modelId };
+      }),
+    ).toEqual({ phase: "idle", download: undefined, model: "large-v3-turbo" });
+    await page.screenshot({ path: testInfo.outputPath("settings-voice-setup.png") });
+    await page.getByText("Microphone & performance", { exact: true }).click();
+    await expect(page.getByLabel("Acceleration")).toBeVisible();
+    await expect(page.getByLabel("Microphone", { exact: true })).toHaveValue(
+      "saved-microphone-fixture",
+    );
+    await expect(
+      page.getByLabel("Microphone", { exact: true }).locator("option:checked"),
+    ).toHaveText("Saved microphone");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    const preview = page.locator(".preview-surface .pet-art");
+    const mediumHeight = await preview.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    expect(
+      await preview.evaluate((element) => element.getBoundingClientRect().height),
+    ).toBeLessThan(mediumHeight);
+    await expect(page.locator(".tab-dirty")).toHaveCount(2);
+    await options.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(composer).toBeFocused();
+    await expect(composer).toHaveValue("Keep this draft while I set things up.");
+    await page.getByRole("button", { name: "Models & sign-in…", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Models", exact: true })).toBeFocused();
+    await expect(options.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    await expect(page.locator(".tab-dirty")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("settings-models.png") });
+    await page.keyboard.press("Escape");
+    await expect(composer).toBeFocused();
+    await expect(composer).toHaveValue("Keep this draft while I set things up.");
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+test("a partial settings save identifies the failed tab and retries its remaining draft", async () => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const obstruction = join(userData, "voice.json.tmp");
+  await mkdir(obstruction);
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await page.getByRole("button", { name: "Set up voice…", exact: true }).click();
+    await page.getByLabel("Speech model", { exact: true }).selectOption("base.en");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    await page.getByRole("tab", { name: "General", exact: true }).click();
+    await options.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(options.getByRole("alert")).toContainText("Saved: Desktop cat.");
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Speech model", { exact: true })).toHaveValue("base.en");
+    await expect(page.locator(".tab-dirty")).toHaveCount(1);
+    expect(
+      await page.evaluate(async () => (await window.computerCat.info()).preferences.size),
+    ).toBe("small");
+    expect(
+      await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.modelId),
+    ).toBe("large-v3-turbo");
+    await rmdir(obstruction);
+    await options.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.locator(".settings-actions .save-status")).toHaveText("Changes saved.");
+    await expect(options.getByRole("alert")).toBeHidden();
+    await expect(page.locator(".tab-dirty")).toHaveCount(0);
+    expect(
+      await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.modelId),
+    ).toBe("base.en");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("textbox", { name: "Message Computer Cat" })).toBeFocused();
   } finally {
     await electron.close();
     await removeTestData(userData);

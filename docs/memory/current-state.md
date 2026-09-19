@@ -1,18 +1,18 @@
 # Current project state
 
-Reviewed: 2026-09-18. Recheck checkout and tests.
+Reviewed: 2026-09-19. Recheck checkout and tests.
 
 ## What exists
 
-Computer Cat is a Windows-first Electron/React/TypeScript desktop companion using a pinned Pi
-SDK behind an application-owned runtime interface. Use the Node version in
+Computer Cat is a Windows-first Electron/React/TypeScript companion with a pinned Pi SDK.
+Use Node from
 [.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
 
 - The transparent cat supports body dragging, click-to-toggle controls, silhouette glow and
   idle/thinking motion. Always-on-top recovers without focus; Find cat moves to the pointer display.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Default demo mode produces deterministic local replies without credentials or API calls.
-  Connections supports app-owned Codex login; chat and cat expose direct model selection.
+  Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
 - Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
