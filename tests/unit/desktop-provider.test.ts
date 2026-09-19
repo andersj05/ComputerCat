@@ -1,0 +1,120 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({ sources: vi.fn(), windows: vi.fn(), inspect: vi.fn() }));
+vi.mock("electron", () => ({
+  desktopCapturer: { getSources: mocks.sources },
+  BrowserWindow: { getAllWindows: mocks.windows },
+}));
+vi.mock("../../src/main/desktop/windows-reader", () => ({ inspectWindow: mocks.inspect }));
+
+import { ElectronDesktopProvider } from "../../src/main/desktop/electron-provider";
+
+const fixture = { id: "window:123:0", name: "Fixture", kind: "window" as const };
+const thumb = (text: string) => ({
+  isEmpty: () => false,
+  getSize: () => ({ width: 640, height: 480 }),
+  toPNG: () => Buffer.from(text),
+});
+function setup() {
+  mocks.windows.mockReturnValue([]);
+  mocks.sources.mockResolvedValue([
+    { ...fixture, thumbnail: thumb("selected") },
+    { id: "window:456:0", name: "Other", thumbnail: thumb("other-window") },
+    { id: "screen:0:0", name: "Screen 1", thumbnail: thumb("screen") },
+  ]);
+  mocks.inspect.mockResolvedValue({
+    title: "Fixture",
+    app: "Test",
+    text: "text",
+    selectedText: "",
+    tabs: [],
+    truncated: false,
+  });
+  return { provider: new ElectronDesktopProvider(), abort: new AbortController() };
+}
+afterEach(() => vi.resetAllMocks());
+
+describe("Electron desktop adapter", () => {
+  it("lists without pixels or icons and excludes our own native windows", async () => {
+    const { provider, abort } = setup();
+    const handle = Buffer.alloc(8);
+    handle.writeBigUInt64LE(456n);
+    mocks.windows.mockReturnValue([
+      { isDestroyed: () => false, getNativeWindowHandle: () => handle },
+    ]);
+    const sources = await provider.list(abort.signal);
+    expect(sources.map((source) => source.id)).toEqual(["window:123:0", "screen:0:0"]);
+    expect(mocks.sources).toHaveBeenCalledWith({
+      types: ["window", "screen"],
+      thumbnailSize: { width: 0, height: 0 },
+      fetchWindowIcons: false,
+    });
+    expect(JSON.stringify(sources)).not.toContain("thumbnail");
+  });
+
+  it("captures only the requested matching window result", async () => {
+    const { provider, abort } = setup();
+    expect(await provider.capture(fixture, abort.signal)).toEqual({
+      data: Buffer.from("selected").toString("base64"),
+      width: 640,
+      height: 480,
+    });
+    expect(mocks.sources.mock.calls[0]?.[0].types).toEqual(["window"]);
+  });
+
+  it.each(["changed", "closed", "protected", "dimensions", "bytes"])(
+    "fails closed for %s captures",
+    async (reason) => {
+      const { provider, abort } = setup();
+      const thumbnail = thumb("selected");
+      if (reason === "protected") thumbnail.isEmpty = () => true;
+      if (reason === "dimensions") thumbnail.getSize = () => ({ width: 8000, height: 4000 });
+      if (reason === "bytes") thumbnail.toPNG = () => Buffer.alloc(6_000_001);
+      mocks.sources.mockResolvedValue(
+        reason === "closed"
+          ? []
+          : [{ ...fixture, name: reason === "changed" ? "New title" : fixture.name, thumbnail }],
+      );
+      await expect(provider.capture(fixture, abort.signal)).rejects.toThrow();
+    },
+  );
+
+  it("rejects capture of Computer Cat after a source becomes ours", async () => {
+    const { provider, abort } = setup();
+    const handle = Buffer.alloc(4);
+    handle.writeUInt32LE(123);
+    mocks.windows.mockReturnValue([
+      { isDestroyed: () => false, getNativeWindowHandle: () => handle },
+    ]);
+    await expect(provider.capture(fixture, abort.signal)).rejects.toThrow();
+  });
+
+  it("revalidates title/identity before reading and forwards only a numeric handle", async () => {
+    const { provider, abort } = setup();
+    await provider.read(fixture, abort.signal);
+    expect(mocks.inspect).toHaveBeenCalledWith("123", abort.signal);
+    mocks.sources.mockResolvedValue([{ ...fixture, name: "Another window" }]);
+    await expect(provider.read(fixture, abort.signal)).rejects.toThrow();
+    expect(mocks.inspect).toHaveBeenCalledOnce();
+  });
+
+  it("rejects changed window identity after accessibility reading", async () => {
+    const { provider, abort } = setup();
+    mocks.inspect.mockResolvedValue({ title: "New window" });
+    await expect(provider.read(fixture, abort.signal)).rejects.toThrow();
+  });
+
+  it("aborts before OS access and discards capture results cancelled during enumeration", async () => {
+    const { provider, abort } = setup();
+    abort.abort();
+    await expect(provider.list(abort.signal)).rejects.toThrow();
+    await expect(provider.capture(fixture, abort.signal)).rejects.toThrow();
+    expect(mocks.sources).not.toHaveBeenCalled();
+    const later = new AbortController();
+    mocks.sources.mockImplementation(async () => {
+      later.abort();
+      return [{ ...fixture, thumbnail: thumb("private") }];
+    });
+    await expect(provider.capture(fixture, later.signal)).rejects.toThrow();
+  });
+});
