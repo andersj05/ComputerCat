@@ -27,6 +27,17 @@ globalThis.fetch = async (url, options) => {
     .map((part) => part.text ?? "")
     .join("\n");
   const readLine = userText.split("\n").find((line) => line.startsWith("read-fixture:"));
+  const latestUserText = (body.input.findLast((item) => item.role === "user")?.content ?? [])
+    .map((part) => part.text ?? "")
+    .join("\n");
+  const desktopCase = /^desktop-list-fixture:(denied|allowed)$/.exec(latestUserText)?.[1];
+  const desktopCallId = desktopCase ? `offline-desktop-${desktopCase}` : undefined;
+  const desktopResult = desktopCallId
+    ? body.input.find(
+        (item) => item.type === "function_call_output" && item.call_id === desktopCallId,
+      )
+    : undefined;
+  const needsDesktop = desktopCallId && !desktopResult;
   const needsRead =
     readLine &&
     !body.input.some(
@@ -34,31 +45,40 @@ globalThis.fetch = async (url, options) => {
         item.type === "function_call_output" &&
         JSON.stringify(item).includes("fixture-file-content"),
     );
-  const item = needsRead
+  const needsTool = needsRead || needsDesktop;
+  const desktopText = desktopResult
+    ? typeof desktopResult.output === "string"
+      ? desktopResult.output
+      : JSON.stringify(desktopResult.output)
+    : undefined;
+  const replyText = desktopText ? `Offline desktop result: ${desktopText}` : "Offline Codex reply.";
+  const item = needsTool
     ? {
         id: "offline-tool-call",
         type: "function_call",
-        call_id: "offline-read",
-        name: "read",
-        arguments: JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) }),
+        call_id: needsRead ? "offline-read" : desktopCallId,
+        name: needsRead ? "read" : "desktop_list_windows",
+        arguments: needsRead
+          ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
+          : "{}",
         status: "completed",
       }
     : {
         id: "offline-message",
         type: "message",
         role: "assistant",
-        content: [{ type: "output_text", text: "Offline Codex reply." }],
+        content: [{ type: "output_text", text: replyText }],
       };
   const events = [
     { type: "response.created", response: { id: "offline-response" } },
     {
       type: "response.output_item.added",
       output_index: 0,
-      item: needsRead ? { ...item, arguments: "" } : { ...item, content: [] },
+      item: needsTool ? { ...item, arguments: "" } : { ...item, content: [] },
     },
-    ...(needsRead
+    ...(needsTool
       ? [{ type: "response.function_call_arguments.delta", output_index: 0, delta: item.arguments }]
-      : [{ type: "response.output_text.delta", output_index: 0, delta: "Offline Codex reply." }]),
+      : [{ type: "response.output_text.delta", output_index: 0, delta: replyText }]),
     { type: "response.output_item.done", output_index: 0, item },
     {
       type: "response.completed",

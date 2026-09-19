@@ -51,6 +51,8 @@ Offline [broker](../tests/unit/desktop-controller.test.ts),
 requests, image preservation, text-only models, timeouts, transport failure and late-result
 suppression. [Real Pi tests](../tests/unit/pi-runtime.test.ts) pass image blocks through the
 actual SDK loop without a paid provider.
+[Codex worker smoke](../tests/smoke/codex.spec.ts) exercises desktop requests through the
+actual Electron utility process with an offline provider and confirms denied/enabled access.
 
 [Sharing smoke tests](../tests/smoke/desktop-context.spec.ts) exercise both Electron windows,
 consent, renderer trust, narrow layouts and lifecycle revocation with real desktop capture

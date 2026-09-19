@@ -209,6 +209,9 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     });
     expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
       "bash",
+      "desktop_capture",
+      "desktop_list_windows",
+      "desktop_read_window",
       "edit",
       "find",
       "grep",
@@ -310,6 +313,78 @@ test("a failed model save preserves the draft and current connection until retry
     expect((await page.evaluate(() => window.computerCat.info())).models.defaults.source).toBe(
       "environment",
     );
+  } finally {
+    await electron.close();
+    await cleanup(userData);
+  }
+});
+
+test("the real Codex worker enforces desktop sharing before returning on-demand context", async () => {
+  test.setTimeout(90_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
+  const { electron, page, pet } = await launch(userData);
+  try {
+    await interceptCodex(electron);
+    // Production smoke mode has an empty provider. Fail the test if any real
+    // enumeration/capture path is accidentally reached through the worker RPC.
+    await electron.evaluate(({ desktopCapturer }) => {
+      Reflect.set(globalThis, "desktopCaptureCalls", 0);
+      desktopCapturer.getSources = async () => {
+        Reflect.set(
+          globalThis,
+          "desktopCaptureCalls",
+          Reflect.get(globalThis, "desktopCaptureCalls") + 1,
+        );
+        throw new Error("Real desktop capture is forbidden in smoke tests");
+      };
+    });
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: "Use a device code" }).click();
+    await expect(page.getByRole("textbox", { name: "Sign-in code" })).toHaveValue("TEST-CODE");
+    await electron.evaluate(() => {
+      Reflect.get(globalThis, "offlineCodex").allowLogin = true;
+    });
+    await expect(page.getByText("Connected to ChatGPT", { exact: true })).toBeVisible();
+    await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
+    await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+
+    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
+    const denied = await sendAndWaitForReply(page, "desktop-list-fixture:denied");
+    await expect(denied).toContainText("Screen sharing is off.");
+    await expect(denied.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_list_windows · error",
+    );
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+
+    await page.getByRole("button", { name: "Share screen…" }).click();
+    await page
+      .getByRole("dialog", { name: "Share your screen" })
+      .getByRole("button", { name: "Start sharing", exact: true })
+      .click();
+    await expect(page.getByRole("dialog", { name: "Share your screen" })).toBeHidden();
+    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+    const allowed = await sendAndWaitForReply(page, "desktop-list-fixture:allowed");
+    await expect(allowed).toContainText('"sources":[]');
+    await expect(allowed).toContainText('"observedAt":');
+    await expect(allowed.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_list_windows · complete",
+    );
+    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(true);
+
+    const requests = await electron.evaluate(
+      () => Reflect.get(globalThis, "offlineCodex").requests,
+    );
+    expect(requests).toHaveLength(4);
+    const result = requests[3].input.find(
+      (item: { type: string; call_id?: string }) =>
+        item.type === "function_call_output" && item.call_id === "offline-desktop-allowed",
+    );
+    expect(JSON.parse(result.output)).toMatchObject({ sources: [], truncated: false });
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+    await pet.getByRole("button", { name: "Stop sharing", exact: true }).click();
+    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
   } finally {
     await electron.close();
     await cleanup(userData);
