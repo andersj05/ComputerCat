@@ -68,7 +68,7 @@ export function VoiceOptions({
         <p className="field-help" id="speech-model-help">
           {draft.modelId === "base.en"
             ? "A smaller, faster option for English."
-            : "Supports multiple languages. Can be slow on this computer; Base English is smaller and faster."}
+            : "Multilingual. Base English is smaller and faster on CPU."}
         </p>
         <div className="voice-assets">
           <span className="voice-install-status" role="status">
@@ -76,7 +76,7 @@ export function VoiceOptions({
               className={`connection-light ${installed ? "connected" : ""}`}
               aria-hidden="true"
             />
-            {installed ? "Installed on this computer" : "Download needed before you can Talk"}
+            {installed ? "Installed on this computer" : "Not installed"}
           </span>
           {download ? (
             <>
@@ -123,9 +123,7 @@ export function VoiceOptions({
             </button>
           )}
         </div>
-        <p className="field-help">
-          Download and Remove take effect immediately. Downloads include a small speech detector.
-        </p>
+        <p className="field-help">Download and Remove take effect immediately.</p>
       </fieldset>
       <fieldset disabled={disabled}>
         <legend>2. Voice input</legend>
@@ -152,9 +150,7 @@ export function VoiceOptions({
             </option>
           </select>
         </div>
-        <p className="field-help">
-          Apply or OK saves your choices. Your microphone starts only when you click Talk.
-        </p>
+        <p className="field-help">Save with Apply, then click Talk to start recording.</p>
       </fieldset>
       <details className="voice-advanced">
         <summary>Microphone &amp; performance</summary>
@@ -230,10 +226,6 @@ export function VoiceOptions({
           <p className="field-help">Auto chooses the available CPU helper.</p>
         </fieldset>
       </details>
-      <p className="option-note">
-        Speech is transcribed on this computer. Review the text before sending it with your chat's
-        selected model.
-      </p>
       {(error || state.error) && (
         <p role="alert" className="connection-error">
           {error || (state.error && voiceMessages[state.error])}

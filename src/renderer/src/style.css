@@ -1486,7 +1486,7 @@ select:focus-visible,
   margin-top: 8px;
 }
 .voice-assets > .voice-install-status {
-  width: 100%;
+  flex: 1 1 150px;
   display: flex;
   align-items: center;
   gap: 6px;

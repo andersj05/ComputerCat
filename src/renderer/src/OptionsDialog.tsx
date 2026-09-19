@@ -280,7 +280,7 @@ export function OptionsDialog({
           >
             <div className="settings-intro">
               <h2>Talk to your cat</h2>
-              <p>Set up speech input, then use Talk in chat or on your desktop cat.</p>
+              <p>Transcribe on this computer. Review the text before sending.</p>
             </div>
             <VoiceOptions
               draft={draftVoice}
