@@ -10,8 +10,10 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import type { ChatMessage } from "../shared/contracts";
-import { PI_TOOL_NAMES } from "../shared/tools";
+import type { DesktopExecutor } from "../shared/desktop";
+import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../shared/tools";
 import type { RuntimeConfig } from "./config";
+import { createDesktopTools } from "./desktop-tools";
 import { type AgentRuntime, SYSTEM_PROMPT, UserFacingError } from "./runtime";
 
 export function isolatedResources(): ResourceLoader {
@@ -61,6 +63,7 @@ export async function createPiRuntime(
   cwd: string,
   injectedModels?: ModelRuntime,
   saved?: { sessionFile: string; history: ChatMessage[] },
+  desktop?: DesktopExecutor,
 ): Promise<AgentRuntime> {
   const models = injectedModels ?? (await createModelRuntime());
   const model = models.getModel(config.provider, config.model);
@@ -116,7 +119,8 @@ export async function createPiRuntime(
     modelRuntime: models,
     model,
     ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
-    tools: [...PI_TOOL_NAMES],
+    tools: desktop ? [...ALL_TOOL_NAMES] : [...PI_TOOL_NAMES],
+    ...(desktop ? { customTools: createDesktopTools(desktop, model.input.includes("image")) } : {}),
     resourceLoader: isolatedResources(),
     sessionManager: manager,
     settingsManager: SettingsManager.inMemory({
@@ -135,7 +139,7 @@ export async function createPiRuntime(
       const unsubscribe = session.subscribe((event) => {
         if (signal.aborted) return;
         if (event.type === "tool_execution_start" || event.type === "tool_execution_end") {
-          const name = PI_TOOL_NAMES.find((name) => name === event.toolName);
+          const name = ALL_TOOL_NAMES.find((name) => name === event.toolName);
           if (name)
             onTool?.({
               id: event.toolCallId,

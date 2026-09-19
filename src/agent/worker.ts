@@ -1,4 +1,5 @@
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { DesktopWorkerClient } from "./desktop-rpc";
 import { type WorkerEvent, workerRequestSchema } from "./protocol";
 import { type AgentRuntime, UserFacingError } from "./runtime";
 
@@ -9,11 +10,16 @@ let models: ModelRuntime | undefined;
 let sessionKey: string | undefined;
 let active: { id: string; abort: AbortController } | undefined;
 const send = (event: WorkerEvent) => port.postMessage(event);
+const desktop = new DesktopWorkerClient(send);
 
 port.on("message", async ({ data }) => {
   const parsed = workerRequestSchema.safeParse(data);
   if (!parsed.success) return;
   const request = parsed.data;
+  if (request.type === "desktop-result") {
+    desktop.receive(request);
+    return;
+  }
   if (request.type === "stop") {
     if (active?.id === request.id) active.abort.abort();
     return;
@@ -24,6 +30,7 @@ port.on("message", async ({ data }) => {
   }
   const current = { id: request.id, abort: new AbortController() };
   active = current;
+  desktop.beginTurn(current.id, current.abort.signal);
   try {
     const config = request.config;
     const key = JSON.stringify([config.provider, config.model, config.reasoning]);
@@ -33,7 +40,13 @@ port.on("message", async ({ data }) => {
     models ??= await createModelRuntime();
     // Resolve in main for every turn so a long-running worker cannot reuse an expired token.
     if (runtime) await models.setRuntimeApiKey(config.provider, config.apiKey);
-    runtime ??= await createPiRuntime(config, process.cwd(), models, request.context);
+    runtime ??= await createPiRuntime(
+      config,
+      process.cwd(),
+      models,
+      request.context,
+      desktop.execute,
+    );
     sessionKey = key;
     current.abort.signal.throwIfAborted();
     await runtime.run(
@@ -59,6 +72,7 @@ port.on("message", async ({ data }) => {
             : "The model connection failed. Check your configuration and try again.",
       });
   } finally {
+    desktop.endTurn();
     active = undefined;
   }
 });
