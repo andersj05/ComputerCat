@@ -155,7 +155,7 @@ clean-machine tests remain release gates.
 
 Consequences: native Windows build/distribution and sizeable model downloads become project
 responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation
-retention. Speech output, screenshots and desktop control remain independent future scope.
+retention. Speech output and desktop control remain independent future scope; desktop observation is D011.
 No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
 [contracts](../implementation/whisper/contracts.md) and [delivery gates](../implementation/whisper/delivery.md).
 
@@ -176,3 +176,46 @@ or always-listening mode is introduced. CPU recognition latency remains model-de
 
 Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/renderer/src/voice/PetVoice.tsx),
 [boundary tests](../../tests/unit/voice-controller.test.ts) and [Electron checks](../../tests/smoke/voice.spec.ts).
+
+## D011: Make desktop context explicit, read-only and on demand
+
+Status: superseded by D012 on 2026-09-19. The first implementation required a visible,
+memory-only sharing grant. The user explicitly rejected the Share screen workflow and
+requested agent-selected tools that act directly on screen questions.
+
+## D012: Let the agent choose desktop observations for user requests
+
+Status: adopted and implemented, reviewed 2026-09-19. Supersedes D011's sharing grant/UI.
+
+Expose `desktop_observe` alongside window listing, capture and text reading. For “this page,”
+the harness finds the foreground app, or infers the app behind Computer Cat when the companion
+has focus. Return the target reason, text, selection, tabs and image together; keep useful
+partial results. Named windows use opaque IDs scoped to the current turn and sixty seconds.
+This makes screen context part of the agent's normal tool loop without a separate user gesture.
+Do not scan at startup or poll the desktop in the background.
+
+Keep bounded private worker RPC, Stop/cancellation, lock/sleep blocking, and read-only Windows
+accessibility. Unlock/resume restores availability automatically. The prompt treats desktop
+content as untrusted and forbids protected-surface workarounds. Images/text follow the existing
+model and local conversation retention policy. This is not an OS sandbox: file/shell tools
+retain user privileges. Input control and complete background browser access remain future work.
+
+Evidence: [desktop design](../desktop-context.md), [broker](../../src/main/desktop/controller.ts),
+[Pi tools](../../src/agent/desktop-tools.ts), [prompt](../../src/agent/runtime.ts), and
+[boundary tests](../../tests/unit/desktop-controller.test.ts).
+
+## D013: Capture one source and keep focused context tools
+
+Status: adopted and implemented, reviewed 2026-09-19. Refines D012 after real WGC error reports.
+
+Use metadata-only listings and a short-lived isolated media renderer for one selected source.
+Bulk thumbnails attempted unrelated uncapturable windows before JavaScript could filter them.
+Do not globally hide Chromium errors or bypass protected sources. Cancel/deadline destroys
+the media owner. Known capture failures are remembered for the reply, across source relisting;
+the next turn can retry. Preserve readable text when an image fails.
+
+Selection and tab tools skip full-page text collection and screenshots; region capture crops
+before resizing for small details. Keep these read-only and within the same source/turn rules.
+Evidence: [capture boundary](../../src/main/desktop/source-capture.ts),
+[broker](../../src/main/desktop/controller.ts), [tool definitions](../../src/agent/desktop-tools.ts),
+and [native verification](../../tests/smoke/native-capture.spec.ts).

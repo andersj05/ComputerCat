@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import type { ChatMessage } from "../shared/contracts";
 import type { ModelSettings } from "../shared/models";
-import { PI_TOOL_NAMES } from "../shared/tools";
+import { ALL_TOOL_NAMES } from "../shared/tools";
 import { modelSettingsSchema } from "../shared/validation";
 
 export const conversationIdSchema = z.uuid();
@@ -18,7 +18,7 @@ const messageSchema = z.strictObject({
     .array(
       z.strictObject({
         id: z.string().min(1).max(256),
-        name: z.enum(PI_TOOL_NAMES),
+        name: z.enum(ALL_TOOL_NAMES),
         state: z.enum(["running", "complete", "error", "stopped"]),
       }),
     )

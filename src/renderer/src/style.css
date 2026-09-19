@@ -609,6 +609,42 @@ textarea::placeholder {
   flex-shrink: 0;
   flex-wrap: wrap;
 }
+.guide-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  margin: 0 0 16px;
+  list-style: none;
+}
+.guide-preview li {
+  position: relative;
+  border: 1px solid #b9cbe5;
+  padding: 10px 5px;
+  background: #f3f7ff;
+  text-align: center;
+  font-size: 10px;
+}
+.guide-preview li + li::before {
+  content: "→";
+  position: absolute;
+  left: -15px;
+  top: 16px;
+  color: #426799;
+}
+.guide-preview strong {
+  display: block;
+  color: #174ca7;
+  margin-bottom: 5px;
+}
+.guide-preview span {
+  color: #61718a;
+}
+.guide-topics {
+  padding-left: 17px;
+  margin: 4px 0 14px;
+  line-height: 1.8;
+}
 .tab-dirty {
   margin-left: 5px;
   color: #965600;

@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { PI_TOOL_NAMES } from "../shared/tools";
+import { desktopRequestSchema, desktopResultSchema } from "../shared/desktop";
+import { ALL_TOOL_NAMES } from "../shared/tools";
 import { reasoningSchema } from "../shared/validation";
 
 export const toolActivitySchema = z.strictObject({
   id: z.string().min(1).max(256),
-  name: z.enum(PI_TOOL_NAMES),
+  name: z.enum(ALL_TOOL_NAMES),
   state: z.enum(["running", "complete", "error", "stopped"]),
 });
 
@@ -39,8 +40,20 @@ export const workerRequestSchema = z.discriminatedUnion("type", [
       .optional(),
   }),
   z.strictObject({ type: z.literal("stop"), id: z.uuid() }),
+  z.strictObject({
+    type: z.literal("desktop-result"),
+    id: z.uuid(),
+    callId: z.uuid(),
+    result: desktopResultSchema,
+  }),
 ]);
 export const workerEventSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("desktop-request"),
+    id: z.uuid(),
+    callId: z.uuid(),
+    request: desktopRequestSchema,
+  }),
   z.strictObject({ type: z.literal("tool"), id: z.uuid(), activity: toolActivitySchema }),
   z.strictObject({ type: z.literal("delta"), id: z.uuid(), text: z.string().max(65536) }),
   z.strictObject({ type: z.literal("done"), id: z.uuid() }),

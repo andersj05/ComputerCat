@@ -150,3 +150,36 @@ UTF-8-to-wide Windows file opening. Real inference from Unicode/space paths pass
 minimal PATH. Portable Turbo can exceed the inference deadline; guarded AVX2 improves CPU
 performance, and the smaller model remains an explicit choice. See
 [native evidence](../implementation/whisper/native-evidence.md).
+
+## Windows capture errors from unrelated windows
+
+Reviewed: 2026-09-19. Scope: Electron 44 desktop observation.
+
+Requesting nonzero thumbnails with desktopCapturer.getSources captures every source of the
+requested class before JavaScript can filter it. An uncapturable unrelated window may emit
+WGC CreateForWindow / E_INVALIDARG errors; the log alone does not identify the selected app.
+See [Electron issue 51910](https://github.com/electron/electron/issues/51910) and
+[capture source](https://github.com/electron/electron/blob/v44.4.1/shell/browser/api/electron_api_desktop_capturer.cc).
+List with zero-size thumbnails, then request a media frame for the exact selected source.
+Do not suppress Chromium errors globally or work around protected windows.
+
+The dedicated local media frame's legacy desktop request supplies mediaTypes=[] in this
+Electron version, unlike microphone/camera device requests. Permission checks may have an
+empty requestingUrl; only accept this for the verified fixed main frame. The native fixture
+proved this contract, pixel capture and cancellation. Keep physical device permissions denied.
+Evidence: [frame helper](../../src/main/desktop/source-capture.ts),
+[boundary tests](../../tests/unit/source-capture.test.ts) and
+[native test](../../tests/smoke/native-capture.spec.ts).
+
+## Keep accessibility helper module loading explicit
+
+Reviewed: 2026-09-19. Scope: Windows PowerShell 5.1 accessibility helper.
+
+Cold hosted Windows runs exposed fixture startup and first-read timeouts. The fixed
+[reader](../../src/main/desktop/windows-reader.ts) disables module auto-loading and imports
+only the built-in Utility module by its PSHOME path. Its child environment disables the
+per-user module analysis cache with PSModuleAnalysisCachePath=NUL; the eight-second read
+deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader.spec.ts)
+uses the same initialization and supplies TEMP/TMP for its C# compilation.
+The native fixture passes locally; hosted timing is still an environment-dependent check.
+See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).

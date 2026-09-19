@@ -1,9 +1,11 @@
-import { mkdir, mkdtemp, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { PET_ACTIVITIES, type PetActivity } from "../../src/renderer/src/pet-activity";
 import { type ChatSnapshot, IPC } from "../../src/shared/contracts";
+import { ALL_TOOL_NAMES } from "../../src/shared/tools";
 import { DEFAULT_VOICE, type VoiceSnapshot } from "../../src/shared/voice";
 import { composeMessage, showCatControls } from "./chat";
 
@@ -100,6 +102,161 @@ async function removeTestData(userData: string) {
     throw new Error("Unexpected test directory");
   await rm(userData, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("harness guide opens offline, preserves settings drafts, and explains the tool loop", async ({}, testInfo) => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    await electron.evaluate(({ shell }) => {
+      const paths: string[] = [];
+      Reflect.set(globalThis, "guidePaths", paths);
+      shell.openPath = async (path) => {
+        paths.push(path);
+        return paths.length === 1 ? "Synthetic browser failure" : "";
+      };
+    });
+    await expect(
+      pet.evaluate(() =>
+        window.computerCat.openHarnessGuide().then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).resolves.toBe("denied");
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByLabel("Large", { exact: true }).check();
+    await page.getByRole("tab", { name: "Harness guide", exact: true }).click();
+    const open = page.getByRole("button", { name: "Open harness guide in browser" });
+    await open.click();
+    await expect(page.getByRole("alert")).toContainText("Couldn't open the harness guide");
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeEnabled();
+    await open.click();
+    await expect(page.getByText("Guide opened in your browser.", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("options-harness-guide.png") });
+    const paths = await electron.evaluate(() => Reflect.get(globalThis, "guidePaths") as string[]);
+    expect(paths).toEqual([
+      join(userData, "help", "harness-guide.html"),
+      join(userData, "help", "harness-guide.html"),
+    ]);
+    const exported = await readFile(paths[0] as string, "utf8");
+    expect(exported).not.toContain("__CSP__");
+    expect(exported).not.toContain("/*__TOOLS__*/");
+    expect(exported).not.toContain("test-only-not-a-credential");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    await expect(page.getByLabel("Large", { exact: true })).toBeChecked();
+    expect((await page.evaluate(() => window.computerCat.info())).preferences.size).toBe("medium");
+
+    // Load the exported file with no preload, Node, app bridge or server. Do not launch a user's browser.
+    const nextWindow = electron.waitForEvent("window");
+    await electron.evaluate(
+      async ({ BrowserWindow }, url) => {
+        const document = new BrowserWindow({
+          show: false,
+          width: 1280,
+          height: 1100,
+          // Keep the invisible preview painting in packaged Electron as well as development.
+          webPreferences: {
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false,
+            offscreen: true,
+            backgroundThrottling: false,
+          },
+        });
+        await document.loadURL(url);
+      },
+      pathToFileURL(paths[0] as string).href,
+    );
+    const guide = await nextWindow;
+    const errors: string[] = [];
+    guide.on("pageerror", (error) => errors.push(error.message));
+    await expect(guide.getByRole("heading", { name: "The harness, at a glance" })).toBeVisible();
+    await expect(guide.locator("#guide-status")).toContainText(`${ALL_TOOL_NAMES.length} tools`);
+    expect(
+      await guide.evaluate(() => ({
+        bridge: typeof Reflect.get(window, "computerCat"),
+        node: typeof Reflect.get(window, "require"),
+      })),
+    ).toEqual({ bridge: "undefined", node: "undefined" });
+    await guide.screenshot({ path: testInfo.outputPath("harness-map.png"), fullPage: true });
+    await guide.getByRole("button", { name: /Check & route/ }).click();
+    await expect(guide.locator("#component-source")).toContainText(
+      "src/main/desktop/controller.ts",
+    );
+    await guide.getByLabel("Follow an example").selectOption("selection");
+    await expect(guide.locator("#trace-steps")).toContainText("desktop_read_selection");
+    await guide.getByRole("link", { name: "desktop_read_selection", exact: true }).click();
+    await expect(guide.locator("#tool-desktop_read_selection")).toHaveAttribute("open", "");
+    await expect(guide.locator("#tool-desktop_read_selection summary")).toBeFocused();
+    await expect(guide.locator(".tool-entry")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.screenshot({ path: testInfo.outputPath("harness-tools.png"), fullPage: true });
+    await guide.getByLabel("Find a tool").fill("region");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(1);
+    await guide.getByLabel("Tool family").selectOption("files");
+    await expect(guide.locator("#no-tools")).toBeVisible();
+    await guide.getByLabel("Find a tool").fill("");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(8);
+    await guide.getByRole("link", { name: "Change the harness" }).click();
+    await expect(guide.getByRole("heading", { name: "The cat needs a new ability" })).toBeVisible();
+    await guide.screenshot({ path: testInfo.outputPath("harness-extension.png"), fullPage: true });
+    await guide.getByRole("link", { name: "Context & limits" }).click();
+    await expect(
+      guide.locator("#boundaries").getByText("Files & shell", { exact: true }),
+    ).toBeVisible();
+    await guide.getByRole("link", { name: "Harness map" }).click();
+    await guide.getByLabel("Follow an example").selectOption("file");
+    await expect(guide.locator('[data-node="files"]')).toHaveClass(/on-path/);
+    await expect(guide.locator('[data-node="desktop"]')).not.toHaveClass(/on-path/);
+    await guide.getByLabel("Follow an example").selectOption("voice");
+    await expect(guide.locator("#trace-steps")).toContainText("Talk, review, send");
+    await guide.getByLabel("Follow an example").selectOption("detail");
+    await expect(guide.locator("#trace-steps")).toContainText("desktop_capture_region");
+    await electron.evaluate(
+      ({ BrowserWindow }, url) => {
+        BrowserWindow.getAllWindows()
+          .find((window) => window.webContents.getURL().startsWith(url))
+          ?.setContentSize(390, 850);
+      },
+      pathToFileURL(paths[0] as string).href,
+    );
+    // Native Windows scaling can round the requested content size by a few DIPs.
+    await expect.poll(() => guide.evaluate(() => innerWidth)).toBeLessThanOrEqual(400);
+    expect(await guide.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await guide.screenshot({ path: testInfo.outputPath("harness-map-narrow.png"), fullPage: true });
+    await guide.reload();
+    await expect(guide.locator("#guide-status")).toContainText(`${ALL_TOOL_NAMES.length} tools`);
+    let networkAttempted = false;
+    await guide.route("https://guide-test.invalid/**", async (route) => {
+      networkAttempted = true;
+      await route.abort();
+    });
+    expect(
+      await guide.evaluate(() =>
+        fetch("https://guide-test.invalid/probe").then(
+          () => true,
+          () => false,
+        ),
+      ),
+    ).toBe(false);
+    expect(networkAttempted).toBe(false);
+    await guide.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await guide.emulateMedia({ media: "print" });
+    await expect(guide.locator(".guide-section:visible")).toHaveCount(4);
+    await expect(guide.locator(".tool-entry[open]:visible")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.emulateMedia({ media: "screen" });
+    await guide.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    expect(errors).toEqual([]);
+    expect((await page.evaluate(() => window.computerCat.snapshot())).messages).toEqual([]);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
 test("cat activities follow real snapshots, interrupt completion, and preserve motion controls", async ({}, testInfo) => {
@@ -475,6 +632,9 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
     await expect(page.getByLabel("Enable voice input")).not.toBeChecked();
     await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Harness guide", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Open harness guide in browser" })).toBeVisible();
+    await page.keyboard.press("ArrowRight");
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeFocused();
     await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
     await expect(
@@ -482,7 +642,9 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
         .getByRole("tabpanel", { name: "General", exact: true })
         .getByText("Local demo", { exact: true }),
     ).toBeVisible();
-    await expect(options.getByText("Off", { exact: true })).toBeVisible();
+    await expect(
+      options.getByText("Unavailable in local demo or until connected", { exact: true }),
+    ).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("options-general.png") });
     await page.keyboard.press("Home");
     await expect(page.getByRole("tab", { name: "Desktop cat" })).toBeFocused();

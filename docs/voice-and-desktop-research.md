@@ -1,7 +1,8 @@
 # Voice, screen context, and computer control
 
-Reviewed: 2026-09-17. Status: broad research and proposals; local Whisper speech input was
-subsequently selected for implementation preparation. No voice/desktop feature is delivered.
+Reviewed: 2026-09-17. Status: historical research and proposals. Local Whisper was subsequently
+implemented; on-demand [desktop context](desktop-context.md) was implemented on 2026-09-19.
+Computer-control drivers below remain proposals.
 Repository baseline: `dev` at `2acff1b`, with a clean working tree before
 this documentation change. Research used current primary documentation and the installed
 Pi 0.85.1 declarations. No speech provider or desktop driver was installed, called, or

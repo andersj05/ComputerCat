@@ -30,6 +30,7 @@ export const IPC = {
   modelsRequested: "cat:models-requested",
   openChat: "cat:open-chat",
   openOptions: "cat:open-options",
+  openHarnessGuide: "cat:open-harness-guide",
   optionsRequested: "cat:options-requested",
   dragPet: "cat:drag-pet",
   petVoiceOpen: "cat:pet-voice-open",
@@ -122,6 +123,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   onModelsRequested(listener: () => void): () => void;
   openChat(): Promise<void>;
   openOptions(tab?: "voice"): Promise<void>;
+  openHarnessGuide(): Promise<ActionResult>;
   onOptionsRequested(listener: (tab?: "voice") => void): () => void;
   dragPet(phase: "start" | "move" | "end" | "cancel"): Promise<{ moved: boolean }>;
   setPetVoiceOpen(open: boolean): Promise<void>;
