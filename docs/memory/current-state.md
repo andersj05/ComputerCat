@@ -8,8 +8,9 @@ Computer Cat is a Windows-first Electron/React/TypeScript companion with a pinne
 Use Node from
 [.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
 
-- The transparent cat supports body dragging, click-to-toggle controls, silhouette glow and
-  idle/thinking motion. Always-on-top recovers without focus; Find cat moves to the pointer display.
+- The draggable cat has toggle controls, glow and eleven [activity poses](../cat-motion.md).
+  Options previews poses; disabled motion uses stills. Always-on-top recovers without focus;
+  Find cat moves to the pointer display.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.

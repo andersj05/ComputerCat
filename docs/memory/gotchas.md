@@ -96,6 +96,20 @@ body dragging so repeated position updates cannot accumulate size rounding.
 Evidence: [placement helper](../../src/main/index.ts) and the off-screen/display-change cases in
 [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
 
+## Playwright forces renderer visibility during Electron smoke tests
+
+Reviewed: 2026-09-19. Scope: Playwright 1.63.0 and Electron 44.4.1 on Windows.
+
+Playwright enables CDP focus emulation in its own page session. Hiding a native window still
+leaves `document.hidden` false under automation; disabling emulation in a second CDP session
+does not undo the first session's override. Do not change application background throttling
+to compensate. The [cat smoke test](../../tests/smoke/desktop.spec.ts) exercises the Page
+Visibility event boundary explicitly and removes its temporary document property afterward.
+A separate demo launch without Playwright verified that native hide sets document.hidden and
+pauses the rig, and showInactive resumes it. The production listener uses the unmodified DOM API.
+See [Electron's visibility contract](https://www.electronjs.org/docs/latest/api/browser-window#page-visibility)
+and the [pet listener](../../src/renderer/src/Pet.tsx).
+
 ## Send acknowledgements and reply completion are separate events
 
 Reviewed: 2026-09-17. Scope: renderer drafts and Electron smoke tests.

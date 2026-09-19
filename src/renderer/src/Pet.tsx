@@ -1,6 +1,9 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
+import { type VoiceSnapshot, voiceMessages } from "../../shared/voice";
 import { PetArtwork } from "./PetArtwork";
+import { PET_ACTIVITIES } from "./pet-activity";
+import { usePetActivity } from "./usePetActivity";
 
 export function Pet({
   snapshot,
@@ -12,7 +15,8 @@ export function Pet({
   modelLabel,
   stop,
   talk,
-  voiceStatus,
+  voice,
+  hasDraft,
   voiceBusy,
   voicePanel,
 }: {
@@ -25,16 +29,23 @@ export function Pet({
   modelLabel: string;
   stop: () => void;
   talk: () => void;
-  voiceStatus: string;
+  voice: VoiceSnapshot;
+  hasDraft: boolean;
   voiceBusy: boolean;
   voicePanel?: ReactNode;
 }) {
   const [controlsVisible, setControlsVisible] = useState(false);
+  const [hidden, setHidden] = useState(document.hidden);
   const catButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const hide = () => setControlsVisible(false);
+    const visibility = () => setHidden(document.hidden);
     window.addEventListener("blur", hide);
-    return () => window.removeEventListener("blur", hide);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("blur", hide);
+      document.removeEventListener("visibilitychange", visibility);
+    };
   }, []);
   function act(action: () => void) {
     setControlsVisible(false);
@@ -52,17 +63,19 @@ export function Pet({
     }
   }
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
-  const status =
-    error || dragError || voiceStatus
-      ? error || dragError || voiceStatus
-      : snapshot.busy
-        ? "Thinking…"
-        : lastReply?.state === "error"
-          ? "Reply interrupted."
-          : "";
+  const activity = usePetActivity(snapshot, voice, error || dragError, hasDraft);
+  const status = activity === "idle" ? "" : PET_ACTIVITIES[activity].label;
+  const detail =
+    error ||
+    dragError ||
+    snapshot.persistenceError ||
+    (voice.error ? voiceMessages[voice.error] : "") ||
+    (lastReply?.state === "error" ? "Reply interrupted. Open chat to try again." : "");
   return (
     <main
-      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${snapshot.busy ? "working" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
+      className={`pet-wrap ${preferences.animation ? "animated" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
+      data-motion-paused={hidden || dragging}
+      data-size={preferences.size}
       style={{
         position: "absolute",
         right: 0,
@@ -78,13 +91,14 @@ export function Pet({
       }}
     >
       {voicePanel}
-      <div className="pet-status-slot" role="status">
-        {!voicePanel && (controlsVisible || voiceBusy) && status && (
-          <span className="pet-bubble">
-            {snapshot.busy && !error && !dragError && (
-              <span className="thinking-dot" aria-hidden="true" />
-            )}
+      <div className="pet-status-slot" id="pet-activity-status" role="status" aria-atomic="true">
+        {status && (
+          <span
+            className={voicePanel ? "sr-only" : "pet-bubble"}
+            title={detail || PET_ACTIVITIES[activity].description}
+          >
             {status}
+            {activity === "error" && detail && <span className="sr-only">. {detail}</span>}
           </span>
         )}
       </div>
@@ -94,6 +108,7 @@ export function Pet({
         ref={catButton}
         aria-expanded={controlsVisible}
         aria-controls="pet-controls"
+        aria-describedby="pet-activity-status"
         onClick={(event) => {
           if (event.detail === 0) setControlsVisible((visible) => !visible);
         }}
@@ -126,7 +141,7 @@ export function Pet({
         aria-label="Show cat controls"
         title="Click for controls; drag to move"
       >
-        <PetArtwork />
+        <PetArtwork activity={activity} />
       </button>
       <div
         id="pet-controls"

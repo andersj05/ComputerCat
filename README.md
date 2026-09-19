@@ -22,8 +22,10 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   available during replies. Click again, press Escape, or choose an action to hide the controls.
 - Drag the cat itself to move it. Otherwise, only the cat is visible.
 - Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
-- The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
-  the system reduced-motion setting control motion.
+- The cat listens, thinks, takes notes, taps a tiny keyboard, and animates its face while
+  text replies arrive. A happy flourish marks a finished reply. Try all eleven activity poses
+  in Options → Desktop cat. Animate cat and system reduced motion control movement while
+  keeping the activity readable. Replying is a text animation; speech audio is not implemented.
 - Always on top keeps the cat above ordinary windows without taking keyboard focus.
   Find cat in Options or the tray brings it to the display under your pointer.
 - The compact XP messenger keeps the conversation and message box in one window.
