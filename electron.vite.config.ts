@@ -10,6 +10,7 @@ export default defineConfig(({ command }) => ({
         input: {
           index: resolve("src/main/index.ts"),
           "agent-worker": resolve("src/agent/worker.ts"),
+          "desktop-capture": resolve("src/main/desktop/source-capture.ts"),
         },
       },
     },

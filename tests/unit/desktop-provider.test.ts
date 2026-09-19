@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   windows: vi.fn(),
   inspect: vi.fn(),
   current: vi.fn(),
+  capture: vi.fn(),
 }));
 vi.mock("electron", () => ({
   desktopCapturer: { getSources: mocks.sources },
@@ -38,7 +39,15 @@ function setup() {
     tabs: [],
     truncated: false,
   });
-  return { provider: new ElectronDesktopProvider(), abort: new AbortController() };
+  mocks.capture.mockResolvedValue({
+    data: Buffer.from("selected").toString("base64"),
+    width: 640,
+    height: 480,
+  });
+  return {
+    provider: new ElectronDesktopProvider({ capture: mocks.capture }),
+    abort: new AbortController(),
+  };
 }
 afterEach(() => vi.resetAllMocks());
 
@@ -118,25 +127,34 @@ describe("Electron desktop adapter", () => {
       width: 640,
       height: 480,
     });
-    expect(mocks.sources.mock.calls[0]?.[0].types).toEqual(["window"]);
+    expect(mocks.capture).toHaveBeenCalledExactlyOnceWith(fixture.id, abort.signal);
+    expect(
+      mocks.sources.mock.calls.every(
+        ([options]) => options.thumbnailSize.width === 0 && options.thumbnailSize.height === 0,
+      ),
+    ).toBe(true);
   });
 
-  it.each(["changed", "closed", "protected", "dimensions", "bytes"])(
-    "fails closed for %s captures",
-    async (reason) => {
-      const { provider, abort } = setup();
-      const thumbnail = thumb("selected");
-      if (reason === "protected") thumbnail.isEmpty = () => true;
-      if (reason === "dimensions") thumbnail.getSize = () => ({ width: 8000, height: 4000 });
-      if (reason === "bytes") thumbnail.toPNG = () => Buffer.alloc(6_000_001);
-      mocks.sources.mockResolvedValue(
-        reason === "closed"
-          ? []
-          : [{ ...fixture, name: reason === "changed" ? "New title" : fixture.name, thumbnail }],
-      );
-      await expect(provider.capture(fixture, abort.signal)).rejects.toThrow();
-    },
-  );
+  it.each(["changed", "closed", "protected"])("fails closed for %s captures", async (reason) => {
+    const { provider, abort } = setup();
+    const thumbnail = thumb("selected");
+    if (reason === "protected") mocks.capture.mockRejectedValue(new Error("No frame"));
+    mocks.sources.mockResolvedValue(
+      reason === "closed"
+        ? []
+        : [{ ...fixture, name: reason === "changed" ? "New title" : fixture.name, thumbnail }],
+    );
+    await expect(provider.capture(fixture, abort.signal)).rejects.toThrow();
+  });
+
+  it("drops a frame if the source changes during capture", async () => {
+    const { provider, abort } = setup();
+    mocks.capture.mockImplementation(async () => {
+      mocks.sources.mockResolvedValue([{ ...fixture, name: "Different page" }]);
+      return { data: "cG5n", width: 20, height: 20 };
+    });
+    await expect(provider.capture(fixture, abort.signal)).rejects.toThrow("changed");
+  });
 
   it("rejects capture of Computer Cat after a source becomes ours", async () => {
     const { provider, abort } = setup();

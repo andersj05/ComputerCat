@@ -1,9 +1,11 @@
 import { BrowserWindow, desktopCapturer } from "electron";
 import type { DesktopWindowText } from "../../shared/desktop";
 import type { CurrentDesktopWindow, DesktopProvider, DesktopSource } from "./controller";
+import { SourceCapturer } from "./source-capture";
 import { inspectCurrentWindow, inspectWindow } from "./windows-reader";
 
 export class ElectronDesktopProvider implements DesktopProvider {
+  constructor(private readonly capturer: Pick<SourceCapturer, "capture"> = new SourceCapturer()) {}
   async current(signal: AbortSignal): Promise<CurrentDesktopWindow | undefined> {
     const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal);
     signal.throwIfAborted();
@@ -47,23 +49,17 @@ export class ElectronDesktopProvider implements DesktopProvider {
 
   async capture(source: DesktopSource, signal: AbortSignal) {
     signal.throwIfAborted();
-    // Electron returns thumbnails for this source class; only the selected source leaves main.
-    const sources = await desktopCapturer.getSources({
-      types: [source.kind],
-      thumbnailSize: { width: 1920, height: 1080 },
-      fetchWindowIcons: false,
-    });
-    signal.throwIfAborted();
-    const current = sources.find(
-      (item) => item.id === source.id && item.name === source.name && !this.isOwnWindow(item.id),
+    const current = (await this.list(signal)).find(
+      (item) => item.id === source.id && item.name === source.name,
     );
-    if (!current || current.thumbnail.isEmpty()) throw new Error("Source unavailable");
-    const image = current.thumbnail;
-    const size = image.getSize();
-    if (size.width > 1920 || size.height > 1080) throw new Error("Unexpected image dimensions");
-    const data = image.toPNG().toString("base64");
-    if (data.length > 8_000_000) throw new Error("Image too large");
-    return { data, ...size };
+    if (!current) throw new Error("Source unavailable");
+    const image = await this.capturer.capture(current.id, signal);
+    // A title/identity change during startup must not silently replace the requested app.
+    if (
+      !(await this.list(signal)).some((item) => item.id === source.id && item.name === source.name)
+    )
+      throw new Error("Source changed");
+    return image;
   }
 
   async read(source: DesktopSource, signal: AbortSignal): Promise<DesktopWindowText> {

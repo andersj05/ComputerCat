@@ -32,10 +32,13 @@ until the next listing or cancellation. A changed/closed source requires a fresh
 
 ## Harness boundaries
 
-Only main owns capture and native inspection. The renderer has no desktop observation or
-permission API. Strict schemas and correlated turn/call IDs validate private worker RPC;
+Main owns source selection and native inspection. The chat/pet renderers have no desktop
+observation or permission API. A separate hidden, sandboxed media renderer captures one frame
+of the exact selected source and is destroyed afterward, including on cancellation or timeout.
+Its memory-only session permits only its fixed main frame's desktop request, blocks network
+access and rejects camera/microphone requests. Strict schemas validate private worker RPC;
 main allows twenty requests per turn and one OS observation at a time. Each observation has
-a fifteen-second deadline. Timed-out Electron calls hold their operation slot until settled.
+a fifteen-second deadline; frame capture has a separate six-second ceiling.
 Stop, worker failure/disposal, context changes and renderer restarts cancel pending work and
 drop late results. Independent lock and sleep blocks cannot accidentally unlock one another.
 
@@ -56,8 +59,9 @@ unavailable. Password controls are excluded from text reading; screenshots can s
 visible on the chosen surface. There is no automatic secret redaction.
 
 Computer Cat's own windows are excluded as individual sources, but a display screenshot may
-include the cat/chat. Electron enumerates thumbnails for the selected source class during
-capture; only the chosen image leaves main. Observations go to the selected model and persist
+include the cat/chat. Listings always request zero-size thumbnails. Capture addresses one
+source through Electron's desktop media stream, so unrelated uncapturable windows are never
+asked for thumbnails. Source identity is rechecked after capture. Observations go to the selected model and persist
 in the conversation's local native Pi context, including images. Deleting that conversation
 deletes its saved context. Stop prevents pending observations from being delivered; it does
 not retract results already provided to the model.
@@ -74,6 +78,11 @@ pass combined text/image blocks through the SDK loop without a paid provider.
 [Codex worker smoke](../tests/smoke/codex.spec.ts) sends a natural screen question through the
 actual Electron utility process, returns generated text/image context to an offline model,
 and checks locking and automatic recovery without sharing UI or real desktop capture.
+
+[Native capture smoke](../tests/smoke/native-capture.spec.ts) verifies actual pixels from an
+owned generated window with all source enumeration disabled, plus cancellation and media
+renderer cleanup. [Capture boundary tests](../tests/unit/source-capture.test.ts) exercise
+permissions, renderer failures, deadline, cancellation, image limits and invalid IDs.
 
 The [native Windows smoke](../tests/smoke/windows-reader.spec.ts) reads an owned synthetic
 WPF window and verifies title, text, exact selection, tab names, password exclusion and

@@ -62,7 +62,7 @@ session-owner microphone grant described above. Model output is rendered as Mark
 images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools plus three app-owned desktop
+its explicit allowlist contains all eight built-in Pi tools plus four app-owned desktop
 observation tools, and native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
@@ -120,11 +120,14 @@ to the agent during user turns, without a renderer sharing grant. Renderers cann
 pixels or generic native operations. Per-turn, correlated worker RPC validates desktop tool
 requests and responses. Opaque source IDs expire after sixty seconds, on a fresh listing, or
 when their owning turn ends. Main caps requests per turn and permits one OS observation at a time.
-Stop, context changes, disposal and deadlines suppress late results. Non-cancellable Electron calls
-retain their operation lock until settled, even after their result deadline.
+Stop, context changes, disposal and deadlines suppress late results.
 
-[Electron capture](../src/main/desktop/electron-provider.ts) lists sources without thumbnails
-and produces a bounded PNG only on an explicit tool call. Only the selected source leaves main.
+[Electron capture](../src/main/desktop/electron-provider.ts) lists sources without thumbnails.
+The [frame helper](../src/main/desktop/source-capture.ts) opens a hidden sandboxed media renderer
+in a separate memory-only session, requests only the chosen source, returns one bounded PNG,
+then destroys the renderer. Its six-second deadline also destroys stalled media requests.
+Only its fixed main frame can request desktop media; physical camera/audio, navigation and
+network requests are denied. The app UI gets no new permission. No all-window thumbnails run.
 [Windows reading](../src/main/desktop/windows-reader.ts) uses fixed, hidden PowerShell code,
 validated numeric window handles, an isolated environment and a bounded UI Automation traversal.
 It does not focus, copy, click or change selection. Text, tab names and selection depend on the
