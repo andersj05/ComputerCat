@@ -99,29 +99,37 @@ export function OptionsDialog({
     setSaving(true);
     setApplied(false);
     setError("");
+    const savedSections: string[] = [];
+    let savingTab: OptionTab = "cat";
+    function saveError(message: string) {
+      selectTab(savingTab);
+      setError(`${message}${savedSections.length ? ` Saved: ${savedSections.join(", ")}.` : ""}`);
+    }
     try {
       if (dirtyPet) {
         const result = await onApply(draft);
         if (!result.ok) {
-          setError(result.message);
+          saveError(result.message);
           return;
         }
         setSaved(draft);
+        savedSections.push("Desktop cat");
       }
       if (dirtyModels) {
+        savingTab = "models";
         const result = await window.computerCat.updateModels(draftModels);
         if (!result.ok) {
-          setError(result.message);
+          saveError(result.message);
           return;
         }
         setSavedModels(draftModels);
+        savedSections.push("Models");
       }
       if (dirtyVoice) {
+        savingTab = "voice";
         const result = await window.computerCat.voiceUpdateSettings(draftVoice);
         if (!result.ok) {
-          setError(
-            `${voiceMessages[result.code]}${dirtyPet || dirtyModels ? " Changes to the other tabs were saved." : ""}`,
-          );
+          saveError(voiceMessages[result.code]);
           return;
         }
         setSavedVoice(draftVoice);
@@ -129,7 +137,7 @@ export function OptionsDialog({
       if (closeAfter) await close();
       else setApplied(true);
     } catch {
-      setError("Couldn't save these settings. Try again.");
+      saveError("Couldn't save these settings. Try again.");
     } finally {
       pending.current = false;
       setSaving(false);

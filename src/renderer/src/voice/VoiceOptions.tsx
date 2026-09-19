@@ -46,9 +46,10 @@ export function VoiceOptions({
     <div className="voice-options">
       <fieldset disabled={disabled || acting}>
         <legend>1. Speech model</legend>
-        <label className="voice-option">
-          Speech model
+        <div className="voice-option">
+          <label htmlFor="speech-model">Speech model</label>
           <select
+            id="speech-model"
             value={draft.modelId}
             disabled={Boolean(download)}
             aria-describedby="speech-model-help"
@@ -63,7 +64,7 @@ export function VoiceOptions({
             <option value="large-v3-turbo">Turbo · 1.51 GiB · multilingual</option>
             <option value="base.en">Base English · 141 MiB · smaller</option>
           </select>
-        </label>
+        </div>
         <p className="field-help" id="speech-model-help">
           {draft.modelId === "base.en"
             ? "A smaller, faster option for English."
@@ -136,9 +137,10 @@ export function VoiceOptions({
           />
           <span>Enable voice input</span>
         </label>
-        <label className="voice-option">
-          Language
+        <div className="voice-option">
+          <label htmlFor="speech-language">Language</label>
           <select
+            id="speech-language"
             value={draft.language}
             onChange={(event) =>
               onChange({ ...draft, language: event.target.value as VoiceSettings["language"] })
@@ -149,7 +151,7 @@ export function VoiceOptions({
               Detect automatically
             </option>
           </select>
-        </label>
+        </div>
         <p className="field-help">
           Apply or OK saves your choices. Your microphone starts only when you click Talk.
         </p>
@@ -158,9 +160,10 @@ export function VoiceOptions({
         <summary>Microphone &amp; performance</summary>
         <fieldset disabled={disabled}>
           <legend>Recording options</legend>
-          <label className="voice-option">
-            Microphone
+          <div className="voice-option">
+            <label htmlFor="speech-microphone">Microphone</label>
             <select
+              id="speech-microphone"
               value={draft.inputDeviceId ?? ""}
               onChange={(event) => {
                 const next = { ...draft };
@@ -181,7 +184,7 @@ export function VoiceOptions({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
           <button
             type="button"
             className="xp-button"
@@ -206,9 +209,10 @@ export function VoiceOptions({
             Refresh microphones
           </button>
           <p className="field-help">Microphone names may appear after your first recording.</p>
-          <label className="voice-option">
-            Acceleration
+          <div className="voice-option">
+            <label htmlFor="speech-acceleration">Acceleration</label>
             <select
+              id="speech-acceleration"
               value={draft.backend}
               onChange={(event) =>
                 onChange({ ...draft, backend: event.target.value as VoiceSettings["backend"] })
@@ -222,7 +226,7 @@ export function VoiceOptions({
                 </option>
               )}
             </select>
-          </label>
+          </div>
           <p className="field-help">Auto chooses the available CPU helper.</p>
         </fieldset>
       </details>

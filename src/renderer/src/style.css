@@ -811,6 +811,11 @@ input:disabled {
   color: #a12a12;
   line-height: 1.4;
 }
+.options-dialog .dialog-error {
+  flex-shrink: 0;
+  max-height: 64px;
+  overflow-y: auto;
+}
 .clear-dialog {
   width: 345px;
 }

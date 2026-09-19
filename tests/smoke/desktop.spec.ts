@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, rm, rmdir } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { IPC } from "../../src/shared/contracts";
+import { DEFAULT_VOICE } from "../../src/shared/voice";
 import { composeMessage, showCatControls } from "./chat";
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
@@ -401,6 +402,10 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
 test("settings shortcuts preserve drafts and identify pending changes across tabs", async ({}, testInfo) => {
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  await writeFile(
+    join(userData, "voice.json"),
+    JSON.stringify({ ...DEFAULT_VOICE, inputDeviceId: "saved-microphone-fixture" }),
+  );
   const electron = await launch(userData);
   try {
     const { page } = await windows(electron);
@@ -429,7 +434,12 @@ test("settings shortcuts preserve drafts and identify pending changes across tab
     await page.screenshot({ path: testInfo.outputPath("settings-voice-setup.png") });
     await page.getByText("Microphone & performance", { exact: true }).click();
     await expect(page.getByLabel("Acceleration")).toBeVisible();
-    await expect(page.getByLabel("Microphone", { exact: true })).toHaveValue("");
+    await expect(page.getByLabel("Microphone", { exact: true })).toHaveValue(
+      "saved-microphone-fixture",
+    );
+    await expect(
+      page.getByLabel("Microphone", { exact: true }).locator("option:checked"),
+    ).toHaveText("Saved microphone");
     await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
     const preview = page.locator(".preview-surface .pet-art");
     const mediumHeight = await preview.evaluate(
@@ -451,6 +461,46 @@ test("settings shortcuts preserve drafts and identify pending changes across tab
     await page.keyboard.press("Escape");
     await expect(composer).toBeFocused();
     await expect(composer).toHaveValue("Keep this draft while I set things up.");
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+test("a partial settings save identifies the failed tab and retries its remaining draft", async () => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const obstruction = join(userData, "voice.json.tmp");
+  await mkdir(obstruction);
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await page.getByRole("button", { name: "Set up voice…", exact: true }).click();
+    await page.getByLabel("Speech model", { exact: true }).selectOption("base.en");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    await page.getByRole("tab", { name: "General", exact: true }).click();
+    await options.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(options.getByRole("alert")).toContainText("Saved: Desktop cat.");
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Speech model", { exact: true })).toHaveValue("base.en");
+    await expect(page.locator(".tab-dirty")).toHaveCount(1);
+    expect(
+      await page.evaluate(async () => (await window.computerCat.info()).preferences.size),
+    ).toBe("small");
+    expect(
+      await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.modelId),
+    ).toBe("large-v3-turbo");
+    await rmdir(obstruction);
+    await options.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.locator(".settings-actions .save-status")).toHaveText("Changes saved.");
+    await expect(options.getByRole("alert")).toBeHidden();
+    await expect(page.locator(".tab-dirty")).toHaveCount(0);
+    expect(
+      await page.evaluate(async () => (await window.computerCat.voiceSnapshot()).settings?.modelId),
+    ).toBe("base.en");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("textbox", { name: "Message Computer Cat" })).toBeFocused();
   } finally {
     await electron.close();
     await removeTestData(userData);
