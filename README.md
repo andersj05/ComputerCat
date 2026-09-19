@@ -22,8 +22,10 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   available during replies. Click again, press Escape, or choose an action to hide the controls.
 - Drag the cat itself to move it. Otherwise, only the cat is visible.
 - Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
-- The cat blinks, breathes, and looks around, with a separate thinking pose. Animate cat and
-  the system reduced-motion setting control motion.
+- The cat listens, thinks, takes notes, taps a tiny keyboard, and animates its face while
+  text replies arrive. A happy flourish marks a finished reply. Try all eleven activity poses
+  in Options → Desktop cat. Animate cat and system reduced motion control movement while
+  keeping the activity readable. Replying is a text animation; speech audio is not implemented.
 - Always on top keeps the cat above ordinary windows without taking keyboard focus.
   Find cat in Options or the tray brings it to the display under your pointer.
 - The compact XP messenger keeps the conversation and message box in one window.
@@ -31,6 +33,8 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 - Options controls pet size, animation, and always-on-top behavior. Apply or OK saves changes
   locally; Cancel or Escape discards unapplied changes.
 - Options → Models connects your Codex subscription and saves a default model and reasoning level.
+- Options → Harness guide opens an offline, themed browser guide with an interactive map,
+  tool catalog and [guidance for extending the harness](docs/harness-guide.md).
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
@@ -42,12 +46,33 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
   enabled voice keeps a **Voice options** link beside Talk.
 
-The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
-computer control, external MCP connections, and long-term memory are not implemented yet.**
+The companion includes on-demand screen context for connected models. **Computer control,
+external MCP connections, and long-term user memory are not implemented yet.**
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Help with your screen
+
+Ask a connected model “What is this page?”, “What does this error mean?” or “Summarize the
+text I selected.” You can type or use Talk. The agent chooses desktop tools automatically;
+there is no Share screen button. It can identify the current app, combine a screenshot with
+accessible text, inspect named windows, and read exposed browser tabs and selected text.
+Focused text tools avoid collecting the full page; region screenshots let it inspect small
+text or diagrams more closely without sending the whole window again.
+When the cat or chat has focus, the app behind it is used as a starting point.
+
+Observations happen on tool calls during your request, not in a background screen feed.
+**Stop** cancels the reply and pending observations. Windows lock/sleep blocks observation;
+tools are available again after unlock/resume. Screenshots need an image-capable model;
+text-only models receive accessible text, and the local demo never reads the desktop.
+Captured content goes to the selected model and remains in the chat's local model context,
+including images, until that conversation is deleted.
+
+Text and tab support depends on the application's Windows accessibility provider. The cat
+does not have access to every browser tab's contents and cannot select text, click, or type
+through these tools. See [desktop context](docs/desktop-context.md) for limits and verification.
 
 ## Local voice input (Windows x64)
 

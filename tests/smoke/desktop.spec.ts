@@ -1,9 +1,12 @@
-import { mkdir, mkdtemp, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
-import { IPC } from "../../src/shared/contracts";
-import { DEFAULT_VOICE } from "../../src/shared/voice";
+import { PET_ACTIVITIES, type PetActivity } from "../../src/renderer/src/pet-activity";
+import { type ChatSnapshot, IPC } from "../../src/shared/contracts";
+import { ALL_TOOL_NAMES } from "../../src/shared/tools";
+import { DEFAULT_VOICE, type VoiceSnapshot } from "../../src/shared/voice";
 import { composeMessage, showCatControls } from "./chat";
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
@@ -101,6 +104,428 @@ async function removeTestData(userData: string) {
 }
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("harness guide opens offline, preserves settings drafts, and explains the tool loop", async ({}, testInfo) => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    await electron.evaluate(({ shell }) => {
+      const paths: string[] = [];
+      Reflect.set(globalThis, "guidePaths", paths);
+      shell.openPath = async (path) => {
+        paths.push(path);
+        return paths.length === 1 ? "Synthetic browser failure" : "";
+      };
+    });
+    await expect(
+      pet.evaluate(() =>
+        window.computerCat.openHarnessGuide().then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).resolves.toBe("denied");
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByLabel("Large", { exact: true }).check();
+    await page.getByRole("tab", { name: "Harness guide", exact: true }).click();
+    const open = page.getByRole("button", { name: "Open harness guide in browser" });
+    await open.click();
+    await expect(page.getByRole("alert")).toContainText("Couldn't open the harness guide");
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeEnabled();
+    await open.click();
+    await expect(page.getByText("Guide opened in your browser.", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("options-harness-guide.png") });
+    const paths = await electron.evaluate(() => Reflect.get(globalThis, "guidePaths") as string[]);
+    expect(paths).toEqual([
+      join(userData, "help", "harness-guide.html"),
+      join(userData, "help", "harness-guide.html"),
+    ]);
+    const exported = await readFile(paths[0] as string, "utf8");
+    expect(exported).not.toContain("__CSP__");
+    expect(exported).not.toContain("/*__TOOLS__*/");
+    expect(exported).not.toContain("test-only-not-a-credential");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    await expect(page.getByLabel("Large", { exact: true })).toBeChecked();
+    expect((await page.evaluate(() => window.computerCat.info())).preferences.size).toBe("medium");
+
+    // Load the exported file with no preload, Node, app bridge or server. Do not launch a user's browser.
+    const nextWindow = electron.waitForEvent("window");
+    await electron.evaluate(
+      async ({ BrowserWindow }, url) => {
+        const document = new BrowserWindow({
+          show: false,
+          width: 1280,
+          height: 1100,
+          // Keep the invisible preview painting in packaged Electron as well as development.
+          webPreferences: {
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false,
+            offscreen: true,
+            backgroundThrottling: false,
+          },
+        });
+        await document.loadURL(url);
+      },
+      pathToFileURL(paths[0] as string).href,
+    );
+    const guide = await nextWindow;
+    const errors: string[] = [];
+    guide.on("pageerror", (error) => errors.push(error.message));
+    await expect(guide.getByRole("heading", { name: "The harness, at a glance" })).toBeVisible();
+    await expect(guide.locator("#guide-status")).toContainText(`${ALL_TOOL_NAMES.length} tools`);
+    expect(
+      await guide.evaluate(() => ({
+        bridge: typeof Reflect.get(window, "computerCat"),
+        node: typeof Reflect.get(window, "require"),
+      })),
+    ).toEqual({ bridge: "undefined", node: "undefined" });
+    await guide.screenshot({ path: testInfo.outputPath("harness-map.png"), fullPage: true });
+    await guide.getByRole("button", { name: /Check & route/ }).click();
+    await expect(guide.locator("#component-source")).toContainText(
+      "src/main/desktop/controller.ts",
+    );
+    await guide.getByLabel("Follow an example").selectOption("selection");
+    await expect(guide.locator("#trace-steps")).toContainText("desktop_read_selection");
+    await guide.getByRole("link", { name: "desktop_read_selection", exact: true }).click();
+    await expect(guide.locator("#tool-desktop_read_selection")).toHaveAttribute("open", "");
+    await expect(guide.locator("#tool-desktop_read_selection summary")).toBeFocused();
+    await expect(guide.locator(".tool-entry")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.screenshot({ path: testInfo.outputPath("harness-tools.png"), fullPage: true });
+    await guide.getByLabel("Find a tool").fill("region");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(1);
+    await guide.getByLabel("Tool family").selectOption("files");
+    await expect(guide.locator("#no-tools")).toBeVisible();
+    await guide.getByLabel("Find a tool").fill("");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(8);
+    await guide.getByRole("link", { name: "Change the harness" }).click();
+    await expect(guide.getByRole("heading", { name: "The cat needs a new ability" })).toBeVisible();
+    await guide.screenshot({ path: testInfo.outputPath("harness-extension.png"), fullPage: true });
+    await guide.getByRole("link", { name: "Context & limits" }).click();
+    await expect(
+      guide.locator("#boundaries").getByText("Files & shell", { exact: true }),
+    ).toBeVisible();
+    await guide.getByRole("link", { name: "Harness map" }).click();
+    await guide.getByLabel("Follow an example").selectOption("file");
+    await expect(guide.locator('[data-node="files"]')).toHaveClass(/on-path/);
+    await expect(guide.locator('[data-node="desktop"]')).not.toHaveClass(/on-path/);
+    await guide.getByLabel("Follow an example").selectOption("voice");
+    await expect(guide.locator("#trace-steps")).toContainText("Talk, review, send");
+    await guide.getByLabel("Follow an example").selectOption("detail");
+    await expect(guide.locator("#trace-steps")).toContainText("desktop_capture_region");
+    await electron.evaluate(
+      ({ BrowserWindow }, url) => {
+        BrowserWindow.getAllWindows()
+          .find((window) => window.webContents.getURL().startsWith(url))
+          ?.setContentSize(390, 850);
+      },
+      pathToFileURL(paths[0] as string).href,
+    );
+    // Native Windows scaling can round the requested content size by a few DIPs.
+    await expect.poll(() => guide.evaluate(() => innerWidth)).toBeLessThanOrEqual(400);
+    expect(await guide.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await guide.screenshot({ path: testInfo.outputPath("harness-map-narrow.png"), fullPage: true });
+    await guide.reload();
+    await expect(guide.locator("#guide-status")).toContainText(`${ALL_TOOL_NAMES.length} tools`);
+    let networkAttempted = false;
+    await guide.route("https://guide-test.invalid/**", async (route) => {
+      networkAttempted = true;
+      await route.abort();
+    });
+    expect(
+      await guide.evaluate(() =>
+        fetch("https://guide-test.invalid/probe").then(
+          () => true,
+          () => false,
+        ),
+      ),
+    ).toBe(false);
+    expect(networkAttempted).toBe(false);
+    await guide.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await guide.emulateMedia({ media: "print" });
+    await expect(guide.locator(".guide-section:visible")).toHaveCount(4);
+    await expect(guide.locator(".tool-entry[open]:visible")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.emulateMedia({ media: "screen" });
+    await guide.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    expect(errors).toEqual([]);
+    expect((await page.evaluate(() => window.computerCat.snapshot())).messages).toEqual([]);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("cat activities follow real snapshots, interrupt completion, and preserve motion controls", async ({}, testInfo) => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    const errors: string[] = [];
+    pet.on("pageerror", (error) => errors.push(error.message));
+    await pet.emulateMedia({ reducedMotion: "no-preference" });
+    const art = pet.locator(".pet-art");
+    const base: ChatSnapshot = { conversationId: "motion-fixture", messages: [], busy: false };
+    const stream: ChatSnapshot = {
+      ...base,
+      busy: true,
+      messages: [{ id: "motion-reply", role: "assistant", state: "streaming", text: "" }],
+    };
+    const reply: ChatSnapshot = {
+      ...stream,
+      messages: stream.messages.map((message) => ({ ...message, text: "Here is your answer." })),
+    };
+    const completed: ChatSnapshot = {
+      ...reply,
+      busy: false,
+      messages: reply.messages.map((message) => ({ ...message, state: "complete" })),
+    };
+    let revision = 1000;
+    const publish = async (chat: ChatSnapshot, voice: Partial<VoiceSnapshot> = {}) => {
+      await electron.evaluate(
+        ({ BrowserWindow }, payload) => {
+          const target = BrowserWindow.getAllWindows().find((win) =>
+            win.webContents.getURL().includes("view=pet"),
+          );
+          target?.webContents.send(payload.chatChannel, payload.chat);
+          target?.webContents.send(payload.voiceChannel, payload.voice);
+        },
+        {
+          chatChannel: IPC.changed,
+          voiceChannel: IPC.voiceChanged,
+          chat,
+          voice: {
+            phase: "idle",
+            availability: "ready",
+            elapsedMs: 0,
+            ...voice,
+            revision: revision++,
+          },
+        },
+      );
+    };
+    const poses: { activity: PetActivity; chat?: ChatSnapshot; voice?: Partial<VoiceSnapshot> }[] =
+      [
+        { activity: "idle" },
+        { activity: "preparing", voice: { phase: "starting" } },
+        { activity: "listening", voice: { phase: "recording" } },
+        { activity: "transcribing", voice: { phase: "finalizing" } },
+        { activity: "transcribing", voice: { phase: "transcribing" } },
+        { activity: "review", voice: { phase: "review" } },
+        { activity: "stopping", voice: { phase: "cancelling" } },
+        { activity: "error", voice: { error: "device-missing" } },
+        { activity: "thinking", chat: stream },
+        {
+          activity: "working",
+          chat: {
+            ...reply,
+            messages: reply.messages.map((message) => ({
+              ...message,
+              tools: [{ id: "reading", name: "read", state: "running" }],
+            })),
+          },
+        },
+        { activity: "replying", chat: reply },
+      ];
+    for (const size of ["small", "medium", "large"] as const) {
+      await page.evaluate((size) => window.computerCat.updatePreferences({ size }), size);
+      await expect(pet.locator(".pet-wrap")).toHaveCSS(
+        "width",
+        `${{ small: 148, medium: 188, large: 228 }[size]}px`,
+      );
+      // Native window resizing finishes after the preference broadcast at fractional DPI.
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await pet.evaluate(() => innerWidth)) - { small: 148, medium: 188, large: 228 }[size],
+          ),
+        )
+        .toBeLessThanOrEqual(1);
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await pet.evaluate(() => innerHeight)) - { small: 244, medium: 298, large: 352 }[size],
+          ),
+        )
+        .toBeLessThanOrEqual(1);
+      const bounds = await art.boundingBox();
+      for (const pose of poses) {
+        await publish(pose.chat ?? base, pose.voice);
+        await expect(art).toHaveAttribute("data-activity", pose.activity);
+        if (pose.activity !== "idle") {
+          await expect(pet.locator(".pet-bubble")).toContainText(
+            PET_ACTIVITIES[pose.activity].label,
+          );
+        }
+        await expect(pet.getByRole("button", { name: "Show cat controls" })).toHaveAttribute(
+          "aria-expanded",
+          "false",
+        );
+        const currentBounds = await art.boundingBox();
+        if (!bounds || !currentBounds) throw new Error("Missing artwork bounds");
+        for (const dimension of ["x", "y", "width", "height"] as const) {
+          expect(currentBounds[dimension]).toBeCloseTo(bounds[dimension], 1);
+        }
+        const samples = await art.evaluate((element) => {
+          const animations = element.getAnimations({ subtree: true });
+          const head = element.querySelector(".cat-head");
+          if (!head) throw new Error("Missing cat head");
+          for (const animation of animations) {
+            animation.pause();
+            animation.currentTime = 0;
+          }
+          const before = getComputedStyle(head).transform;
+          const headDuration = Number(
+            head.getAnimations()[0]?.effect?.getTiming().duration ?? 2400,
+          );
+          for (const animation of animations) animation.currentTime = headDuration / 2;
+          return { before, after: getComputedStyle(head).transform, count: animations.length };
+        });
+        expect(samples.count).toBeGreaterThan(0);
+        // Idle spends time at rest; active poses must visibly move, not just carry a class.
+        if (pose.activity !== "idle") expect(samples.after).not.toBe(samples.before);
+        await pet.screenshot({
+          path: testInfo.outputPath(
+            `activity-${size}-${pose.activity}-${pose.voice?.phase ?? "chat"}.png`,
+          ),
+          omitBackground: true,
+        });
+        await pet.emulateMedia({ reducedMotion: "reduce" });
+        expect(
+          await art.evaluate((element) => element.getAnimations({ subtree: true }).length),
+        ).toBe(0);
+        await expect(art).toHaveAttribute("data-activity", pose.activity);
+        await pet.emulateMedia({ reducedMotion: "no-preference" });
+      }
+    }
+
+    await publish(completed);
+    await expect(art).toHaveAttribute("data-activity", "happy");
+    await pet.screenshot({
+      path: testInfo.outputPath("activity-complete.png"),
+      omitBackground: true,
+    });
+    await expect(art).toHaveAttribute("data-activity", "idle");
+    // Opening another saved conversation cannot replay an old success.
+    await publish({ ...completed, conversationId: "restored-conversation" });
+    await expect(art).toHaveAttribute("data-activity", "idle");
+    await publish(reply);
+    await expect(art).toHaveAttribute("data-activity", "replying");
+    await publish(completed);
+    await expect(art).toHaveAttribute("data-activity", "happy");
+    await publish({ ...completed, conversationId: "brief-visit" });
+    await expect(art).toHaveAttribute("data-activity", "idle");
+    await publish(completed);
+    await expect(art).toHaveAttribute("data-activity", "idle");
+    await publish(reply);
+    await expect(art).toHaveAttribute("data-activity", "replying");
+    await publish(completed);
+    await expect(art).toHaveAttribute("data-activity", "happy");
+    await publish(completed, { phase: "recording" });
+    await expect(art).toHaveAttribute("data-activity", "listening");
+    await publish(completed, { error: "cancelled" });
+    await expect(art).toHaveAttribute("data-activity", "idle");
+    await publish(reply);
+    await expect(art).toHaveAttribute("data-activity", "replying");
+    await publish({
+      ...completed,
+      messages: completed.messages.map((message) => ({ ...message, state: "stopped" })),
+    });
+    await expect(art).toHaveAttribute("data-activity", "idle");
+
+    await publish(base, { phase: "recording" });
+    await expect(art).toHaveAttribute("data-activity", "listening");
+    await page.evaluate(() => window.computerCat.updatePreferences({ animation: false }));
+    await expect(pet.locator(".pet-wrap")).not.toHaveClass(/animated/);
+    expect(await art.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(
+      0,
+    );
+    await expect(pet.locator(".cat-signal")).toHaveCount(4);
+    await expect(pet.locator(".pet-bubble")).toHaveText("Listening");
+    await page.evaluate(() => window.computerCat.updatePreferences({ animation: true }));
+    await expect(pet.locator(".pet-wrap")).toHaveClass(/animated/);
+    const button = await pet.locator(".pet-button").boundingBox();
+    if (!button) throw new Error("Missing cat button");
+    await pet.mouse.move(button.x + button.width / 2, button.y + button.height / 2);
+    await pet.mouse.down();
+    await expect(pet.locator(".pet-wrap")).toHaveAttribute("data-motion-paused", "true");
+    expect(
+      await art.evaluate((element) =>
+        element
+          .getAnimations({ subtree: true })
+          .every((animation) => animation.playState === "paused"),
+      ),
+    ).toBe(true);
+    await pet.mouse.up();
+    await expect(pet.locator(".pet-wrap")).toHaveAttribute("data-motion-paused", "false");
+    // Playwright's own CDP session forces visibility, including for hidden Electron windows.
+    // Exercise the Page Visibility boundary explicitly; native hide/show is checked separately.
+    await pet.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(pet.locator(".pet-wrap")).toHaveAttribute("data-motion-paused", "true");
+    await pet.evaluate(() => {
+      Reflect.deleteProperty(document, "hidden");
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(pet.locator(".pet-wrap")).toHaveAttribute("data-motion-paused", "false");
+    expect(errors).toEqual([]);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("activity preview stays local and all poses support staged and reduced motion", async ({}, testInfo) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    const preview = page.locator(".preview-surface .pet-art");
+    for (const activity of Object.keys(PET_ACTIVITIES)) {
+      await page.getByLabel("Preview activity", { exact: true }).selectOption(activity);
+      await expect(preview).toHaveAttribute("data-activity", activity);
+      await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "idle");
+      await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      expect(
+        await preview.evaluate((element) => element.getAnimations({ subtree: true }).length),
+      ).toBe(0);
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      expect(
+        await preview.evaluate((element) => element.getAnimations({ subtree: true }).length),
+      ).toBeGreaterThan(0);
+    }
+    await page.getByLabel("Preview activity", { exact: true }).selectOption("transcribing");
+    await page.getByRole("checkbox", { name: "Animate cat" }).uncheck();
+    expect(
+      await preview.evaluate((element) => element.getAnimations({ subtree: true }).length),
+    ).toBe(0);
+    await expect(pet.locator(".pet-wrap")).toHaveClass(/animated/);
+    await page.screenshot({ path: testInfo.outputPath("activity-preview.png") });
+    expect(
+      await page.evaluate(async () => ({
+        chat: await window.computerCat.snapshot(),
+        voice: await window.computerCat.voiceSnapshot(),
+      })),
+    ).toMatchObject({ chat: { busy: false, messages: [] }, voice: { phase: "idle" } });
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(pet.locator(".pet-wrap")).toHaveClass(/animated/);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
 test("XP messenger, keyboard controls, isolated bridge, and conversation lifecycle", async ({}, testInfo) => {
   test.setTimeout(60_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
@@ -164,7 +589,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await input.press("Enter");
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeVisible();
     await showCatControls(pet);
-    await expect(pet.getByRole("status")).toContainText("Thinking");
+    await expect(pet.getByRole("status")).toContainText(/Thinking|Replying/);
     await expect(page.getByRole("button", { name: "New conversation" })).toBeDisabled();
     await expect(page.locator(".message.assistant")).toContainText("local demo");
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
@@ -207,6 +632,9 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
     await expect(page.getByLabel("Enable voice input")).not.toBeChecked();
     await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Harness guide", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Open harness guide in browser" })).toBeVisible();
+    await page.keyboard.press("ArrowRight");
     await expect(page.getByRole("tab", { name: "General", exact: true })).toBeFocused();
     await expect(page.getByRole("tabpanel", { name: "General", exact: true })).toBeVisible();
     await expect(
@@ -214,7 +642,9 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
         .getByRole("tabpanel", { name: "General", exact: true })
         .getByText("Local demo", { exact: true }),
     ).toBeVisible();
-    await expect(options.getByText("Off", { exact: true })).toBeVisible();
+    await expect(
+      options.getByText("Unavailable in local demo or until connected", { exact: true }),
+    ).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("options-general.png") });
     await page.keyboard.press("Home");
     await expect(page.getByRole("tab", { name: "Desktop cat" })).toBeFocused();
@@ -671,14 +1101,14 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
     await pet.emulateMedia({ reducedMotion: "no-preference" });
     expect(
       await pet.locator(".cat-head").evaluate((element) => getComputedStyle(element).animationName),
-    ).toBe("cat-look");
+    ).toMatch(/^cat-(look|hello)$/);
     expect(
       await pet
-        .locator(".cat-blink")
+        .locator(".cat-eye-left")
         .evaluate((element) => getComputedStyle(element).animationName),
     ).toBe("cat-blink");
     await pet.screenshot({ path: testInfo.outputPath("cat-idle.png"), omitBackground: true });
-    await pet.locator(".cat-blink").evaluate((element) => {
+    await pet.locator(".cat-eye-left").evaluate((element) => {
       const animation = element.getAnimations()[0];
       if (animation) {
         animation.pause();
@@ -686,7 +1116,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
       }
     });
     await pet.screenshot({ path: testInfo.outputPath("cat-blink.png"), omitBackground: true });
-    await pet.locator(".cat-blink").evaluate((element) => element.getAnimations()[0]?.play());
+    await pet.locator(".cat-eye-left").evaluate((element) => element.getAnimations()[0]?.play());
 
     // Simulate losing topmost status while another app-owned window has typing focus.
     await electron.evaluate(({ BrowserWindow }) => {
@@ -826,7 +1256,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
         await pet
           .locator(".cat-head")
           .evaluate((element) => getComputedStyle(element).animationName),
-      ).toBe("cat-think");
+      ).toMatch(/^cat-(think|talk)$/);
       expect(
         await pet
           .locator(".pet-dock")

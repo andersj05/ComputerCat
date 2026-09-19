@@ -4,10 +4,11 @@ import { DEFAULT_MODEL_SETTINGS } from "../../shared/models";
 import { DEFAULT_VOICE, type VoiceSnapshot, voiceMessages } from "../../shared/voice";
 import { ModelOptions } from "./ModelOptions";
 import { PetArtwork } from "./PetArtwork";
+import { PET_ACTIVITIES, type PetActivity } from "./pet-activity";
 import { VoiceOptions } from "./voice/VoiceOptions";
 import { WindowCaption } from "./WindowCaption";
 
-const optionTabs = ["cat", "models", "voice", "general"] as const;
+const optionTabs = ["cat", "models", "voice", "guide", "general"] as const;
 type OptionTab = (typeof optionTabs)[number];
 
 export function OptionsDialog({
@@ -32,6 +33,7 @@ export function OptionsDialog({
   initialTab?: OptionTab;
 }) {
   const [tab, setTab] = useState<OptionTab>(initialTab);
+  const [previewActivity, setPreviewActivity] = useState<PetActivity>("idle");
   const [draft, setDraft] = useState(preferences);
   const [saved, setSaved] = useState(preferences);
   const [draftModels, setDraftModels] = useState(info?.models.defaults ?? DEFAULT_MODEL_SETTINGS);
@@ -42,10 +44,13 @@ export function OptionsDialog({
   const [saving, setSaving] = useState(false);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState("");
+  const [openingGuide, setOpeningGuide] = useState(false);
+  const [guideStatus, setGuideStatus] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const catTab = useRef<HTMLButtonElement>(null);
   const generalTab = useRef<HTMLButtonElement>(null);
   const modelsTab = useRef<HTMLButtonElement>(null);
+  const guideTab = useRef<HTMLButtonElement>(null);
   const pending = useRef(false);
   const loginRef = useRef(info?.models.codex.login);
   loginRef.current = info?.models.codex.login;
@@ -83,7 +88,7 @@ export function OptionsDialog({
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
-    ({ cat: catTab, models: modelsTab, voice: voiceTab, general: generalTab })[
+    ({ cat: catTab, models: modelsTab, voice: voiceTab, guide: guideTab, general: generalTab })[
       initialTab
     ].current?.focus();
     return () => element?.close();
@@ -153,9 +158,25 @@ export function OptionsDialog({
     }
   }
 
+  async function openGuide() {
+    if (openingGuide) return;
+    setOpeningGuide(true);
+    setGuideStatus("");
+    setError("");
+    try {
+      const result = await window.computerCat.openHarnessGuide();
+      if (result.ok) setGuideStatus("Guide opened in your browser.");
+      else setError(result.message);
+    } catch {
+      setError("Couldn't open the harness guide. Please try again.");
+    } finally {
+      setOpeningGuide(false);
+    }
+  }
+
   function selectTab(next: OptionTab) {
     setTab(next);
-    ({ cat: catTab, models: modelsTab, voice: voiceTab, general: generalTab })[
+    ({ cat: catTab, models: modelsTab, voice: voiceTab, guide: guideTab, general: generalTab })[
       next
     ].current?.focus();
   }
@@ -192,7 +213,9 @@ export function OptionsDialog({
                 event.preventDefault();
                 selectTab(
                   optionTabs[
-                    (optionTabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : 3)) % 4
+                    (optionTabs.indexOf(tab) +
+                      (event.key === "ArrowRight" ? 1 : optionTabs.length - 1)) %
+                      optionTabs.length
                   ] ?? "cat",
                 );
               }
@@ -255,6 +278,18 @@ export function OptionsDialog({
                   •
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              ref={guideTab}
+              id="guide-tab"
+              aria-controls="guide-options"
+              aria-selected={tab === "guide"}
+              tabIndex={tab === "guide" ? 0 : -1}
+              onClick={() => setTab("guide")}
+            >
+              Harness guide
             </button>
             <button
               type="button"
@@ -328,9 +363,23 @@ export function OptionsDialog({
                 <div
                   className={`preview-surface preview-${draft.size} ${draft.animation ? "animated" : ""}`}
                 >
-                  <PetArtwork />
+                  <PetArtwork activity={previewActivity} />
                 </div>
-                <span className="preview-label">Preview</span>
+                <label className="preview-label" htmlFor="cat-activity-preview">
+                  Preview activity
+                </label>
+                <select
+                  id="cat-activity-preview"
+                  value={previewActivity}
+                  onChange={(event) => setPreviewActivity(event.target.value as PetActivity)}
+                  aria-describedby="cat-preview-description"
+                >
+                  {Object.entries(PET_ACTIVITIES).map(([value, { label }]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   className="xp-button"
@@ -379,11 +428,65 @@ export function OptionsDialog({
                     <span>Animate cat</span>
                   </label>
                 </fieldset>
+                <p className="option-note" id="cat-preview-description" aria-live="polite">
+                  {PET_ACTIVITIES[previewActivity].description}
+                </p>
               </div>
             </div>
             <p className="option-note">
-              Click for controls. Drag to move. Find cat brings it to the screen under your pointer.
+              Preview any activity here. Your cat follows the real conversation. Reduced motion uses
+              still poses.
             </p>
+          </div>
+          <div
+            className="tab-panel"
+            role="tabpanel"
+            id="guide-options"
+            aria-labelledby="guide-tab"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI tabs pattern makes a panel with introductory content keyboard focusable.
+            tabIndex={0}
+            hidden={tab !== "guide"}
+          >
+            <div className="settings-intro">
+              <h2>Understand how your cat works</h2>
+              <p>An illustrated guide to the agent, its tools and the context behind each reply.</p>
+            </div>
+            <ol className="guide-preview" aria-label="The harness loop">
+              <li>
+                <strong>You ask</strong>
+                <span>Chat or Talk</span>
+              </li>
+              <li>
+                <strong>The agent explores</strong>
+                <span>Tools gather context</span>
+              </li>
+              <li>
+                <strong>Your cat replies</strong>
+                <span>Grounded in results</span>
+              </li>
+            </ol>
+            <fieldset>
+              <legend>Inside the guide</legend>
+              <ul className="guide-topics">
+                <li>A clickable map with example question flows</li>
+                <li>Every tool, what it returns and its limits</li>
+                <li>Where to add capabilities or improve the harness</li>
+              </ul>
+              <button
+                type="button"
+                className="xp-button default-button"
+                disabled={openingGuide}
+                onClick={() => void openGuide()}
+              >
+                {openingGuide ? "Opening guide…" : "Open harness guide in browser"}
+              </button>
+              <p className="field-help">
+                Works offline. Exploring the guide does not run tools or read your screen.
+              </p>
+              <p className="field-help" role="status">
+                {guideStatus}
+              </p>
+            </fieldset>
           </div>
           <div
             className="tab-panel"
@@ -422,7 +525,11 @@ export function OptionsDialog({
                 <dt>History:</dt>
                 <dd>Saved on this computer</dd>
                 <dt>Screen access:</dt>
-                <dd>Off</dd>
+                <dd>
+                  {info?.mode === "pi" && info.configured
+                    ? "On demand through agent tools"
+                    : "Unavailable in local demo or until connected"}
+                </dd>
               </dl>
             </fieldset>
             <fieldset>

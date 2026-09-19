@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { sendAndWaitForReply, showCatControls } from "./chat";
 
-async function launch(userData: string) {
+async function launch(userData: string, desktopFixture = false) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] => entry[1] !== undefined,
@@ -21,6 +21,7 @@ async function launch(userData: string) {
       COMPUTERCAT_MODEL: "offline-model",
       COMPUTERCAT_API_KEY: "test-only",
       COMPUTERCAT_SMOKE_TEST: "1",
+      COMPUTERCAT_DESKTOP_FIXTURE: desktopFixture ? "1" : "0",
       COMPUTERCAT_TEST_USER_DATA: userData,
     },
   });
@@ -209,6 +210,13 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     });
     expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
       "bash",
+      "desktop_capture",
+      "desktop_capture_region",
+      "desktop_list_tabs",
+      "desktop_list_windows",
+      "desktop_observe",
+      "desktop_read_selection",
+      "desktop_read_window",
       "edit",
       "find",
       "grep",
@@ -310,6 +318,95 @@ test("a failed model save preserves the draft and current connection until retry
     expect((await page.evaluate(() => window.computerCat.info())).models.defaults.source).toBe(
       "environment",
     );
+  } finally {
+    await electron.close();
+    await cleanup(userData);
+  }
+});
+
+test("screen questions automatically observe through the real worker and recover after unlock", async () => {
+  test.setTimeout(90_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
+  const { electron, page, pet } = await launch(userData, true);
+  try {
+    await interceptCodex(electron);
+    // Smoke mode uses generated context. Fail the test if any real
+    // enumeration/capture path is accidentally reached through the worker RPC.
+    await electron.evaluate(({ desktopCapturer }) => {
+      Reflect.set(globalThis, "desktopCaptureCalls", 0);
+      desktopCapturer.getSources = async () => {
+        Reflect.set(
+          globalThis,
+          "desktopCaptureCalls",
+          Reflect.get(globalThis, "desktopCaptureCalls") + 1,
+        );
+        throw new Error("Real desktop capture is forbidden in smoke tests");
+      };
+    });
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: "Use a device code" }).click();
+    await expect(page.getByRole("textbox", { name: "Sign-in code" })).toHaveValue("TEST-CODE");
+    await electron.evaluate(() => {
+      Reflect.get(globalThis, "offlineCodex").allowLogin = true;
+    });
+    await expect(page.getByText("Connected to ChatGPT", { exact: true })).toBeVisible();
+    await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
+    await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+
+    await expect(page.getByRole("button", { name: /Share screen|Stop sharing/ })).toHaveCount(0);
+    await expect(pet.getByRole("button", { name: /Share screen|Stop sharing/ })).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        Object.keys(window.computerCat).filter((key) => /desktop|sharing/i.test(key)),
+      ),
+    ).toEqual([]);
+    const allowed = await sendAndWaitForReply(page, "What is this page?");
+    await expect(allowed).toContainText("Fixture help page");
+    await expect(allowed).toContainText("This help page explains saving a document.");
+    await expect(allowed).toContainText("Save your changes");
+    await expect(allowed.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_observe · complete",
+    );
+
+    const requests = await electron.evaluate(
+      () => Reflect.get(globalThis, "offlineCodex").requests,
+    );
+    expect(requests).toHaveLength(2);
+    const result = requests[1].input.find(
+      (item: { type: string; call_id?: string }) =>
+        item.type === "function_call_output" && item.call_id === "offline-desktop-1",
+    );
+    const metadata =
+      typeof result.output === "string"
+        ? result.output
+        : result.output.find((part: { type: string; text?: string }) => part.type === "input_text")
+            ?.text;
+    expect(JSON.parse(metadata)).toMatchObject({
+      target: "behind-assistant",
+      title: "Fixture help page",
+      window: { selectedText: "Save your changes" },
+    });
+    expect(JSON.stringify(requests[1].input)).toContain("data:image/png;base64,");
+
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("lock-screen");
+    });
+    const locked = await sendAndWaitForReply(page, "What is this page? Check while locked.");
+    await expect(locked).toContainText("locked");
+    await expect(locked.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_observe · error",
+    );
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("unlock-screen");
+    });
+    const resumed = await sendAndWaitForReply(page, "What is this page? Check again.");
+    await expect(resumed).toContainText("This help page explains saving a document.");
+    await expect(resumed.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_observe · complete",
+    );
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
   } finally {
     await electron.close();
     await cleanup(userData);

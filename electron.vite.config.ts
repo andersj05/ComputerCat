@@ -1,15 +1,17 @@
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { harnessGuidePlugin } from "./src/guide/build";
 
 export default defineConfig(({ command }) => ({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), harnessGuidePlugin()],
     build: {
       rollupOptions: {
         input: {
           index: resolve("src/main/index.ts"),
           "agent-worker": resolve("src/agent/worker.ts"),
+          "desktop-capture": resolve("src/main/desktop/source-capture.ts"),
         },
       },
     },

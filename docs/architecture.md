@@ -1,8 +1,9 @@
 # Architecture
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
-a local demo mode that works without credentials. Screen capture, mouse/keyboard control,
-external MCP servers and selected-fact user memory are later features, not implicit privileges.
+a local demo mode that works without credentials. The agent selects on-demand screen tools
+for relevant user requests. Mouse/keyboard control, external MCP servers and selected-fact user memory
+remain later features.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
@@ -32,7 +33,7 @@ checks fixed catalogue lengths and SHA-256, then renames a same-volume partial. 
 files are verified once per run. Symlinks/junction ancestors are rejected. Voice preferences
 live in voice.json, disabled by default. Audio is memory-only; main retains a transcript until
 React commits composer/review ownership. Pet snapshots exclude settings, downloads and chat-origin text.
-The existing text-only agent protocol and Codex authentication remain unchanged. See
+Voice sends reviewed text through the existing agent interface; Codex authentication is unchanged. See
 [native evidence](implementation/whisper/native-evidence.md) for verified behavior and remaining
 real-microphone/clean-machine gates.
 
@@ -61,7 +62,8 @@ session-owner microphone grant described above. Model output is rendered as Mark
 images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools, and native Pi sessions are saved per conversation.
+its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
+observation tools, and native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
@@ -105,12 +107,56 @@ leave the UI usable, and cancellation must not append output from an old turn to
 The user explicitly enabled the complete built-in Pi file and shell tool set on 2026-09-17.
 These tools have local user privileges, with no per-command approval broker. The system prompt
 requires authorization for otherwise unrequested destructive actions; it is not an OS sandbox.
-Future screen-control and external API tools need their own scope and authorization design.
+Desktop observation now uses the on-demand broker below. Future input-control and external
+API tools need their own scope and authorization design.
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.
 
+## On-demand desktop context (reviewed 2026-09-19)
+
+The [desktop broker](../src/main/desktop/controller.ts) makes read-only observations available
+to the agent during user turns, without a renderer sharing grant. Renderers cannot request
+pixels or generic native operations. Per-turn, correlated worker RPC validates desktop tool
+requests and responses. Opaque source IDs expire after sixty seconds, on a fresh listing, or
+when their owning turn ends. Main caps requests per turn and permits one OS observation at a time.
+Stop, context changes, disposal and deadlines suppress late results.
+
+[Electron capture](../src/main/desktop/electron-provider.ts) lists sources without thumbnails.
+The [frame helper](../src/main/desktop/source-capture.ts) opens a hidden sandboxed media renderer
+in a separate memory-only session, requests only the chosen source, returns one bounded PNG,
+then destroys the renderer. Its six-second deadline also destroys stalled media requests.
+Only its fixed main frame can request desktop media; physical camera/audio, navigation and
+network requests are denied. The app UI gets no new permission. No all-window thumbnails run.
+Capture failure messages are sanitized and remembered per native source for the current reply,
+preventing a relist/retry loop while preserving text and permitting recovery on the next turn.
+[Windows reading](../src/main/desktop/windows-reader.ts) uses fixed, hidden PowerShell code,
+validated numeric window handles, an isolated environment and a bounded UI Automation traversal.
+It does not focus, copy, click or change selection. Text, tab names and selection depend on the
+application's accessibility provider; protected controls are excluded, but screenshots are not
+automatically redacted. The tool never falls back to clipboard or keyboard operations.
+
+The [Pi tools](../src/agent/desktop-tools.ts) include `desktop_observe`, which resolves the
+foreground external app, or infers the nearest visible app behind Computer Cat. Its result
+identifies that inference and combines accessible text with a screenshot, preserving either
+when the other fails. Named-window listing, reading and capture remain available. Text-only
+models automatically omit the screenshot from observation. Screen content is untrusted data.
+Focused selection/tab tools skip full-page text collection and images. Region capture validates
+normalized bounds and crops before downsizing to preserve detail within the image budget.
+Native Pi session files persist observations, including images, under the existing per-chat
+retention policy. Renderer activity events contain only tool names/status, not observed content.
+Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.
+The existing shell tools remain unsandboxed; this is not a security boundary around the agent.
+See [desktop context](desktop-context.md) for usage, limitations and verification.
+
 ## Companion presentation and preferences
+
+The [Harness guide](harness-guide.md) is a self-contained HTML build artifact with an exhaustive
+typed tool catalog, shared XP tokens and no network or app bridge. A chat-only, no-argument IPC
+copies that fixed document out of the app bundle to user data and opens its HTML association.
+No arbitrary URL/path opener is exposed. The guide works without the app running once opened.
+Reviewed 2026-09-19 against [the opener](../src/main/harness-guide.ts) and
+[build plugin](../src/guide/build.ts).
 
 The XP caption bar uses named preload operations to minimize, maximize/restore, and hide the
 chat window. Only the chat renderer can request those controls or change companion settings.
@@ -143,8 +189,12 @@ not focus the pet, unhide a deliberately hidden window, or override a disabled p
 The timer stops on quit. OS secure desktops and exclusive fullscreen surfaces remain outside
 the ordinary desktop window stack. See [Electron’s window API](https://www.electronjs.org/docs/latest/api/browser-window#winsetalwaysontopflag-level-relativelevel).
 
-The original artwork is clipped into overlapping head/body layers in an SVG, with blink overlays.
-Idle, hover, and thinking motion respect both Animate cat and the OS reduced-motion preference.
+The original artwork is clipped into overlapping head, torso, paw and fixed boot layers in an SVG.
+Renderer-only [activity selection](../src/renderer/src/pet-activity.ts) derives poses from typed
+voice and chat snapshots; it introduces no IPC or capture privileges. CSS animates the layers
+and pixel props. Animate cat and OS reduced motion retain readable static poses; dragging and
+document hiding pause every layer. A scoped 2.4-second completion reaction cannot replay saved
+history. See [cat motion](cat-motion.md). Reviewed 2026-09-19.
 
 ## Saved conversations (reviewed 2026-09-17)
 

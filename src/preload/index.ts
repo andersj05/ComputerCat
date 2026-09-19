@@ -63,6 +63,7 @@ const api: ComputerCatAPI = {
   },
   openChat: () => ipcRenderer.invoke(IPC.openChat),
   openOptions: (tab) => ipcRenderer.invoke(IPC.openOptions, tab),
+  openHarnessGuide: () => ipcRenderer.invoke(IPC.openHarnessGuide),
   dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),
   setPetVoiceOpen: (open) => ipcRenderer.invoke(IPC.petVoiceOpen, open),
   onOptionsRequested: (listener) => {

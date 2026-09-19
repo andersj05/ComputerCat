@@ -16,7 +16,7 @@ import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
 import { PetVoice } from "./voice/PetVoice";
 import { useVoice } from "./voice/useVoice";
-import { VoiceControls, voiceStatus } from "./voice/VoiceControls";
+import { VoiceControls } from "./voice/VoiceControls";
 import { WindowCaption } from "./WindowCaption";
 
 const prompts = [
@@ -257,7 +257,8 @@ export function App() {
         openModels={() =>
           void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
         }
-        voiceStatus={voiceStatus(voice.snapshot)}
+        voice={voice.snapshot}
+        hasDraft={petVoiceOpen && !!(text.trim() || voice.review.trim())}
         voiceBusy={voice.busy}
         talk={() => void startPetVoice()}
         voicePanel={

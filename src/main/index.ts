@@ -30,6 +30,10 @@ import {
 import { sessionSchema, VoiceError } from "../shared/voice";
 import { ChatController } from "./chat-controller";
 import { ConversationStore } from "./conversation-store";
+import { DesktopController } from "./desktop/controller";
+import { ElectronDesktopProvider } from "./desktop/electron-provider";
+import { desktopFixture } from "./desktop/fixture-provider";
+import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
 import { keepInWorkArea, PetDrag } from "./pet-window";
@@ -55,6 +59,11 @@ let quitting = false;
 let shutdownComplete = false;
 let controller: ChatController;
 let voice: VoiceController;
+const desktop = new DesktopController(
+  smoke
+    ? desktopFixture(process.env.COMPUTERCAT_DESKTOP_FIXTURE === "1")
+    : new ElectronDesktopProvider(),
+);
 function captureWindow(): BrowserWindow | undefined {
   return voice?.snapshot().owner === "pet" ? pet : chat;
 }
@@ -65,6 +74,7 @@ function assertCaptureSender(event: IpcMainInvokeEvent): void {
 }
 function stopAll(): void {
   controller.stop();
+  desktop.cancel();
   void voice?.cancel();
 }
 if (smoke) app.commandLine.appendSwitch("use-fake-device-for-media-stream");
@@ -76,6 +86,11 @@ let stopShortcutRegistered = false;
 const petDrag = new PetDrag();
 let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
+const harnessGuide = new HarnessGuide(
+  join(here, "harness-guide.html"),
+  app.getPath("userData"),
+  (path) => shell.openPath(path),
+);
 const modelSettings = new ModelSettingsStore(join(app.getPath("userData"), "models.json"), {
   ...DEFAULT_MODEL_SETTINGS,
   source: config.mode === "pi" ? "environment" : "demo",
@@ -265,6 +280,7 @@ else {
             resolveConfig,
             context,
             { directory: join(app.getPath("userData"), "pi-runtime"), allowDownloads: !smoke },
+            (request, signal) => desktop.execute(request, signal),
           ),
         publishModels,
       );
@@ -286,11 +302,13 @@ else {
         ]),
       );
       controller = new ChatController(
-        (conversation) =>
-          models.createRuntime(conversation.model, {
+        (conversation) => {
+          desktop.cancel();
+          return models.createRuntime(conversation.model, {
             sessionFile: conversations.sessionFile(conversation.id),
             history: conversation.messages,
-          }),
+          });
+        },
         (snapshot) => {
           for (const window of BrowserWindow.getAllWindows()) {
             if (!window.isDestroyed()) window.webContents.send(IPC.changed, snapshot);
@@ -462,10 +480,12 @@ else {
       });
       ipcMain.handle(IPC.openConversation, (event, id: unknown) => {
         assertSender(event, true);
+        desktop.cancel();
         return voice.transition(() => controller.open(id));
       });
       ipcMain.handle(IPC.deleteConversation, (event, id: unknown) => {
         assertSender(event, true);
+        desktop.cancel();
         return voice.transition(() => controller.delete(id));
       });
       ipcMain.handle(IPC.selectModel, (event, request: unknown) => {
@@ -474,6 +494,7 @@ else {
           return { ok: false, message: "Wait for the connection change to finish." };
         const valid = models.validate(request);
         if (!valid.ok) return valid;
+        desktop.cancel();
         return voice.transition(() => controller.selectModel(modelSettingsSchema.parse(request)));
       });
       ipcMain.handle(IPC.openModels, (event) => {
@@ -514,8 +535,10 @@ else {
             result.ok &&
             !controller.snapshot().busy &&
             controller.snapshot().messages.length === 0
-          )
+          ) {
+            desktop.cancel();
             await controller.selectModel(models.snapshot().defaults);
+          }
           return result;
         });
       });
@@ -552,6 +575,7 @@ else {
         if (disconnecting || controller.snapshot().busy)
           return { ok: false, message: "Stop the current reply before disconnecting." };
         disconnecting = true;
+        desktop.cancel();
         try {
           await voice.cancel();
           const result = await codex.disconnect();
@@ -568,6 +592,7 @@ else {
       });
       ipcMain.handle(IPC.clear, (event) => {
         assertSender(event, true);
+        desktop.cancel();
         return voice.transition(() => controller.clear());
       });
       ipcMain.handle(IPC.openChat, (event) => {
@@ -579,6 +604,11 @@ else {
         if (tab !== undefined && tab !== "voice") throw new Error("Invalid Options tab.");
         showChat();
         void voice.transition(() => chat.webContents.send(IPC.optionsRequested, tab));
+      });
+      ipcMain.handle(IPC.openHarnessGuide, (event, ...args: unknown[]) => {
+        assertSender(event, true);
+        if (args.length) throw new Error("The harness guide accepts no arguments.");
+        return harnessGuide.open();
       });
       ipcMain.handle(IPC.dragPet, (event, request: unknown) => {
         assertSender(event);
@@ -647,10 +677,17 @@ else {
       for (const win of [chat, pet]) {
         const cancelOwned = () => {
           if (captureWindow() === win) void voice.cancel();
+          if (
+            [chat, pet].every(
+              (target) => target.isDestroyed() || !target.isVisible() || target.isMinimized(),
+            )
+          )
+            desktop.cancel();
         };
         win.on("hide", cancelOwned);
         win.on("minimize", cancelOwned);
         win.webContents.on("did-start-loading", () => {
+          desktop.cancel();
           cancelOwned();
           if (win === pet) {
             petVoiceOpen = false;
@@ -658,6 +695,7 @@ else {
           }
         });
         win.webContents.on("render-process-gone", () => {
+          desktop.cancel();
           const cleanup = captureWindow() === win ? voice.cancel() : Promise.resolve();
           void cleanup.then(() => {
             if (!quitting && !win.isDestroyed()) win.reload();
@@ -667,6 +705,10 @@ else {
       void voice.warm();
       powerMonitor.on("suspend", () => void voice.dispose());
       powerMonitor.on("lock-screen", () => void voice.dispose());
+      powerMonitor.on("suspend", () => desktop.setBlocked("suspended", true));
+      powerMonitor.on("lock-screen", () => desktop.setBlocked("locked", true));
+      powerMonitor.on("resume", () => desktop.setBlocked("suspended", false));
+      powerMonitor.on("unlock-screen", () => desktop.setBlocked("locked", false));
       pet.on("blur", () => {
         petDrag.cancel();
         raisePet();
@@ -701,7 +743,7 @@ else {
           Menu.buildFromTemplate([
             { label: "Open chat", click: showChat },
             { label: "Find cat", click: findPet },
-            { label: "Stop current reply", click: () => controller.stop() },
+            { label: "Stop current reply", click: stopAll },
             { type: "separator" },
             { label: "Quit Computer Cat", click: () => app.quit() },
           ]),
@@ -720,6 +762,7 @@ app.on("before-quit", (event) => {
     event.preventDefault();
     if (quitting) return;
     quitting = true;
+    desktop.setBlocked("closing", true);
     void Promise.all([voice?.dispose(), controller.dispose()]).finally(() => {
       shutdownComplete = true;
       app.quit();

@@ -609,6 +609,42 @@ textarea::placeholder {
   flex-shrink: 0;
   flex-wrap: wrap;
 }
+.guide-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  margin: 0 0 16px;
+  list-style: none;
+}
+.guide-preview li {
+  position: relative;
+  border: 1px solid #b9cbe5;
+  padding: 10px 5px;
+  background: #f3f7ff;
+  text-align: center;
+  font-size: 10px;
+}
+.guide-preview li + li::before {
+  content: "→";
+  position: absolute;
+  left: -15px;
+  top: 16px;
+  color: #426799;
+}
+.guide-preview strong {
+  display: block;
+  color: #174ca7;
+  margin-bottom: 5px;
+}
+.guide-preview span {
+  color: #61718a;
+}
+.guide-topics {
+  padding-left: 17px;
+  margin: 4px 0 14px;
+  line-height: 1.8;
+}
 .tab-dirty {
   margin-left: 5px;
   color: #965600;
@@ -691,6 +727,10 @@ textarea::placeholder {
   display: block;
   margin-bottom: 9px;
   color: var(--muted);
+}
+.cat-preview select {
+  width: 100%;
+  margin-bottom: 9px;
 }
 .cat-fields {
   flex: 1;
@@ -985,6 +1025,7 @@ input:disabled {
 .pet-wrap {
   height: 100%;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 30px minmax(0, 1fr) 26px 23px;
   gap: 2px;
   padding: 3px 7px 5px;
@@ -1080,14 +1121,6 @@ input:disabled {
   text-align: center;
   box-shadow: 1px 2px 0 #0002;
 }
-.thinking-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 5px;
-  background: #37953b;
-  border: 1px solid #23652c;
-}
 .pet-button {
   display: block;
   width: 100%;
@@ -1117,17 +1150,6 @@ input:disabled {
 .preview-large .pet-art {
   height: 148px;
 }
-.cat-body {
-  transform-origin: 54% 93%;
-}
-.cat-head {
-  transform-origin: 54% 49%;
-}
-.cat-blink {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0);
-}
 .pet-button:focus-visible {
   outline: 1px dotted #285daa;
   outline-offset: -4px;
@@ -1150,98 +1172,22 @@ input:disabled {
 .pet-options {
   width: 24px;
 }
+:where(.pet-wrap[data-size="small"]) .pet-dock {
+  gap: 2px;
+}
+:where(.pet-wrap[data-size="small"]) .pet-dock .xp-button {
+  padding-inline: 3px;
+  font-size: 10px;
+}
+:where(.pet-wrap[data-size="small"]) .pet-options {
+  width: 20px;
+}
 .mic-icon {
   vertical-align: -2px;
   color: #244e88;
 }
-.pet-wrap.animated .cat-body,
-.preview-surface.animated .cat-body {
-  animation: cat-breathe 4.6s ease-in-out infinite;
-}
-.pet-wrap.animated .cat-head,
-.preview-surface.animated .cat-head {
-  animation: cat-look 9s ease-in-out infinite;
-}
-.pet-wrap.animated .cat-blink,
-.preview-surface.animated .cat-blink {
-  animation: cat-blink 6.8s linear infinite;
-}
-.pet-wrap.animated.working .cat-head {
-  animation: cat-think 2.8s ease-in-out infinite;
-}
-.pet-wrap.animated.working .thinking-dot {
-  animation: thinking-pulse 1.2s steps(3, end) infinite;
-}
-.pet-wrap.animated .pet-art {
-  transition: transform 160ms ease-out;
-}
-.pet-wrap.animated .pet-button:hover .pet-art {
-  transform: translateY(-2px) rotate(-2deg);
-}
 .pet-wrap.dragging .pet-button {
   cursor: grabbing;
-}
-.pet-wrap.animated.dragging .cat-head,
-.pet-wrap.animated.dragging .cat-body,
-.pet-wrap.animated.dragging .cat-blink {
-  animation-play-state: paused;
-}
-@keyframes cat-breathe {
-  0%,
-  100% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(1.012);
-  }
-}
-@keyframes cat-look {
-  0%,
-  30%,
-  64%,
-  100% {
-    transform: translateY(0) rotate(0);
-  }
-  40%,
-  50% {
-    transform: translateY(-3px) rotate(-1.8deg);
-  }
-  78%,
-  86% {
-    transform: translateY(-2px) rotate(1.2deg);
-  }
-}
-@keyframes cat-blink {
-  0%,
-  42%,
-  46%,
-  79%,
-  83%,
-  100% {
-    transform: scaleY(0);
-  }
-  44%,
-  81% {
-    transform: scaleY(1);
-  }
-}
-@keyframes cat-think {
-  0%,
-  100% {
-    transform: rotate(-2deg) translateY(-3px);
-  }
-  50% {
-    transform: rotate(2deg) translateY(-8px);
-  }
-}
-@keyframes thinking-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
 }
 
 ::-webkit-scrollbar {
@@ -1279,23 +1225,6 @@ input:disabled {
 input:focus-visible + span {
   outline: 1px dotted #000;
   outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pet-wrap.animated .cat-body,
-  .pet-wrap.animated .cat-head,
-  .pet-wrap.animated .cat-blink,
-  .preview-surface.animated .cat-body,
-  .preview-surface.animated .cat-head,
-  .preview-surface.animated .cat-blink,
-  .pet-wrap.animated .pet-art,
-  .pet-wrap.animated.working .cat-head,
-  .pet-wrap.animated.working .thinking-dot {
-    animation: none;
-    transition: none;
-  }
-  .pet-wrap.animated .pet-button:hover .pet-art {
-    transform: none;
-  }
 }
 
 /* Conversation history and direct model selection retain the compact XP layout. */
