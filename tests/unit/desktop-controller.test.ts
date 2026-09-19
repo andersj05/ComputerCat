@@ -46,11 +46,25 @@ afterEach(() => vi.useRealTimers());
 describe("desktop permission broker", () => {
   it("defaults off and enabling never inspects the desktop", async () => {
     const { controller, provider, abort } = setup();
-    expect(controller.snapshot()).toEqual({ enabled: false, busy: false });
+    expect(controller.snapshot()).toEqual({ revision: 0, enabled: false, busy: false });
     expect((await controller.execute({ operation: "list" }, abort.signal)).isError).toBe(true);
     expect(controller.setEnabled({ enabled: true }).enabled).toBe(true);
     expect(provider.list).not.toHaveBeenCalled();
     expect(provider.capture).not.toHaveBeenCalled();
+  });
+
+  it("publishes increasing revisions and grants access in one state update", async () => {
+    const { controller, publish, list } = setup();
+    const granted = controller.setEnabled({ enabled: true });
+    expect(granted).toEqual({ revision: 1, enabled: true, busy: false });
+    expect(publish).toHaveBeenCalledExactlyOnceWith(granted);
+    await list();
+    controller.revoke();
+    const states = publish.mock.calls.map(([state]) => state);
+    expect(states.map((state) => state.revision)).toEqual([1, 2, 3, 4]);
+    expect(states.map((state) => state.enabled)).toEqual([true, true, true, false]);
+    expect(controller.snapshot()).toEqual({ revision: 4, enabled: false, busy: false });
+    expect(controller.setEnabled({ enabled: false }).revision).toBe(4);
   });
 
   it("rejects invalid grants and requests without widening access", async () => {

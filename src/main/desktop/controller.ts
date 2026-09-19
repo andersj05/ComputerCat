@@ -25,6 +25,7 @@ export interface DesktopProvider {
 
 // The grant is deliberately memory-only. This broker is shared by every model worker.
 export class DesktopController {
+  private revision = 0;
   private enabled = false;
   private grant = new AbortController();
   private sources = new Map<string, { source: DesktopSource; expires: number }>();
@@ -39,6 +40,7 @@ export class DesktopController {
 
   snapshot(): DesktopState {
     return {
+      revision: this.revision,
       enabled: this.enabled,
       busy: this.busy,
       ...(this.lastAction ? { lastAction: this.lastAction } : {}),
@@ -49,20 +51,29 @@ export class DesktopController {
     const request = desktopEnabledSchema.safeParse(input);
     if (!request.success) return { ...this.snapshot(), error: "Invalid screen sharing request." };
     if (this.enabled !== request.data.enabled) {
-      this.revoke();
+      this.invalidateGrant();
       this.enabled = request.data.enabled;
-      this.publish(this.snapshot());
+      this.changed();
     }
     return this.snapshot();
   }
 
   revoke(): void {
+    this.invalidateGrant();
+    this.changed();
+  }
+
+  private changed(): void {
+    this.revision++;
+    this.publish(this.snapshot());
+  }
+
+  private invalidateGrant(): void {
     this.enabled = false;
     this.grant.abort();
     this.grant = new AbortController();
     this.sources.clear();
     this.lastAction = undefined;
-    this.publish(this.snapshot());
   }
 
   async execute(input: unknown, turnSignal: AbortSignal): Promise<DesktopResult> {
@@ -96,7 +107,7 @@ export class DesktopController {
         : request.operation === "capture"
           ? "Taking a screenshot"
           : "Reading window text";
-    this.publish(this.snapshot());
+    this.changed();
     // Keep the provider lock until it actually settles, even if a non-cancellable OS call times out.
     const work = (async (): Promise<DesktopResult> => {
       if (request.operation === "list") {
@@ -163,7 +174,7 @@ export class DesktopController {
       };
     })().finally(() => {
       this.busy = false;
-      this.publish(this.snapshot());
+      this.changed();
     });
     let onAbort: (() => void) | undefined;
     const cancelled = new Promise<never>((_resolve, reject) => {

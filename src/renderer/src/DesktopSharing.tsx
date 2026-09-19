@@ -1,59 +1,55 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DesktopState } from "../../shared/desktop";
 import { WindowCaption } from "./WindowCaption";
 
 export function useDesktopSharing() {
-  const [state, setState] = useState<DesktopState>({ enabled: false, busy: false });
+  const [state, setState] = useState<DesktopState>({ revision: -1, enabled: false, busy: false });
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const changing = useRef(false);
-  const observedGeneration = useRef(0);
   const latestState = useRef(state);
+  const acceptState = useCallback((next: DesktopState) => {
+    if (next.revision < latestState.current.revision) return false;
+    latestState.current = next;
+    setState(next);
+    return true;
+  }, []);
   useEffect(() => {
     let active = true;
     let received = false;
     const unsubscribe = window.computerCat.onDesktopChanged((next) => {
       received = true;
-      observedGeneration.current++;
-      latestState.current = next;
-      setState(next);
+      if (!acceptState(next)) return;
       setReady(true);
       setError("");
     });
     void window.computerCat.desktopSnapshot().then(
       (next) => {
         if (!active) return;
-        if (!received) {
-          latestState.current = next;
-          setState(next);
-        }
+        acceptState(next);
         setReady(true);
       },
       () => {
-        if (active) setError("Couldn't check screen sharing. Please restart the app.");
+        if (active && !received) setError("Couldn't check screen sharing. Please restart the app.");
       },
     );
     return () => {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [acceptState]);
 
   async function setEnabled(enabled: boolean) {
     if (changing.current) return false;
     changing.current = true;
     setPending(true);
     setError("");
-    const startedGeneration = observedGeneration.current;
     try {
       const next = await window.computerCat.desktopSetEnabled({ enabled });
       // A lock, context switch, or another window can revoke sharing before this reply arrives.
-      // Broadcasts observed after the request started take precedence over its older snapshot.
-      if (observedGeneration.current === startedGeneration) {
-        latestState.current = next;
-        setState(next);
-      }
+      // Compare broker revisions because broadcasts and invocation replies can arrive out of order.
+      acceptState(next);
       if (latestState.current.enabled !== enabled || next.error) {
         setError(next.error || "Couldn't change screen sharing. Try again.");
         return false;

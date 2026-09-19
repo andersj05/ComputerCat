@@ -33,6 +33,7 @@ export type DesktopExecutor = (
 ) => Promise<DesktopResult>;
 export const desktopEnabledSchema = z.strictObject({ enabled: z.boolean() });
 export interface DesktopState {
+  revision: number;
   enabled: boolean;
   busy: boolean;
   lastAction?: string;

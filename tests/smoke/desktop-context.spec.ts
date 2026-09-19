@@ -90,15 +90,21 @@ test("screen sharing needs consent, stays visible on the cat, and resets after r
     await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
     await expect(page.getByText("Screen sharing on", { exact: true })).toBeVisible();
 
-    await electron.evaluate(({ BrowserWindow }, channel) => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        window.webContents.send(channel, {
-          enabled: true,
-          busy: true,
-          lastAction: "Reading an app",
-        });
-      }
-    }, IPC.desktopChanged);
+    const captureRevision = (await page.evaluate(() => window.computerCat.desktopSnapshot()))
+      .revision;
+    await electron.evaluate(
+      ({ BrowserWindow }, { channel, revision }) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          window.webContents.send(channel, {
+            revision,
+            enabled: true,
+            busy: true,
+            lastAction: "Reading an app",
+          });
+        }
+      },
+      { channel: IPC.desktopChanged, revision: captureRevision },
+    );
     await expect(page.getByText("Reading screen…", { exact: true })).toBeVisible();
     await expect(pet.getByText("Reading screen…", { exact: true })).toBeVisible();
     await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeEnabled();
@@ -230,6 +236,7 @@ test("sharing is revoked when chats, models, computer state, or renderer lifetim
         .click();
       await expect(page.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
       await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+      await expect(page.getByRole("dialog", { name: "Share your screen" })).toBeHidden();
     };
     const expectRevoked = async () => {
       await expect(page.getByRole("button", { name: "Share screen…" })).toBeEnabled();
@@ -334,10 +341,14 @@ test("a late grant acknowledgement cannot restore sharing after a newer revocati
       ipcMain.removeHandler(channels.desktopSetEnabled);
       ipcMain.handle(channels.desktopSetEnabled, () => {
         for (const window of BrowserWindow.getAllWindows())
-          window.webContents.send(channels.desktopChanged, { enabled: true, busy: false });
+          window.webContents.send(channels.desktopChanged, {
+            revision: 1000,
+            enabled: true,
+            busy: false,
+          });
         return new Promise((resolve) => {
           Reflect.set(globalThis, "releaseDesktopGrant", () =>
-            resolve({ enabled: true, busy: false }),
+            resolve({ revision: 1000, enabled: true, busy: false }),
           );
         });
       });
@@ -348,7 +359,7 @@ test("a late grant acknowledgement cannot restore sharing after a newer revocati
     await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
     await electron.evaluate(({ BrowserWindow }, channel) => {
       for (const window of BrowserWindow.getAllWindows())
-        window.webContents.send(channel, { enabled: false, busy: false });
+        window.webContents.send(channel, { revision: 1001, enabled: false, busy: false });
     }, IPC.desktopChanged);
     await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
     await electron.evaluate(() => {
@@ -378,6 +389,7 @@ test("failed sharing changes stay visible and do not imply access was granted or
     await electron.evaluate(({ ipcMain }, channel) => {
       ipcMain.removeHandler(channel);
       ipcMain.handle(channel, () => ({
+        revision: 1000,
         enabled: false,
         busy: false,
         error: "Screen access is unavailable.",
@@ -394,12 +406,17 @@ test("failed sharing changes stay visible and do not imply access was granted or
     await electron.evaluate(({ ipcMain, BrowserWindow }, channels) => {
       ipcMain.removeHandler(channels.desktopSetEnabled);
       ipcMain.handle(channels.desktopSetEnabled, () => ({
+        revision: 1001,
         enabled: true,
         busy: false,
         error: "Couldn't stop sharing. Try again.",
       }));
       for (const window of BrowserWindow.getAllWindows())
-        window.webContents.send(channels.desktopChanged, { enabled: true, busy: false });
+        window.webContents.send(channels.desktopChanged, {
+          revision: 1001,
+          enabled: true,
+          busy: false,
+        });
     }, IPC);
     await pet.getByRole("button", { name: "Stop sharing", exact: true }).click();
     await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();

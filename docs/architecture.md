@@ -119,6 +119,7 @@ The [sharing broker](../src/main/desktop/controller.ts) owns a memory-only grant
 opaque source IDs. Trusted renderers can request consent/status changes; they cannot request
 pixels or generic native operations. Per-turn, correlated worker RPC validates desktop tool
 requests and responses. Main caps requests per turn and permits one OS observation at a time.
+Monotonic status revisions prevent delayed IPC acknowledgements from restoring a revoked grant in the UI.
 Stop, revocation, disposal and deadlines suppress late results. Non-cancellable Electron calls
 retain their operation lock until settled, even after their result deadline.
 
