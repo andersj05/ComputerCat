@@ -1,4 +1,6 @@
 import { EventEmitter } from "node:events";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn() }));
@@ -13,7 +15,8 @@ vi.mock("electron", () => ({
 
 import { SourceCapturer } from "../../src/main/desktop/source-capture";
 
-const url = "file:///C:/fixture/capture.html";
+const documentPath = resolve("fixture", "capture.html");
+const url = pathToFileURL(documentPath).href;
 function setup() {
   let destroyed = false;
   const session = {
@@ -38,7 +41,7 @@ function setup() {
     }),
   });
   mocks.create.mockReturnValue(window);
-  const capturer = new SourceCapturer("C:/fixture/capture.html");
+  const capturer = new SourceCapturer(documentPath);
   const abort = new AbortController();
   return {
     capturer,
