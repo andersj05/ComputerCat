@@ -37,7 +37,10 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 - Conversations save automatically on this computer. **History** lets you find, reopen, or delete them.
 - **New conversation** keeps the old chat in History; it only asks before discarding an unsent draft.
 - The model and reasoning selectors above chat apply to your next reply without clearing the chat.
-  The model button beneath the desktop cat opens the same controls; **Connections** opens sign-in.
+  The model button beneath the desktop cat opens the same controls; **Models & sign-in** opens Options.
+  **This chat** changes the current conversation. Options shows defaults separately and can copy
+  the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
+  enabled voice keeps a **Voice options** link beside Talk.
 
 The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
 computer control, external MCP connections, and long-term memory are not implemented yet.**

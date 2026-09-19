@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-18. Recheck checkout and tests.
+Reviewed: 2026-09-19. Recheck checkout and tests.
 
 ## What exists
 
@@ -12,9 +12,11 @@ SDK behind an application-owned runtime interface. Use the Node version in
   idle/thinking motion. Always-on-top recovers without focus; Find cat moves to the pointer display.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Default demo mode produces deterministic local replies without credentials or API calls.
-  Connections supports app-owned Codex login; chat and cat expose direct model selection.
+  Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
+  Tabs show pending edits, the footer reports saves, and content scrolls above fixed actions.
+  This chat distinguishes the active model from new-chat defaults; Set up voice opens Voice.
 - Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
   The cat's speech bubble shows transcript previews, editable Send and replies without opening chat.
   Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.

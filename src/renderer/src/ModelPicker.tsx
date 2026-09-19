@@ -37,9 +37,10 @@ export function ModelControls({
     <div className="model-picker">
       <div className="quick-model-row">
         <label>
-          Model:
+          This chat:
           <select
             aria-label="Chat model"
+            title="Changes the next reply in this conversation"
             value={value}
             disabled={!state || busy || saving}
             onChange={(event) => {
@@ -70,7 +71,7 @@ export function ModelControls({
                 label={
                   state.codex.connected
                     ? "Codex subscription"
-                    : "Codex — sign in through Connections"
+                    : "Codex — sign in through Models & sign-in"
                 }
               >
                 {state.models.map((entry) => (
@@ -108,8 +109,8 @@ export function ModelControls({
             </select>
           </label>
         )}
-        <button type="button" className="xp-button" onClick={onConnections}>
-          Connections…
+        <button type="button" className="xp-button" onClick={onConnections} disabled={!state}>
+          Models &amp; sign-in…
         </button>
       </div>
       {error && (

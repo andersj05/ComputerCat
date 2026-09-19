@@ -43,7 +43,13 @@ New conversation retains the old chat in History and asks only before discarding
 Default keyboard focus goes to Cancel. History is a searchable dialog with dated entries and
 explicit deletion confirmation. Switching chats preserves their drafts for this app run.
 Return focus to the composer after dialogs close. The cat’s model button opens a small dialog
-with the same immediate selectors as the chat window; Connections opens Options on Models.
+with the same immediate selectors as the chat window. The selector is labeled This chat;
+Models & sign-in opens Options on Models, where defaults and immediate account actions are
+explicitly distinguished. Use this chat's settings stages a copy of the current selection.
+Set up voice in chat opens Options on Voice when voice is disabled or a model is missing;
+otherwise Voice options remains beside Talk. Reviewed 2026-09-19 against
+[model controls](../src/renderer/src/ModelPicker.tsx), [model options](../src/renderer/src/ModelOptions.tsx),
+and [voice controls](../src/renderer/src/voice/VoiceControls.tsx).
 
 The chat starts at 720 × 560 and remains usable at 500 × 420. Options uses a wider property
 sheet with a short introduction per tab, a fixed caption and action area, and independently

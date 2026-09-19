@@ -831,6 +831,19 @@ input:disabled {
   width: 69px;
   flex-shrink: 0;
 }
+.model-scope-note {
+  margin: 0 0 10px;
+}
+.current-model-default {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #dfded3;
+}
 .model-row select {
   min-width: 0;
   flex: 1;
@@ -1289,6 +1302,7 @@ input:focus-visible + span {
   align-items: center;
   gap: 5px;
   min-width: 0;
+  white-space: nowrap;
 }
 .quick-model-row label:first-child {
   flex: 1;
