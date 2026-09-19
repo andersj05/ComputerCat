@@ -17,10 +17,11 @@ export function usePetActivity(
   const activity = getPetActivity({ chat, voice, error, hasDraft });
 
   useEffect(() => {
+    const changedConversation = previous.current.conversationId !== chat.conversationId;
     const replyId = newlyCompletedReply(previous.current, chat);
     previous.current = chat;
     if (replyId) setCelebration({ conversationId: chat.conversationId, replyId });
-    else if (chat.busy || activity !== "idle") setCelebration(null);
+    else if (changedConversation || chat.busy || activity !== "idle") setCelebration(null);
   }, [chat, activity]);
 
   useEffect(() => {

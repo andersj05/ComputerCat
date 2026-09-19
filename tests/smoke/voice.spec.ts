@@ -44,6 +44,10 @@ test("local voice records synthetic audio, reviews text, and cancels without sen
     await expect(page.getByRole("button", { name: "Talk", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(page.locator(".voice-controls")).toContainText("Listening", { timeout: 15000 });
+    const pet = app.windows().find((window) => window.url().includes("view=pet"));
+    if (!pet) throw new Error("Missing desktop cat");
+    await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "listening");
+    await expect(pet.locator(".pet-bubble")).toHaveText("Listening");
     await expect(page.getByRole("button", { name: "Finish recording" })).toBeEnabled();
     await expect
       .poll(() => page.evaluate(async () => (await window.computerCat.voiceSnapshot()).elapsedMs))
@@ -180,6 +184,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await showCatControls(pet);
     await pet.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
+    await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "listening");
     await expect(page.getByRole("button", { name: "Finish recording" })).toBeDisabled();
     expect(await chatVisible()).toBe(false);
     const expandedCat = await pet.locator(".pet-button").boundingBox();
@@ -229,6 +234,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     expect(send.ok).toBe(false);
     await pet.getByRole("button", { name: "Finish recording" }).click();
     await expect(pet.locator("#pet-voice-draft")).toHaveValue("Do not delete the folder.");
+    await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "review");
     await expect(page.locator("#message-input")).toHaveValue("");
     await pet.locator("#pet-voice-draft").fill("Keep the folder, please.");
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
@@ -249,6 +255,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
     await expect(pet.locator(".pet-voice")).toHaveCount(0);
+    await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "idle");
     await expect
       .poll(() => pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).phase))
       .toBe("idle");
