@@ -157,7 +157,14 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
           show: false,
           width: 1280,
           height: 1100,
-          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+          // Keep the invisible preview painting in packaged Electron as well as development.
+          webPreferences: {
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false,
+            offscreen: true,
+            backgroundThrottling: false,
+          },
         });
         await document.loadURL(url);
       },
