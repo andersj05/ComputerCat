@@ -62,7 +62,7 @@ session-owner microphone grant described above. Model output is rendered as Mark
 images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools plus four app-owned desktop
+its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
 observation tools, and native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
@@ -139,6 +139,8 @@ foreground external app, or infers the nearest visible app behind Computer Cat. 
 identifies that inference and combines accessible text with a screenshot, preserving either
 when the other fails. Named-window listing, reading and capture remain available. Text-only
 models automatically omit the screenshot from observation. Screen content is untrusted data.
+Focused selection/tab tools skip full-page text collection and images. Region capture validates
+normalized bounds and crops before downsizing to preserve detail within the image budget.
 Native Pi session files persist observations, including images, under the existing per-chat
 retention policy. Renderer activity events contain only tool names/status, not observed content.
 Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.

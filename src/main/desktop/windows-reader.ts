@@ -1,7 +1,7 @@
 import { type ChildProcessWithoutNullStreams, type SpawnOptions, spawn } from "node:child_process";
 import { win32 } from "node:path";
 import { z } from "zod";
-import type { DesktopWindowText } from "../../shared/desktop";
+import type { DesktopReadMode, DesktopWindowText } from "../../shared/desktop";
 
 const LIMITS = {
   timeoutMs: 8_000,
@@ -23,6 +23,7 @@ $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $result = @{ title = ''; app = ''; text = ''; selectedText = ''; tabs = @(); truncated = $false }
 $identity = @{}
+$mode = $env:COMPUTERCAT_READ_MODE
 try {
   Add-Type -AssemblyName UIAutomationClient
   Add-Type -AssemblyName UIAutomationTypes
@@ -87,8 +88,8 @@ public static class CatWindowTarget {
     if ($value.Length -gt $limit) { $result.truncated = $true; return $value.Substring(0, $limit) }
     return $value
   }
-  function Append-Text($builder, $seen, [string]$value, [int]$limit) {
-    $value = $value.Trim()
+  function Append-Text($builder, $seen, [string]$value, [int]$limit, [bool]$preserveSpace = $false) {
+    if (-not $preserveSpace) { $value = $value.Trim() }
     if ($value.Length -eq 0) { return }
     $remaining = $limit - $builder.Length
     if ($remaining -le 1) { $result.truncated = $true; return }
@@ -111,31 +112,32 @@ public static class CatWindowTarget {
       $info = $element.Current
       # Never read names, values, selections, or descendants of protected controls.
       if ($info.IsPassword -or $info.IsOffscreen) { return }
-      $name = Clip $info.Name 512
-      Append-Text $state.text $state.seen $name 12000
-      if ($info.ControlType -eq [System.Windows.Automation.ControlType]::TabItem -and $name.Length -gt 0) {
+      $name = ''
+      if ($mode -ne 'selection') { $name = Clip $info.Name 512 }
+      if ($mode -eq 'all') { Append-Text $state.text $state.seen $name 12000 }
+      if ($mode -ne 'selection' -and $info.ControlType -eq [System.Windows.Automation.ControlType]::TabItem -and $name.Length -gt 0) {
         $tabName = Clip $name 256
         if ($state.tabs.Count -ge 60) { $result.truncated = $true }
         elseif ($state.seenTabs.Add($tabName)) { $state.tabs.Add($tabName) }
       }
       $pattern = $null
-      if ($element.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$pattern)) {
+      if ($mode -ne 'tabs' -and $element.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$pattern)) {
         try {
           $ranges = $pattern.GetSelection()
           for ($i = 0; $i -lt [Math]::Min($ranges.Length, 16); $i++) {
-            Append-Text $state.selected $state.seenSelected ($ranges[$i].GetText(4001)) 4000
+            Append-Text $state.selected $state.seenSelected ($ranges[$i].GetText(4001)) 4000 $true
           }
           if ($ranges.Length -gt 16) { $result.truncated = $true }
         } catch { }
-        try {
+        if ($mode -eq 'all') { try {
           $ranges = $pattern.GetVisibleRanges()
           for ($i = 0; $i -lt [Math]::Min($ranges.Length, 16); $i++) {
             Append-Text $state.text $state.seen ($ranges[$i].GetText(12001)) 12000
           }
           if ($ranges.Length -gt 16) { $result.truncated = $true }
-        } catch { }
+        } catch { } }
       }
-      elseif ($info.ControlType -eq [System.Windows.Automation.ControlType]::Edit) {
+      elseif ($mode -eq 'all' -and $info.ControlType -eq [System.Windows.Automation.ControlType]::Edit) {
         $pattern = $null
         if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$pattern)) {
           Append-Text $state.text $state.seen (Clip $pattern.Current.Value 12000) 12000
@@ -229,7 +231,11 @@ export class WindowsReader {
       ((command, args, launchOptions) => spawn(command, args, { ...launchOptions, stdio: "pipe" }));
   }
 
-  async inspectWindow(nativeWindowId: string, signal: AbortSignal): Promise<DesktopWindowText> {
+  async inspectWindow(
+    nativeWindowId: string,
+    signal: AbortSignal,
+    mode: DesktopReadMode = "all",
+  ): Promise<DesktopWindowText> {
     if (signal.aborted) throw cancelled();
     // IntPtr is signed; disallow zero, leading zeroes, signs, whitespace and code.
     if (
@@ -238,18 +244,24 @@ export class WindowsReader {
     ) {
       return unavailable("The selected window is no longer available. Choose it again.");
     }
-    return this.inspect(nativeWindowId, signal);
+    return this.inspect(nativeWindowId, signal, mode);
   }
 
-  inspectCurrentWindow(signal: AbortSignal): Promise<CurrentWindowInspection> {
-    return this.inspect(undefined, signal);
+  inspectCurrentWindow(
+    signal: AbortSignal,
+    mode: DesktopReadMode = "all",
+  ): Promise<CurrentWindowInspection> {
+    return this.inspect(undefined, signal, mode);
   }
 
   private async inspect(
     nativeWindowId: string | undefined,
     signal: AbortSignal,
+    mode: DesktopReadMode,
   ): Promise<CurrentWindowInspection> {
     if (signal.aborted) throw cancelled();
+    if (!["all", "selection", "tabs"].includes(mode))
+      return unavailable("Unsupported text reading mode.");
     if (this.platform !== "win32") {
       return unavailable("Reading application text is currently available on Windows only.");
     }
@@ -264,6 +276,7 @@ export class WindowsReader {
     }
     env.COMPUTERCAT_WINDOW_HANDLE = nativeWindowId ?? "";
     env.COMPUTERCAT_OWNER_PID = String(process.pid);
+    env.COMPUTERCAT_READ_MODE = mode;
 
     let child: ChildProcessWithoutNullStreams;
     try {
@@ -373,10 +386,14 @@ export class WindowsReader {
 export function inspectWindow(
   nativeWindowId: string,
   signal: AbortSignal,
+  mode?: DesktopReadMode,
 ): Promise<DesktopWindowText> {
-  return new WindowsReader().inspectWindow(nativeWindowId, signal);
+  return new WindowsReader().inspectWindow(nativeWindowId, signal, mode);
 }
 
-export function inspectCurrentWindow(signal: AbortSignal): Promise<CurrentWindowInspection> {
-  return new WindowsReader().inspectCurrentWindow(signal);
+export function inspectCurrentWindow(
+  signal: AbortSignal,
+  mode?: DesktopReadMode,
+): Promise<CurrentWindowInspection> {
+  return new WindowsReader().inspectCurrentWindow(signal, mode);
 }

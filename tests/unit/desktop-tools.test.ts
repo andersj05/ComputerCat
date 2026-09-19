@@ -25,6 +25,38 @@ afterEach(() => vi.useRealTimers());
 
 describe("desktop tools", () => {
   it.each([
+    ["desktop_read_selection", "selection"],
+    ["desktop_list_tabs", "tabs"],
+  ])("routes %s directly to a focused read without an image", async (name, operation) => {
+    const execute = vi.fn().mockResolvedValue(textResult);
+    const tool = createDesktopTools(execute, false).find((item) => item.name === name);
+    await invoke(tool);
+    expect(execute).toHaveBeenLastCalledWith({ operation }, expect.any(AbortSignal));
+    await invoke(tool, { sourceId });
+    expect(execute).toHaveBeenLastCalledWith({ operation, sourceId }, expect.any(AbortSignal));
+  });
+
+  it("validates region bounds and image support before capture", async () => {
+    const execute = vi.fn().mockResolvedValue(imageResult);
+    const tool = createDesktopTools(execute, true).find(
+      (item) => item.name === "desktop_capture_region",
+    );
+    const region = { x: 0.5, y: 0, width: 0.5, height: 1 };
+    await invoke(tool, { sourceId, ...region });
+    expect(execute).toHaveBeenCalledWith(
+      { operation: "capture-region", sourceId, region },
+      expect.any(AbortSignal),
+    );
+    await expect(invoke(tool, { sourceId, ...region, width: 0.9 })).rejects.toThrow();
+    const textOnly = createDesktopTools(execute, false).find(
+      (item) => item.name === "desktop_capture_region",
+    );
+    await expect(invoke(textOnly, { sourceId, ...region })).rejects.toThrow(
+      "cannot view screenshots",
+    );
+    expect(execute).toHaveBeenCalledOnce();
+  });
+  it.each([
     [true, {}, { operation: "observe", screenshot: true }],
     [false, {}, { operation: "observe", screenshot: false }],
     [true, { includeScreenshot: false }, { operation: "observe", screenshot: false }],

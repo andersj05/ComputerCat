@@ -53,6 +53,57 @@ function setup() {
 afterEach(() => vi.useRealTimers());
 
 describe("on-demand desktop harness", () => {
+  it.each(["selection", "tabs"] as const)(
+    "returns only %s from the current app or a listed window",
+    async (operation) => {
+      const { controller, abort, provider, list } = setup();
+      const result = await controller.execute({ operation }, abort.signal);
+      expect(provider.current).toHaveBeenCalledWith(expect.any(AbortSignal), operation);
+      const content = metadata(result);
+      expect(content[operation === "selection" ? "selectedText" : "tabs"]).toBeDefined();
+      expect(content).not.toHaveProperty("text");
+      expect(content).not.toHaveProperty(operation === "selection" ? "tabs" : "selectedText");
+      expect(provider.capture).not.toHaveBeenCalled();
+      const sourceId = (await list())[0]?.sourceId;
+      await controller.execute({ operation, sourceId }, abort.signal);
+      expect(provider.read).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "window:123:0" }),
+        expect.any(AbortSignal),
+        operation,
+      );
+    },
+  );
+
+  it("passes a valid region to the selected capture and rejects out-of-source rectangles", async () => {
+    const { controller, abort, provider, list } = setup();
+    const sourceId = (await list())[0]?.sourceId;
+    const region = { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
+    expect(
+      metadata(
+        await controller.execute({ operation: "capture-region", sourceId, region }, abort.signal),
+      ).region,
+    ).toEqual(region);
+    expect(provider.capture).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "window:123:0" }),
+      expect.any(AbortSignal),
+      region,
+    );
+    for (const invalid of [
+      { ...region, x: -1 },
+      { ...region, width: 0 },
+      { ...region, height: 1 },
+      { ...region, x: Number.NaN },
+    ])
+      expect(
+        (
+          await controller.execute(
+            { operation: "capture-region", sourceId, region: invalid },
+            abort.signal,
+          )
+        ).isError,
+      ).toBe(true);
+    expect(provider.capture).toHaveBeenCalledOnce();
+  });
   it("does nothing until a tool call, then observes the current page without a UI grant", async () => {
     const { provider, observe } = setup();
     expect(provider.current).not.toHaveBeenCalled();

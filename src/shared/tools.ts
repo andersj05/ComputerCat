@@ -14,6 +14,9 @@ export const DESKTOP_TOOL_NAMES = [
   "desktop_list_windows",
   "desktop_capture",
   "desktop_read_window",
+  "desktop_read_selection",
+  "desktop_list_tabs",
+  "desktop_capture_region",
 ] as const;
 
 export const ALL_TOOL_NAMES = [...PI_TOOL_NAMES, ...DESKTOP_TOOL_NAMES] as const;

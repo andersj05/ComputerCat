@@ -32,6 +32,11 @@ inference; if it is unrelated or ambiguous, list windows and inspect the relevan
 which app the user means after using the available evidence. Never pretend the target is certain.
 For a named application or multiple windows, use desktop_list_windows then exact sourceIds.
 desktop_read_window and desktop_capture support focused follow-up reads during the same turn.
+Use desktop_read_selection for highlighted-text questions and desktop_list_tabs for tab titles;
+these return focused text without a screenshot or a full page dump. An empty selection/tab
+result means the application exposed none, not proof that nothing is selected or no tabs exist.
+When screenshot text is too small, use desktop_capture_region with a normalized rectangle
+inside the observed source to inspect that part at greater detail.
 Keep available text when an image fails, and use the image when accessibility text is unavailable.
 If a source expires or changes, re-observe or re-list. Do not repeat an identical failed call.
 Do not use shell scripts, clipboard access, browser data files or debugging ports to work around

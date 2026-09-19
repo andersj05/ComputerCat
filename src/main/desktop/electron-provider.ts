@@ -1,13 +1,16 @@
 import { BrowserWindow, desktopCapturer } from "electron";
-import type { DesktopWindowText } from "../../shared/desktop";
+import type { DesktopReadMode, DesktopRegion, DesktopWindowText } from "../../shared/desktop";
 import type { CurrentDesktopWindow, DesktopProvider, DesktopSource } from "./controller";
 import { SourceCapturer } from "./source-capture";
 import { inspectCurrentWindow, inspectWindow } from "./windows-reader";
 
 export class ElectronDesktopProvider implements DesktopProvider {
   constructor(private readonly capturer: Pick<SourceCapturer, "capture"> = new SourceCapturer()) {}
-  async current(signal: AbortSignal): Promise<CurrentDesktopWindow | undefined> {
-    const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal);
+  async current(
+    signal: AbortSignal,
+    mode?: DesktopReadMode,
+  ): Promise<CurrentDesktopWindow | undefined> {
+    const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal, mode);
     signal.throwIfAborted();
     if (!nativeWindowId || !target) return undefined;
     const source = (await this.list(signal)).find(
@@ -47,13 +50,13 @@ export class ElectronDesktopProvider implements DesktopProvider {
       }));
   }
 
-  async capture(source: DesktopSource, signal: AbortSignal) {
+  async capture(source: DesktopSource, signal: AbortSignal, region?: DesktopRegion) {
     signal.throwIfAborted();
     const current = (await this.list(signal)).find(
       (item) => item.id === source.id && item.name === source.name,
     );
     if (!current) throw new Error("Source unavailable");
-    const image = await this.capturer.capture(current.id, signal);
+    const image = await this.capturer.capture(current.id, signal, region);
     // A title/identity change during startup must not silently replace the requested app.
     if (
       !(await this.list(signal)).some((item) => item.id === source.id && item.name === source.name)
@@ -62,14 +65,18 @@ export class ElectronDesktopProvider implements DesktopProvider {
     return image;
   }
 
-  async read(source: DesktopSource, signal: AbortSignal): Promise<DesktopWindowText> {
+  async read(
+    source: DesktopSource,
+    signal: AbortSignal,
+    mode?: DesktopReadMode,
+  ): Promise<DesktopWindowText> {
     const current = (await this.list(signal)).find(
       (item) => item.id === source.id && item.name === source.name,
     );
     const handle =
       current?.kind === "window" ? /^window:(\d+):\d+$/.exec(current.id)?.[1] : undefined;
     if (!handle) throw new Error("Source unavailable");
-    const result = await inspectWindow(handle, signal);
+    const result = await inspectWindow(handle, signal, mode);
     signal.throwIfAborted();
     if (result.title && result.title !== source.name.slice(0, 512))
       throw new Error("Window changed");

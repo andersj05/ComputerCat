@@ -57,6 +57,8 @@ Ask a connected model “What is this page?”, “What does this error mean?”
 text I selected.” You can type or use Talk. The agent chooses desktop tools automatically;
 there is no Share screen button. It can identify the current app, combine a screenshot with
 accessible text, inspect named windows, and read exposed browser tabs and selected text.
+Focused text tools avoid collecting the full page; region screenshots let it inspect small
+text or diagrams more closely without sending the whole window again.
 When the cat or chat has focus, the app behind it is used as a starting point.
 
 Observations happen on tool calls during your request, not in a background screen feed.

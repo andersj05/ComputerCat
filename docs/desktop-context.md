@@ -16,6 +16,9 @@ desktop. Lock/sleep blocks observations; unlock/resume makes tools available aga
 | `desktop_list_windows` | Find a named app, compare windows, or recover from an unavailable current app. Lists windows and displays without thumbnails. |
 | `desktop_capture` | Take a fresh image of an exact sourceId from this turn's observation or listing. Prefer a window to a whole display. |
 | `desktop_read_window` | Read accessible text, selected text and tab names from an exact window sourceId without taking an image. |
+| `desktop_read_selection` | Read only the selection from the current app or a specified window. Preserve whitespace; skip full-page text collection and screenshots. |
+| `desktop_list_tabs` | Read exposed tab titles from the current app or a specified window without page text or images. |
+| `desktop_capture_region` | Inspect a smaller part of a previously observed source. Supply x, y, width and height as fractions of the whole source, from 0 to 1. |
 
 Observe defaults to the foreground external app. If Computer Cat owns the foreground window,
 the helper walks down the window order to the first visible, nonminimized, uncloaked external
@@ -29,6 +32,8 @@ Text-only models automatically omit images. Screenshots are bounded to 1920 × 1
 as image content, not base64 text. Snapshot timestamps distinguish an observation from a
 live feed. Opaque source IDs are valid for the same turn only, at most sixty seconds, and
 until the next listing or cancellation. A changed/closed source requires a fresh observation.
+Region capture crops the source frame before downsizing, so details can remain readable
+without sending another full-window image. Rectangles must fit entirely inside the source.
 
 ## Harness boundaries
 
@@ -83,6 +88,9 @@ and checks locking and automatic recovery without sharing UI or real desktop cap
 owned generated window with all source enumeration disabled, plus cancellation and media
 renderer cleanup. [Capture boundary tests](../tests/unit/source-capture.test.ts) exercise
 permissions, renderer failures, deadline, cancellation, image limits and invalid IDs.
+Native coverage also checks a region's pixel content, focused selection/tab reads and
+whitespace preservation. Empty selection/tab output is an accessibility limitation, not
+proof that the app has no selection or tabs.
 
 The [native Windows smoke](../tests/smoke/windows-reader.spec.ts) reads an owned synthetic
 WPF window and verifies title, text, exact selection, tab names, password exclusion and

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { BrowserWindow } from "electron";
 import { z } from "zod";
+import { type DesktopRegion, desktopRegionSchema } from "../../shared/desktop";
 
 export const captureImageSchema = z.strictObject({
   data: z
@@ -31,7 +32,7 @@ export class CaptureError extends Error {
 
 // Fixed code in an isolated, invisible media renderer. The app's chat/pet renderers
 // never receive a capture permission, source ID, media stream, or raw image.
-function captureFrame(sourceId: string) {
+function captureFrame(sourceId: string, region?: DesktopRegion) {
   return (async () => {
     let stream: MediaStream | undefined;
     const video = document.createElement("video");
@@ -58,13 +59,18 @@ function captureFrame(sourceId: string) {
       await video.play();
       await ready;
       if (!video.videoWidth || !video.videoHeight) throw new Error("Empty frame");
-      const scale = Math.min(1, 1920 / video.videoWidth, 1080 / video.videoHeight);
+      const crop = region ?? { x: 0, y: 0, width: 1, height: 1 };
+      const x = Math.floor(crop.x * video.videoWidth);
+      const y = Math.floor(crop.y * video.videoHeight);
+      const width = Math.min(video.videoWidth - x, Math.ceil(crop.width * video.videoWidth));
+      const height = Math.min(video.videoHeight - y, Math.ceil(crop.height * video.videoHeight));
+      const scale = Math.min(1, 1920 / width, 1080 / height);
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
       const context = canvas.getContext("2d", { alpha: false });
       if (!context) throw new Error("No canvas");
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.drawImage(video, x, y, width, height, 0, 0, canvas.width, canvas.height);
       return {
         data: canvas.toDataURL("image/png").slice("data:image/png;base64,".length),
         width: canvas.width,
@@ -90,8 +96,14 @@ export class SourceCapturer {
     ),
   ) {}
 
-  async capture(sourceId: string, signal: AbortSignal): Promise<CapturedImage> {
+  async capture(
+    sourceId: string,
+    signal: AbortSignal,
+    region?: DesktopRegion,
+  ): Promise<CapturedImage> {
     if (signal.aborted) throw new CaptureError("cancelled");
+    if (region && !desktopRegionSchema.safeParse(region).success)
+      throw new CaptureError("unavailable");
     if (!/^(window:[1-9]\d{0,18}:[01]|screen:[0-9]+:[0-9]+)$/.test(sourceId))
       throw new CaptureError("unavailable");
     if (this.active) throw new CaptureError("busy");
@@ -161,7 +173,7 @@ export class SourceCapturer {
         await window.loadFile(this.documentPath);
         if (signal.aborted) throw new CaptureError("cancelled");
         const result: unknown = await contents.executeJavaScript(
-          `(${captureFrame.toString()})(${JSON.stringify(sourceId)})`,
+          `(${captureFrame.toString()})(${JSON.stringify(sourceId)}, ${JSON.stringify(region)})`,
         );
         if (signal.aborted) throw new CaptureError("cancelled");
         return captureImageSchema.parse(result);

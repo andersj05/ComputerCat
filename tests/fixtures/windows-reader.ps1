@@ -56,6 +56,12 @@ $timer.Add_Tick({
     [Console]::Out.WriteLine("status:$($editor.SelectionStart):$($editor.SelectionLength)")
     [Console]::Out.Flush()
   }
+  if ($command -eq 'select-spaces') {
+    $editor.Text = '  selected code  '
+    $editor.Select(0, $editor.Text.Length)
+    [Console]::Out.WriteLine('selection-ready')
+    [Console]::Out.Flush()
+  }
 })
 $form.Add_ContentRendered({
   [void]$editor.Focus()

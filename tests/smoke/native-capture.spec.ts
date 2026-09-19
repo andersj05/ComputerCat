@@ -47,6 +47,15 @@ test("captures pixels from one owned window without thumbnail enumeration and st
       for (let channel = 0; channel < 3; channel++)
         expect(Math.abs(actual[channel] - (expected[channel] ?? 0))).toBeLessThanOrEqual(3);
     expect(result.windows).toBe(1);
+    const crop = await electron.evaluate(() =>
+      Reflect.get(globalThis, "captureFixture")({ x: 0.5, y: 0, width: 0.5, height: 1 }),
+    );
+    expect(crop.width).toBe(Math.ceil(result.width / 2));
+    expect(crop.height).toBe(result.height);
+    for (const point of [crop.left, crop.right])
+      for (let channel = 0; channel < 3; channel++)
+        expect(Math.abs(point[channel] - ([224, 64, 16][channel] ?? 0))).toBeLessThanOrEqual(3);
+    expect(crop.windows).toBe(1);
     expect(await electron.evaluate(() => Reflect.get(globalThis, "captureCancelFixture")())).toBe(
       "cancelled",
     );

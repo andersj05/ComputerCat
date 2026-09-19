@@ -17,8 +17,12 @@ app.whenReady().then(async () => {
       ),
   );
   const capturer = new SourceCapturer(process.argv[3]);
-  globalThis.captureFixture = async () => {
-    const result = await capturer.capture(target.getMediaSourceId(), new AbortController().signal);
+  globalThis.captureFixture = async (region) => {
+    const result = await capturer.capture(
+      target.getMediaSourceId(),
+      new AbortController().signal,
+      region,
+    );
     const image = nativeImage.createFromBuffer(Buffer.from(result.data, "base64"));
     const bitmap = image.toBitmap();
     const sample = (x, y) =>

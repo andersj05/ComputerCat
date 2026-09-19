@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("electron", () => ({
-  BrowserWindow: (options: unknown) => mocks.create(options),
+  BrowserWindow: class {
+    constructor(options: unknown) {
+      // biome-ignore lint/correctness/noConstructorReturn: Electron's constructor is replaced by a controlled test window.
+      return mocks.create(options);
+    }
+  },
 }));
 
 import { SourceCapturer } from "../../src/main/desktop/source-capture";
@@ -151,6 +156,14 @@ describe("selected-source media capture", () => {
     );
     abort.abort();
     await expect(capture()).rejects.toHaveProperty("code", "cancelled");
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid crop bounds before creating a media renderer", async () => {
+    const { capturer, abort } = setup();
+    await expect(
+      capturer.capture("window:123:0", abort.signal, { x: 0.8, y: 0, width: 0.3, height: 1 }),
+    ).rejects.toHaveProperty("code", "unavailable");
     expect(mocks.create).not.toHaveBeenCalled();
   });
 

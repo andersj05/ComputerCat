@@ -211,8 +211,11 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
       "bash",
       "desktop_capture",
+      "desktop_capture_region",
+      "desktop_list_tabs",
       "desktop_list_windows",
       "desktop_observe",
+      "desktop_read_selection",
       "desktop_read_window",
       "edit",
       "find",

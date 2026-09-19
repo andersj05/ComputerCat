@@ -96,8 +96,30 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
       tabs: result.tabs,
     });
     expect(current.unavailableReason).toBeUndefined();
+    const selection = await new WindowsReader().inspectWindow(
+      handle,
+      new AbortController().signal,
+      "selection",
+    );
+    expect(selection.selectedText).toBe("violet cat");
+    expect(selection.text).toBe("");
+    expect(selection.tabs).toEqual([]);
+    const tabs = await new WindowsReader().inspectWindow(
+      handle,
+      new AbortController().signal,
+      "tabs",
+    );
+    expect(tabs.tabs).toEqual(result.tabs);
+    expect(tabs.text).toBe("");
+    expect(tabs.selectedText).toBe("");
     child.stdin.write("status\n");
     expect(await nextLine()).toBe("status:2:10");
+    child.stdin.write("select-spaces\n");
+    expect(await nextLine()).toBe("selection-ready");
+    expect(
+      (await new WindowsReader().inspectWindow(handle, new AbortController().signal, "selection"))
+        .selectedText,
+    ).toBe("  selected code  ");
   } finally {
     lines.close();
     child.stdin.end();

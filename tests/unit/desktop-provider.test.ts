@@ -66,7 +66,7 @@ describe("Electron desktop adapter", () => {
       text: { text: "text" },
     });
     expect(result?.text).not.toHaveProperty("nativeWindowId");
-    expect(mocks.current).toHaveBeenCalledWith(abort.signal);
+    expect(mocks.current).toHaveBeenCalledWith(abort.signal, undefined);
     expect(mocks.sources.mock.calls[0]?.[0].thumbnailSize).toEqual({ width: 0, height: 0 });
   });
 
@@ -127,7 +127,7 @@ describe("Electron desktop adapter", () => {
       width: 640,
       height: 480,
     });
-    expect(mocks.capture).toHaveBeenCalledExactlyOnceWith(fixture.id, abort.signal);
+    expect(mocks.capture).toHaveBeenCalledExactlyOnceWith(fixture.id, abort.signal, undefined);
     expect(
       mocks.sources.mock.calls.every(
         ([options]) => options.thumbnailSize.width === 0 && options.thumbnailSize.height === 0,
@@ -169,7 +169,7 @@ describe("Electron desktop adapter", () => {
   it("revalidates title/identity before reading and forwards only a numeric handle", async () => {
     const { provider, abort } = setup();
     await provider.read(fixture, abort.signal);
-    expect(mocks.inspect).toHaveBeenCalledWith("123", abort.signal);
+    expect(mocks.inspect).toHaveBeenCalledWith("123", abort.signal, undefined);
     mocks.sources.mockResolvedValue([{ ...fixture, name: "Another window" }]);
     await expect(provider.read(fixture, abort.signal)).rejects.toThrow();
     expect(mocks.inspect).toHaveBeenCalledOnce();
