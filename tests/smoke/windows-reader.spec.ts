@@ -28,6 +28,14 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
     },
   );
   const closed = new Promise<void>((done) => child.once("close", () => done()));
+  const failed = new Promise<never>((_, reject) => {
+    child.on("error", () => reject(new Error("The synthetic UI fixture could not start.")));
+    for (const stream of [child.stdin, child.stdout, child.stderr]) {
+      stream.on("error", () => reject(new Error("The synthetic UI fixture lost its test pipe.")));
+    }
+  });
+  // A failure can occur while UI Automation is reading, between nextLine calls.
+  void failed.catch(() => {});
   child.stderr.resume();
   // Every HWND comes directly from this generated test window. No desktop scan,
   // screenshot, other application inspection, credentials, or model call occurs.
@@ -38,6 +46,7 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
     try {
       const line = await Promise.race([
         iterator.next(),
+        failed,
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new Error("The synthetic UI fixture timed out.")), 8_000);
         }),
@@ -66,11 +75,27 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
   } finally {
     lines.close();
     child.stdin.end();
-    const killTimer = setTimeout(() => child.kill(), 1_000);
+    const killTimer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+        // The bounded close wait below reports failure without native details.
+      }
+    }, 1_000);
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await closed;
+      await Promise.race([
+        closed,
+        new Promise<never>((_, reject) => {
+          closeTimer = setTimeout(
+            () => reject(new Error("The synthetic UI fixture did not close.")),
+            3_000,
+          );
+        }),
+      ]);
     } finally {
       clearTimeout(killTimer);
+      clearTimeout(closeTimer);
     }
   }
 });

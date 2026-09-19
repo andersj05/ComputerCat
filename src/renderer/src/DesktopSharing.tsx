@@ -8,11 +8,15 @@ export function useDesktopSharing() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const changing = useRef(false);
+  const observedGeneration = useRef(0);
+  const latestState = useRef(state);
   useEffect(() => {
     let active = true;
     let received = false;
     const unsubscribe = window.computerCat.onDesktopChanged((next) => {
       received = true;
+      observedGeneration.current++;
+      latestState.current = next;
       setState(next);
       setReady(true);
       setError("");
@@ -20,7 +24,10 @@ export function useDesktopSharing() {
     void window.computerCat.desktopSnapshot().then(
       (next) => {
         if (!active) return;
-        if (!received) setState(next);
+        if (!received) {
+          latestState.current = next;
+          setState(next);
+        }
         setReady(true);
       },
       () => {
@@ -38,10 +45,16 @@ export function useDesktopSharing() {
     changing.current = true;
     setPending(true);
     setError("");
+    const startedGeneration = observedGeneration.current;
     try {
       const next = await window.computerCat.desktopSetEnabled({ enabled });
-      setState(next);
-      if (next.enabled !== enabled || next.error) {
+      // A lock, context switch, or another window can revoke sharing before this reply arrives.
+      // Broadcasts observed after the request started take precedence over its older snapshot.
+      if (observedGeneration.current === startedGeneration) {
+        latestState.current = next;
+        setState(next);
+      }
+      if (latestState.current.enabled !== enabled || next.error) {
         setError(next.error || "Couldn't change screen sharing. Try again.");
         return false;
       }

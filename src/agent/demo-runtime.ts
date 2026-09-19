@@ -4,7 +4,7 @@ import type { AgentRuntime } from "./runtime";
 export class DemoRuntime implements AgentRuntime {
   async run(prompt: string, signal: AbortSignal, onDelta: (text: string) => void): Promise<void> {
     const answer = /screen|see|looking/i.test(prompt)
-      ? "I can't see your screen or control your computer. Those tools aren't connected."
+      ? "This local demo doesn't read your screen. Connect a model in Options → Models, choose Share screen, then ask about the window you'd like help with. Screen tools can observe, but cannot click or type."
       : /plan|task|day/i.test(prompt)
         ? "Start with one thing you'd like to finish. Break it into a step you can do now.\n\nWhat are you working on?"
         : /idea|think|explore/i.test(prompt)

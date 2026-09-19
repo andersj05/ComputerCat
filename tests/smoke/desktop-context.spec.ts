@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { IPC } from "../../src/shared/contracts";
-import { showCatControls } from "./chat";
+import { sendAndWaitForReply, showCatControls } from "./chat";
 
 async function launch(userData: string) {
   const env = Object.fromEntries(
@@ -209,6 +209,160 @@ test("desktop sharing validates requests and never exposes capture or arbitrary 
       ),
     ).toEqual(["denied", "denied", "denied"]);
     expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+test("sharing is revoked when chats, models, computer state, or renderer lifetimes change", async () => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-desktop-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    const enable = async () => {
+      await page.getByRole("button", { name: "Share screen…" }).click();
+      await page
+        .getByRole("dialog", { name: "Share your screen" })
+        .getByRole("button", { name: "Start sharing", exact: true })
+        .click();
+      await expect(page.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+      await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+    };
+    const expectRevoked = async () => {
+      await expect(page.getByRole("button", { name: "Share screen…" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
+      await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
+      expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
+      expect((await pet.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
+    };
+
+    await enable();
+    const firstChat = (await page.evaluate(() => window.computerCat.snapshot())).conversationId;
+    await page.getByRole("button", { name: "New conversation", exact: true }).click();
+    await expect
+      .poll(async () => (await page.evaluate(() => window.computerCat.snapshot())).conversationId)
+      .not.toBe(firstChat);
+    await expectRevoked();
+
+    // The configured environment model is deliberately nonexistent. Selecting it must not
+    // contact a provider; no turn is sent until the local demo is selected again.
+    await enable();
+    await page.getByLabel("Chat model", { exact: true }).selectOption("environment");
+    await expect
+      .poll(async () => (await page.evaluate(() => window.computerCat.info())).models.active.source)
+      .toBe("environment");
+    await expectRevoked();
+
+    // Saving defaults also replaces the active model when the chat is still empty.
+    await enable();
+    expect(
+      await page.evaluate(async () => {
+        const settings = (await window.computerCat.info()).models.defaults;
+        return window.computerCat.updateModels({ ...settings, source: "demo" });
+      }),
+    ).toEqual({ ok: true });
+    await expect
+      .poll(async () => (await page.evaluate(() => window.computerCat.info())).models.active.source)
+      .toBe("demo");
+    await expectRevoked();
+
+    await sendAndWaitForReply(page, "A local conversation for desktop sharing lifecycle checks.");
+    const savedChat = (await page.evaluate(() => window.computerCat.snapshot())).conversationId;
+    if (!savedChat) throw new Error("Missing fixture conversation");
+    await page.getByRole("button", { name: "New conversation", exact: true }).click();
+    await expect
+      .poll(async () => (await page.evaluate(() => window.computerCat.snapshot())).conversationId)
+      .not.toBe(savedChat);
+    await enable();
+    expect(await page.evaluate((id) => window.computerCat.openConversation(id), savedChat)).toEqual(
+      { ok: true },
+    );
+    await expectRevoked();
+    await enable();
+    expect(
+      await page.evaluate((id) => window.computerCat.deleteConversation(id), savedChat),
+    ).toEqual({ ok: true });
+    await expectRevoked();
+
+    for (const [pause, resume] of [
+      ["lock-screen", "unlock-screen"],
+      ["suspend", "resume"],
+    ] as const) {
+      await enable();
+      await electron.evaluate(({ powerMonitor }, event) => powerMonitor.emit(event), pause);
+      await expectRevoked();
+      await electron.evaluate(({ powerMonitor }, event) => powerMonitor.emit(event), resume);
+      await expectRevoked();
+    }
+
+    for (const renderer of [page, pet]) {
+      await enable();
+      await renderer.reload();
+      await expectRevoked();
+    }
+
+    await enable();
+    await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    expect((await pet.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(true);
+    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+    await electron.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((window) => window.webContents.getURL().includes("view=pet"))
+        ?.hide();
+    });
+    await expectRevoked();
+    await electron.evaluate(({ BrowserWindow }) => {
+      for (const window of BrowserWindow.getAllWindows()) window.showInactive();
+    });
+    await expectRevoked();
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+test("a late grant acknowledgement cannot restore sharing after a newer revocation", async () => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-desktop-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    await electron.evaluate(({ ipcMain, BrowserWindow }, channels) => {
+      ipcMain.removeHandler(channels.desktopSetEnabled);
+      ipcMain.handle(channels.desktopSetEnabled, () => {
+        for (const window of BrowserWindow.getAllWindows())
+          window.webContents.send(channels.desktopChanged, { enabled: true, busy: false });
+        return new Promise((resolve) => {
+          Reflect.set(globalThis, "releaseDesktopGrant", () =>
+            resolve({ enabled: true, busy: false }),
+          );
+        });
+      });
+    }, IPC);
+    await page.getByRole("button", { name: "Share screen…" }).click();
+    const dialog = page.getByRole("dialog", { name: "Share your screen" });
+    await dialog.getByRole("button", { name: "Start sharing", exact: true }).click();
+    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
+    await electron.evaluate(({ BrowserWindow }, channel) => {
+      for (const window of BrowserWindow.getAllWindows())
+        window.webContents.send(channel, { enabled: false, busy: false });
+    }, IPC.desktopChanged);
+    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
+    await electron.evaluate(() => {
+      Reflect.get(globalThis, "releaseDesktopGrant")();
+      Reflect.deleteProperty(globalThis, "releaseDesktopGrant");
+    });
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "Couldn't change screen sharing. Try again.",
+    );
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Share screen…" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
+    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeHidden();
     expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
   } finally {
     await electron.close();

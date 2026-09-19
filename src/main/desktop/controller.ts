@@ -149,6 +149,7 @@ export class DesktopController {
       const windowText = await this.provider.read(issued.source, signal);
       signal.throwIfAborted();
       return {
+        ...(windowText.unavailableReason ? { isError: true } : {}),
         content: [
           {
             type: "text",

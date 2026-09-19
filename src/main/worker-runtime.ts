@@ -3,6 +3,7 @@ import { type UtilityProcess, utilityProcess } from "electron";
 import { isConfigured, type RuntimeConfig, workerEnvironment } from "../agent/config";
 import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
+import { type DesktopExecutor, desktopError, desktopResultSchema } from "../shared/desktop";
 import type { ToolActivity } from "../shared/tools";
 
 export class WorkerRuntime implements AgentRuntime {
@@ -21,6 +22,7 @@ export class WorkerRuntime implements AgentRuntime {
       history: import("../shared/contracts").ChatMessage[];
     },
     private readonly toolCache?: { directory: string; allowDownloads: boolean },
+    private readonly desktop?: DesktopExecutor,
   ) {}
 
   async run(
@@ -81,6 +83,11 @@ export class WorkerRuntime implements AgentRuntime {
     this.child = child;
     const id = randomUUID();
     await new Promise<void>((resolve, reject) => {
+      const observations = new AbortController();
+      const desktopSignal = AbortSignal.any([signal, this.lifetime.signal, observations.signal]);
+      const calls = new Set<string>();
+      let desktopBusy = false;
+      let settled = false;
       let stopTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = setTimeout(
         () => {
@@ -91,6 +98,9 @@ export class WorkerRuntime implements AgentRuntime {
         config.provider === "openai-codex" ? 600_000 : 120_000,
       );
       const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        observations.abort();
         clearTimeout(timeout);
         clearTimeout(stopTimer);
         signal.removeEventListener("abort", stop);
@@ -101,10 +111,72 @@ export class WorkerRuntime implements AgentRuntime {
         else resolve();
       };
       this.finish = finish;
+      const post = (message: unknown): boolean => {
+        try {
+          child.postMessage(message);
+          return true;
+        } catch {
+          this.faulted = true;
+          this.child = undefined;
+          finish(
+            new UserFacingError("The model session disconnected. Start a new chat to reconnect."),
+          );
+          try {
+            child.kill();
+          } catch {
+            // The worker may already have exited before its exit event reached main.
+          }
+          return false;
+        }
+      };
       const message = (input: unknown) => {
         const parsed = workerEventSchema.safeParse(input);
         if (!parsed.success || parsed.data.id !== id) return;
         const event = parsed.data;
+        if (event.type === "desktop-request" && !desktopSignal.aborted) {
+          if (calls.has(event.callId)) return;
+          const reply = (result: unknown) => {
+            if (desktopSignal.aborted || settled || this.child !== child) return;
+            const checked = desktopResultSchema.safeParse(result);
+            post({
+              type: "desktop-result",
+              id,
+              callId: event.callId,
+              result: checked.success ? checked.data : desktopError("Invalid desktop observation."),
+            });
+          };
+          if (calls.size >= 20) {
+            reply(
+              desktopError(
+                "Desktop observation limit reached for this reply. Ask the user to continue.",
+              ),
+            );
+            return;
+          }
+          calls.add(event.callId);
+          if (!this.desktop || desktopBusy) {
+            reply(
+              desktopError(
+                desktopBusy
+                  ? "Another desktop observation is in progress."
+                  : "Desktop context is unavailable.",
+              ),
+            );
+            return;
+          }
+          desktopBusy = true;
+          void Promise.resolve()
+            .then(() => {
+              desktopSignal.throwIfAborted();
+              return this.desktop?.(event.request, desktopSignal);
+            })
+            .then(reply, () =>
+              reply(desktopError("Desktop context is unavailable or the request was cancelled.")),
+            )
+            .finally(() => {
+              desktopBusy = false;
+            });
+        }
         if (event.type === "delta" && !signal.aborted) onDelta(event.text);
         if (event.type === "tool" && !signal.aborted) onTool?.(event.activity);
         if (event.type === "done") finish();
@@ -120,7 +192,7 @@ export class WorkerRuntime implements AgentRuntime {
         );
       };
       const stop = () => {
-        child.postMessage({ type: "stop", id });
+        if (!post({ type: "stop", id })) return;
         stopTimer = setTimeout(() => {
           this.faulted = true;
           child.kill();
@@ -131,7 +203,7 @@ export class WorkerRuntime implements AgentRuntime {
       child.on("message", message);
       child.once("exit", exited);
       signal.addEventListener("abort", stop, { once: true });
-      child.postMessage({
+      post({
         type: "run",
         id,
         prompt,

@@ -30,6 +30,8 @@ import {
 import { sessionSchema, VoiceError } from "../shared/voice";
 import { ChatController } from "./chat-controller";
 import { ConversationStore } from "./conversation-store";
+import { DesktopController } from "./desktop/controller";
+import { ElectronDesktopProvider } from "./desktop/electron-provider";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
 import { keepInWorkArea, PetDrag } from "./pet-window";
@@ -55,6 +57,25 @@ let quitting = false;
 let shutdownComplete = false;
 let controller: ChatController;
 let voice: VoiceController;
+const desktop = new DesktopController(
+  smoke
+    ? {
+        list: async () => [],
+        capture: async () => {
+          throw new Error("Desktop capture disabled in smoke tests");
+        },
+        read: async () => {
+          throw new Error("Desktop inspection disabled in smoke tests");
+        },
+      }
+    : new ElectronDesktopProvider(),
+  (state) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed() && trusted.has(win.webContents.id))
+        win.webContents.send(IPC.desktopChanged, state);
+    }
+  },
+);
 function captureWindow(): BrowserWindow | undefined {
   return voice?.snapshot().owner === "pet" ? pet : chat;
 }
@@ -65,6 +86,7 @@ function assertCaptureSender(event: IpcMainInvokeEvent): void {
 }
 function stopAll(): void {
   controller.stop();
+  desktop.revoke();
   void voice?.cancel();
 }
 if (smoke) app.commandLine.appendSwitch("use-fake-device-for-media-stream");
@@ -265,6 +287,7 @@ else {
             resolveConfig,
             context,
             { directory: join(app.getPath("userData"), "pi-runtime"), allowDownloads: !smoke },
+            (request, signal) => desktop.execute(request, signal),
           ),
         publishModels,
       );
@@ -286,11 +309,13 @@ else {
         ]),
       );
       controller = new ChatController(
-        (conversation) =>
-          models.createRuntime(conversation.model, {
+        (conversation) => {
+          desktop.revoke();
+          return models.createRuntime(conversation.model, {
             sessionFile: conversations.sessionFile(conversation.id),
             history: conversation.messages,
-          }),
+          });
+        },
         (snapshot) => {
           for (const window of BrowserWindow.getAllWindows()) {
             if (!window.isDestroyed()) window.webContents.send(IPC.changed, snapshot);
@@ -400,6 +425,19 @@ else {
           "check",
         ),
       );
+      ipcMain.handle(IPC.desktopSnapshot, (event) => {
+        assertSender(event);
+        return desktop.snapshot();
+      });
+      ipcMain.handle(IPC.desktopSetEnabled, (event, request: unknown) => {
+        assertSender(event);
+        return desktop.setEnabled(request);
+      });
+      ipcMain.handle(IPC.desktopOpenSharing, (event) => {
+        assertSender(event);
+        showChat();
+        chat.webContents.send(IPC.desktopSharingRequested);
+      });
       ipcMain.handle(IPC.voiceSnapshot, (event) => {
         assertSender(event);
         return voice.snapshot(trusted.get(event.sender.id)?.role === "chat");
@@ -462,10 +500,12 @@ else {
       });
       ipcMain.handle(IPC.openConversation, (event, id: unknown) => {
         assertSender(event, true);
+        desktop.revoke();
         return voice.transition(() => controller.open(id));
       });
       ipcMain.handle(IPC.deleteConversation, (event, id: unknown) => {
         assertSender(event, true);
+        desktop.revoke();
         return voice.transition(() => controller.delete(id));
       });
       ipcMain.handle(IPC.selectModel, (event, request: unknown) => {
@@ -474,6 +514,7 @@ else {
           return { ok: false, message: "Wait for the connection change to finish." };
         const valid = models.validate(request);
         if (!valid.ok) return valid;
+        desktop.revoke();
         return voice.transition(() => controller.selectModel(modelSettingsSchema.parse(request)));
       });
       ipcMain.handle(IPC.openModels, (event) => {
@@ -514,8 +555,10 @@ else {
             result.ok &&
             !controller.snapshot().busy &&
             controller.snapshot().messages.length === 0
-          )
+          ) {
+            desktop.revoke();
             await controller.selectModel(models.snapshot().defaults);
+          }
           return result;
         });
       });
@@ -552,6 +595,7 @@ else {
         if (disconnecting || controller.snapshot().busy)
           return { ok: false, message: "Stop the current reply before disconnecting." };
         disconnecting = true;
+        desktop.revoke();
         try {
           await voice.cancel();
           const result = await codex.disconnect();
@@ -568,6 +612,7 @@ else {
       });
       ipcMain.handle(IPC.clear, (event) => {
         assertSender(event, true);
+        desktop.revoke();
         return voice.transition(() => controller.clear());
       });
       ipcMain.handle(IPC.openChat, (event) => {
@@ -647,10 +692,17 @@ else {
       for (const win of [chat, pet]) {
         const cancelOwned = () => {
           if (captureWindow() === win) void voice.cancel();
+          if (
+            [chat, pet].every(
+              (target) => target.isDestroyed() || !target.isVisible() || target.isMinimized(),
+            )
+          )
+            desktop.revoke();
         };
         win.on("hide", cancelOwned);
         win.on("minimize", cancelOwned);
         win.webContents.on("did-start-loading", () => {
+          desktop.revoke();
           cancelOwned();
           if (win === pet) {
             petVoiceOpen = false;
@@ -658,6 +710,7 @@ else {
           }
         });
         win.webContents.on("render-process-gone", () => {
+          desktop.revoke();
           const cleanup = captureWindow() === win ? voice.cancel() : Promise.resolve();
           void cleanup.then(() => {
             if (!quitting && !win.isDestroyed()) win.reload();
@@ -667,6 +720,8 @@ else {
       void voice.warm();
       powerMonitor.on("suspend", () => void voice.dispose());
       powerMonitor.on("lock-screen", () => void voice.dispose());
+      powerMonitor.on("suspend", () => desktop.revoke());
+      powerMonitor.on("lock-screen", () => desktop.revoke());
       pet.on("blur", () => {
         petDrag.cancel();
         raisePet();
@@ -701,7 +756,8 @@ else {
           Menu.buildFromTemplate([
             { label: "Open chat", click: showChat },
             { label: "Find cat", click: findPet },
-            { label: "Stop current reply", click: () => controller.stop() },
+            { label: "Stop current reply", click: stopAll },
+            { label: "Stop screen sharing", click: () => desktop.revoke() },
             { type: "separator" },
             { label: "Quit Computer Cat", click: () => app.quit() },
           ]),
@@ -720,6 +776,7 @@ app.on("before-quit", (event) => {
     event.preventDefault();
     if (quitting) return;
     quitting = true;
+    desktop.revoke();
     void Promise.all([voice?.dispose(), controller.dispose()]).finally(() => {
       shutdownComplete = true;
       app.quit();

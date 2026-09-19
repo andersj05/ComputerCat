@@ -212,4 +212,25 @@ describe("desktop permission broker", () => {
     expect(events).not.toContain("Readable text");
     expect(events).not.toContain("Fixture");
   });
+
+  it("reports unsupported accessibility as a tool error with its limitation", async () => {
+    const { controller, provider, abort, list } = setup();
+    controller.setEnabled({ enabled: true });
+    const sources = await list();
+    provider.read.mockResolvedValue({
+      title: "",
+      app: "",
+      text: "",
+      selectedText: "",
+      tabs: [],
+      truncated: false,
+      unavailableReason: "This window does not expose readable text.",
+    });
+    const result = await controller.execute(
+      { operation: "read", sourceId: sources[0]?.sourceId },
+      abort.signal,
+    );
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result)).toContain("does not expose readable text");
+  });
 });
