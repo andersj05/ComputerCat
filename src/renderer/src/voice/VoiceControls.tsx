@@ -16,6 +16,7 @@ export function VoiceControls({
   review,
   onReview,
   onInsert,
+  onOptions,
 }: {
   state: VoiceSnapshot;
   busy: boolean;
@@ -23,8 +24,10 @@ export function VoiceControls({
   review: string;
   onReview: (value: string) => void;
   onInsert: () => void;
+  onOptions: () => void;
 }) {
   const [error, setError] = useState("");
+  const needsSetup = state.availability === "disabled" || state.availability === "model-missing";
   async function run(task: Promise<VoiceResult>) {
     setError("");
     try {
@@ -42,9 +45,9 @@ export function VoiceControls({
             type="button"
             className="xp-button"
             disabled={agentBusy}
-            onClick={() => void run(window.computerCat.voiceStart())}
+            onClick={() => (needsSetup ? onOptions() : void run(window.computerCat.voiceStart()))}
           >
-            Talk
+            {needsSetup ? "Set up voice…" : "Talk"}
           </button>
         ) : (
           <>
@@ -73,8 +76,15 @@ export function VoiceControls({
           </>
         )}
         <span role="status" className={state.phase === "recording" ? "listening" : ""}>
-          {error || voiceStatus(state)}
+          {error ||
+            voiceStatus(state) ||
+            (needsSetup ? "Use your microphone to draft a message." : "")}
         </span>
+        {!busy && !needsSetup && (
+          <button type="button" className="text-button" onClick={onOptions}>
+            Voice options…
+          </button>
+        )}
       </div>
       {review && (
         <div className="voice-review">

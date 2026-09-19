@@ -31,10 +31,13 @@ legends, and orange selected-tab edge throughout. Caption buttons perform native
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
 Options is an XP property sheet with Desktop cat, Models, Voice, and General tabs. Stage changes until Apply
-or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
-keep the dialog and draft open, show the error there, and leave the running cat unchanged.
+or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If a pet
+preference save fails, keep the draft open and the running cat unchanged.
+When saving several tabs, keep successful saves, identify them in the error, and focus the
+tab that failed. Its draft stays available for retry. Reviewed 2026-09-19 against
+[Options](../src/renderer/src/OptionsDialog.tsx) and [desktop coverage](../tests/smoke/desktop.spec.ts).
 Models uses native select controls for the default connection, model, and reasoning. Saving a
-default does not replace an existing conversation; New conversation applies it. Account sign-in
+default keeps existing messages and their model; new or empty chats use the new default. Account sign-in
 and Disconnect take effect immediately, separately from staged defaults. Closing Options cancels
 an unfinished sign-in. Authentication stays in the user's browser; the property sheet shows status,
 device codes, and an optional callback-URL fallback, never saved credentials.
@@ -43,17 +46,32 @@ New conversation retains the old chat in History and asks only before discarding
 Default keyboard focus goes to Cancel. History is a searchable dialog with dated entries and
 explicit deletion confirmation. Switching chats preserves their drafts for this app run.
 Return focus to the composer after dialogs close. The cat’s model button opens a small dialog
-with the same immediate selectors as the chat window; Connections opens Options on Models.
+with the same immediate selectors as the chat window. The selector is labeled This chat;
+Models & sign-in opens Options on Models, where defaults and immediate account actions are
+explicitly distinguished. Use this chat's settings stages a copy of the current selection.
+Set up voice in chat opens Options on Voice when voice is disabled or a model is missing;
+otherwise Voice options remains beside Talk. Reviewed 2026-09-19 against
+[model controls](../src/renderer/src/ModelPicker.tsx), [model options](../src/renderer/src/ModelOptions.tsx),
+and [voice controls](../src/renderer/src/voice/VoiceControls.tsx).
 
-The chat starts at 720 × 560 and remains usable at 500 × 420. Dialog tabs keep a stable height.
+The chat starts at 720 × 560 and remains usable at 500 × 420. Options uses a wider property
+sheet with a short introduction per tab, a fixed caption and action area, and independently
+scrolling content. Unsaved tabs have a dot and an accessible description; the footer reports
+pending changes and successful saves. The cat preview reflects staged size and animation.
+Reviewed 2026-09-19 against [Options](../src/renderer/src/OptionsDialog.tsx) and
+[styles](../src/renderer/src/style.css). Tab navigation follows the
+[WAI tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/), including focusable content panels.
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 
 Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
 Finish recording and Cancel recording; a persistent Listening label appears on both chat
 and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
-Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Download/Remove are explicit
-immediate operations with size/progress. The panel scrolls within the existing property sheet.
+Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Speech-model selection and its
+explicit immediate Download/Remove actions come first, followed by enabling voice and language.
+Microphone and performance controls expand on demand. Downloads show model name and progress;
+a saved microphone remains selected even before devices are listed. The panel scrolls within
+the property sheet. Reviewed 2026-09-19 against [voice options](../src/renderer/src/voice/VoiceOptions.tsx).
 See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
 [smoke coverage](../tests/smoke/voice.spec.ts).
 

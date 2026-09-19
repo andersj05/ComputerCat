@@ -69,7 +69,7 @@ test("history survives restart, resumes drafts, and deletes only the chosen conv
     await expect(page.getByRole("dialog", { name: "Choose model" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("pet-model-picker.png") });
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByRole("button", { name: "Connections…" }).click();
+    await page.getByRole("button", { name: "Models & sign-in…" }).click();
     await expect(page.getByRole("tab", { name: "Models", exact: true })).toBeFocused();
     await page.keyboard.press("Escape");
 

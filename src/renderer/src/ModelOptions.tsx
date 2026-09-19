@@ -21,6 +21,17 @@ export function ModelOptions({
   const connection = state?.codex;
   const login = connection?.login;
   const selectedModel = state?.models.find((model) => model.id === draft.codexModel);
+  const active = state?.active;
+  const activeName =
+    active?.source === "codex"
+      ? (state?.models.find((model) => model.id === active.codexModel)?.name ?? active.codexModel)
+      : active?.source === "environment"
+        ? (state?.environment.model ?? "Environment API key")
+        : "Local demo";
+  const matchesChat =
+    active?.source === draft.source &&
+    (active?.source !== "codex" ||
+      (active.codexModel === draft.codexModel && active.reasoning === draft.reasoning));
 
   async function action(run: () => Promise<ActionResult>) {
     if (acting) return;
@@ -168,10 +179,17 @@ export function ModelOptions({
             protection.
           </p>
         )}
+        <p className="field-help">
+          Sign-in and Disconnect take effect immediately. Cancel does not undo them.
+        </p>
       </fieldset>
       {!login && (
         <fieldset disabled={disabled || acting}>
           <legend>Default for new conversations</legend>
+          <p className="field-help model-scope-note">
+            Saved with Apply or OK. Existing conversations keep their model; an empty chat uses the
+            new default immediately.
+          </p>
           <div className="model-row">
             <label htmlFor="model-connection">Connection:</label>
             <select
@@ -249,12 +267,27 @@ export function ModelOptions({
                 ? `${state?.environment.provider ?? "Unconfigured"} / ${state?.environment.model ?? "No model"}. Uses API billing.`
                 : "Model access and usage limits depend on your plan."}
           </p>
+          {active && (
+            <div className="current-model-default">
+              <span>
+                This chat: <strong>{activeName}</strong>
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                disabled={matchesChat || (active.source === "codex" && !connection?.connected)}
+                onClick={() => onChange({ ...active })}
+              >
+                Use this chat's settings
+              </button>
+            </div>
+          )}
         </fieldset>
       )}
       <p className="option-note">
         {login
           ? "Closing Options cancels this sign-in."
-          : "Apply saves defaults for new conversations. Use the selector above chat to change this conversation."}
+          : "To change this conversation, close Options and use the This chat selector above the messages."}
       </p>
       {connection?.message && (
         <p className="connection-error" role="alert">

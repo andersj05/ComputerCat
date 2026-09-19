@@ -135,6 +135,15 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     });
     await expect(page.getByText("Connected to ChatGPT", { exact: true })).toBeVisible();
     await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
+    await page.getByRole("button", { name: "Use this chat's settings", exact: true }).click();
+    await expect(page.getByLabel("Connection:", { exact: true })).toHaveValue("demo");
+    await expect(
+      page.getByRole("button", { name: "Use this chat's settings", exact: true }),
+    ).toBeDisabled();
+    expect((await page.evaluate(() => window.computerCat.info())).models.defaults.source).toBe(
+      "demo",
+    );
+    await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
     await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-terra");
     await page.getByLabel("Reasoning:", { exact: true }).selectOption("high");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -153,9 +162,10 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
         .find((window) => window.webContents.getURL().includes("view=chat"))
         ?.setSize(500, 420),
     );
+    await page.getByLabel("Reasoning:", { exact: true }).scrollIntoViewIfNeeded();
     await expect(page.getByLabel("Reasoning:", { exact: true })).toBeInViewport();
     const panel = page.getByRole("tabpanel", { name: "Models", exact: true });
-    expect(await panel.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
+    expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
     await page.screenshot({ path: testInfo.outputPath("connected-models-small.png") });
