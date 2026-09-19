@@ -96,6 +96,7 @@ describe("read-only Windows accessibility supervisor", () => {
           TEMP: "C:\\Temp",
           TMP: "C:\\Temp",
           COMPUTERCAT_WINDOW_HANDLE: "123456",
+          PSModuleAnalysisCachePath: "NUL",
           COMPUTERCAT_OWNER_PID: String(process.pid),
           COMPUTERCAT_READ_MODE: "all",
         },

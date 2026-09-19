@@ -1,5 +1,8 @@
 # Owned, synthetic UI only. The native reader smoke test never enumerates the desktop.
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$PSModuleAutoLoadingPreference = 'None'
+Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1"
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore

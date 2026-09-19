@@ -25,7 +25,13 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
       shell: false,
       windowsHide: true,
       stdio: "pipe",
-      env: { SystemRoot: systemRoot, WINDIR: systemRoot },
+      env: {
+        SystemRoot: systemRoot,
+        WINDIR: systemRoot,
+        TEMP: process.env.TEMP,
+        TMP: process.env.TMP,
+        PSModuleAnalysisCachePath: "NUL",
+      },
     },
   );
   const closed = new Promise<void>((done) => child.once("close", () => done()));

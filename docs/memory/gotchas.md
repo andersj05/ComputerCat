@@ -170,3 +170,16 @@ proved this contract, pixel capture and cancellation. Keep physical device permi
 Evidence: [frame helper](../../src/main/desktop/source-capture.ts),
 [boundary tests](../../tests/unit/source-capture.test.ts) and
 [native test](../../tests/smoke/native-capture.spec.ts).
+
+## Keep accessibility helper module loading explicit
+
+Reviewed: 2026-09-19. Scope: Windows PowerShell 5.1 accessibility helper.
+
+Cold hosted Windows runs exposed fixture startup and first-read timeouts. The fixed
+[reader](../../src/main/desktop/windows-reader.ts) disables module auto-loading and imports
+only the built-in Utility module by its PSHOME path. Its child environment disables the
+per-user module analysis cache with PSModuleAnalysisCachePath=NUL; the eight-second read
+deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader.spec.ts)
+uses the same initialization and supplies TEMP/TMP for its C# compilation.
+The native fixture passes locally; hosted timing is still an environment-dependent check.
+See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).

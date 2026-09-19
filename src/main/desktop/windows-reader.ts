@@ -20,6 +20,8 @@ const LIMITS = {
 const READ_WINDOW_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+$PSModuleAutoLoadingPreference = 'None'
+Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1"
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $result = @{ title = ''; app = ''; text = ''; selectedText = ''; tabs = @(); truncated = $false }
 $identity = @{}
@@ -275,6 +277,8 @@ export class WindowsReader {
       if (value) env[key] = value;
     }
     env.COMPUTERCAT_WINDOW_HANDLE = nativeWindowId ?? "";
+    // This fixed helper needs no discovery or per-user module analysis cache.
+    env.PSModuleAnalysisCachePath = "NUL";
     env.COMPUTERCAT_OWNER_PID = String(process.pid);
     env.COMPUTERCAT_READ_MODE = mode;
 
