@@ -48,7 +48,7 @@ $lifetime = [Diagnostics.Stopwatch]::StartNew()
 $timer = New-Object System.Windows.Threading.DispatcherTimer
 $timer.Interval = [TimeSpan]::FromMilliseconds(50)
 $timer.Add_Tick({
-  if ($lifetime.ElapsedMilliseconds -ge 20000) { $timer.Stop(); $form.Close(); return }
+  if ($lifetime.ElapsedMilliseconds -ge 60000) { $timer.Stop(); $form.Close(); return }
   $command = [FixtureInput]::Next()
   if ($null -eq $command) { return }
   if ($command -eq 'quit') { $timer.Stop(); $form.Close(); return }

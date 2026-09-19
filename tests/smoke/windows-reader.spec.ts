@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import { WindowsReader } from "../../src/main/desktop/windows-reader";
 
 test("native accessibility reads only an owned fixture, excludes passwords, and preserves selection", async () => {
+  test.setTimeout(90_000);
   test.skip(process.platform !== "win32", "Windows UI Automation requires a Windows desktop.");
   const systemRoot = process.env.SystemRoot ?? process.env.WINDIR;
   if (!systemRoot) throw new Error("The Windows runtime directory is unavailable.");
@@ -36,29 +37,41 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
   });
   // A failure can occur while UI Automation is reading, between nextLine calls.
   void failed.catch(() => {});
-  child.stderr.resume();
+  let diagnostics = "";
+  child.stderr.on("data", (chunk: Buffer) => {
+    diagnostics = `${diagnostics}${chunk.toString("utf8")}`.slice(-4_096);
+  });
   // Every HWND comes directly from this generated test window. No desktop scan,
   // screenshot, other application inspection, credentials, or model call occurs.
   const lines = createInterface({ input: child.stdout });
   const iterator = lines[Symbol.asyncIterator]();
-  async function nextLine(): Promise<string> {
+  async function nextLine(phase: string, timeoutMs = 8_000): Promise<string> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const line = await Promise.race([
         iterator.next(),
         failed,
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("The synthetic UI fixture timed out.")), 8_000);
+          timer = setTimeout(
+            () =>
+              reject(
+                new Error(`The synthetic UI fixture timed out during ${phase}. ${diagnostics}`),
+              ),
+            timeoutMs,
+          );
         }),
       ]);
-      if (line.done) throw new Error("The synthetic UI fixture exited unexpectedly.");
+      if (line.done)
+        throw new Error(`The synthetic UI fixture exited during ${phase}. ${diagnostics}`);
       return line.value;
     } finally {
       clearTimeout(timer);
     }
   }
   try {
-    const ready = await nextLine();
+    // Cold hosted runners initialize WPF and compile the fixture's C# input pump.
+    // This startup allowance does not change the real reader's eight-second deadline.
+    const ready = await nextLine("startup", 30_000);
     const handle = /^ready:([1-9]\d*)$/.exec(ready)?.[1];
     expect(handle).toBeTruthy();
     if (!handle) throw new Error("The synthetic UI fixture did not supply its window handle.");
@@ -113,9 +126,9 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
     expect(tabs.text).toBe("");
     expect(tabs.selectedText).toBe("");
     child.stdin.write("status\n");
-    expect(await nextLine()).toBe("status:2:10");
+    expect(await nextLine("selection status")).toBe("status:2:10");
     child.stdin.write("select-spaces\n");
-    expect(await nextLine()).toBe("selection-ready");
+    expect(await nextLine("whitespace selection")).toBe("selection-ready");
     expect(
       (await new WindowsReader().inspectWindow(handle, new AbortController().signal, "selection"))
         .selectedText,
