@@ -8,6 +8,7 @@ import {
 } from "../../shared/contracts";
 import { activeModelInfo } from "../../shared/models";
 import { voiceMessages } from "../../shared/voice";
+import { DesktopSharingButton, DesktopSharingDialog, useDesktopSharing } from "./DesktopSharing";
 import { HistoryDialog } from "./HistoryDialog";
 import { Icon } from "./Icon";
 import { MarkdownMessage } from "./MarkdownMessage";
@@ -26,6 +27,8 @@ const prompts = [
 
 export function App() {
   const isPet = new URLSearchParams(window.location.search).get("view") === "pet";
+  const sharing = useDesktopSharing();
+  const [sharingOpen, setSharingOpen] = useState(false);
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
   const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
@@ -87,6 +90,7 @@ export function App() {
     let latestModels: AppInfo["models"] | undefined;
     const unsubscribeOptions = window.computerCat.onOptionsRequested((tab) => {
       if (!isPet) {
+        setSharingOpen(false);
         setOptionsTab(tab ?? "cat");
         setModelsOpen(false);
         setHistoryOpen(false);
@@ -95,9 +99,19 @@ export function App() {
     });
     const unsubscribeModelPicker = window.computerCat.onModelsRequested(() => {
       if (!isPet) {
+        setSharingOpen(false);
         setHistoryOpen(false);
         setOptionsOpen(false);
         setModelsOpen(true);
+      }
+    });
+    const unsubscribeSharing = window.computerCat.onDesktopSharingRequested(() => {
+      if (!isPet) {
+        setOptionsOpen(false);
+        setHistoryOpen(false);
+        setModelsOpen(false);
+        setConfirmClear(false);
+        setSharingOpen(true);
       }
     });
     const unsubscribeModels = window.computerCat.onModelsChanged((state) => {
@@ -141,6 +155,7 @@ export function App() {
       unsubscribeModels();
       unsubscribeOptions();
       unsubscribeModelPicker();
+      unsubscribeSharing();
     };
   }, [isPet]);
 
@@ -156,9 +171,10 @@ export function App() {
       cancelClear.current?.focus();
     } else {
       dialog.current?.close();
-      if (!isPet && !optionsOpen && !modelsOpen && !historyOpen) input.current?.focus();
+      if (!isPet && !optionsOpen && !modelsOpen && !historyOpen && !sharingOpen)
+        input.current?.focus();
     }
-  }, [confirmClear, optionsOpen, modelsOpen, historyOpen, isPet]);
+  }, [confirmClear, optionsOpen, modelsOpen, historyOpen, sharingOpen, isPet]);
 
   async function action(run: () => Promise<void>, failure: string) {
     try {
@@ -170,12 +186,20 @@ export function App() {
 
   useEffect(() => {
     if (
-      (optionsOpen || historyOpen || modelsOpen || confirmClear) &&
+      (optionsOpen || historyOpen || modelsOpen || confirmClear || sharingOpen) &&
       voice.snapshot.sessionId &&
       voice.busy
     )
       void window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
-  }, [optionsOpen, historyOpen, modelsOpen, confirmClear, voice.busy, voice.snapshot.sessionId]);
+  }, [
+    optionsOpen,
+    historyOpen,
+    modelsOpen,
+    confirmClear,
+    sharingOpen,
+    voice.busy,
+    voice.snapshot.sessionId,
+  ]);
 
   async function send() {
     if (voice.busy) return;
@@ -249,6 +273,13 @@ export function App() {
         snapshot={snapshot}
         preferences={preferences}
         error={error}
+        sharing={sharing}
+        openSharing={() =>
+          void action(
+            () => window.computerCat.desktopOpenSharing(),
+            "Couldn't open screen sharing.",
+          )
+        }
         openChat={() => void action(() => window.computerCat.openChat(), "Couldn't open chat.")}
         openOptions={() =>
           void action(() => window.computerCat.openOptions(), "Couldn't open Options.")
@@ -449,6 +480,19 @@ export function App() {
           )}
           <div ref={end} />
         </section>
+        <div className="desktop-sharing-controls">
+          <DesktopSharingButton sharing={sharing} onOpen={() => setSharingOpen(true)} />
+          {sharing.state.enabled && (
+            <span role="status" title={sharing.state.lastAction}>
+              {sharing.state.busy ? "Reading screen…" : "Screen sharing on"}
+            </span>
+          )}
+          {sharing.error && !sharingOpen && (
+            <span className="connection-error" role="alert">
+              {sharing.error}
+            </span>
+          )}
+        </div>
         <VoiceControls
           state={voice.snapshot}
           busy={voice.busy}
@@ -578,6 +622,9 @@ export function App() {
             setOptionsOpen(true);
           }}
         />
+      )}
+      {sharingOpen && (
+        <DesktopSharingDialog sharing={sharing} onClose={() => setSharingOpen(false)} />
       )}
       <dialog
         className="xp-dialog clear-dialog"

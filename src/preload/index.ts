@@ -5,9 +5,23 @@ import {
   IPC,
   type PetPreferences,
 } from "../shared/contracts";
+import type { DesktopState } from "../shared/desktop";
 import type { ModelState } from "../shared/models";
 
 const api: ComputerCatAPI = {
+  desktopSnapshot: () => ipcRenderer.invoke(IPC.desktopSnapshot),
+  desktopSetEnabled: (request) => ipcRenderer.invoke(IPC.desktopSetEnabled, request),
+  desktopOpenSharing: () => ipcRenderer.invoke(IPC.desktopOpenSharing),
+  onDesktopSharingRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.desktopSharingRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.desktopSharingRequested, receive);
+  },
+  onDesktopChanged: (listener) => {
+    const receive = (_event: Electron.IpcRendererEvent, state: DesktopState) => listener(state);
+    ipcRenderer.on(IPC.desktopChanged, receive);
+    return () => ipcRenderer.removeListener(IPC.desktopChanged, receive);
+  },
   voiceSnapshot: () => ipcRenderer.invoke(IPC.voiceSnapshot),
   voiceStart: () => ipcRenderer.invoke(IPC.voiceStart),
   voiceCaptureStarted: (request) => ipcRenderer.invoke(IPC.voiceCaptureStarted, request),

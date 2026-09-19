@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
 import { type VoiceSnapshot, voiceMessages } from "../../shared/voice";
+import { type DesktopSharing, DesktopSharingButton } from "./DesktopSharing";
 import { PetArtwork } from "./PetArtwork";
 import { PET_ACTIVITIES } from "./pet-activity";
 import { usePetActivity } from "./usePetActivity";
@@ -19,6 +20,8 @@ export function Pet({
   hasDraft,
   voiceBusy,
   voicePanel,
+  sharing,
+  openSharing,
 }: {
   snapshot: ChatSnapshot;
   preferences: PetPreferences;
@@ -33,6 +36,8 @@ export function Pet({
   hasDraft: boolean;
   voiceBusy: boolean;
   voicePanel?: ReactNode;
+  sharing: DesktopSharing;
+  openSharing: () => void;
 }) {
   const [controlsVisible, setControlsVisible] = useState(false);
   const [hidden, setHidden] = useState(document.hidden);
@@ -63,11 +68,16 @@ export function Pet({
     }
   }
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
-  const activity = usePetActivity(snapshot, voice, error || dragError, hasDraft);
-  const status = activity === "idle" ? "" : PET_ACTIVITIES[activity].label;
+  const activity = usePetActivity(snapshot, voice, error || dragError || sharing.error, hasDraft);
+  const status = sharing.state.busy
+    ? "Reading screen…"
+    : activity === "idle"
+      ? ""
+      : PET_ACTIVITIES[activity].label;
   const detail =
     error ||
     dragError ||
+    sharing.error ||
     snapshot.persistenceError ||
     (voice.error ? voiceMessages[voice.error] : "") ||
     (lastReply?.state === "error" ? "Reply interrupted. Open chat to try again." : "");
@@ -188,16 +198,23 @@ export function Pet({
           </button>
         )}
       </div>
-      <button
-        type="button"
-        className="xp-button pet-model"
-        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
-        onClick={() => act(openModels)}
-        aria-label="Choose model"
-        title={`Change model: ${modelLabel}`}
-      >
-        {modelLabel} ▾
-      </button>
+      <div className="pet-footer">
+        <button
+          type="button"
+          className="xp-button pet-model"
+          style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+          onClick={() => act(openModels)}
+          aria-label="Choose model"
+          title={`Change model: ${modelLabel}`}
+        >
+          {modelLabel} ▾
+        </button>
+        <span
+          style={{ visibility: controlsVisible || sharing.state.enabled ? "visible" : "hidden" }}
+        >
+          <DesktopSharingButton sharing={sharing} onOpen={() => act(openSharing)} />
+        </span>
+      </div>
     </main>
   );
 }
