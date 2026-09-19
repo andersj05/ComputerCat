@@ -111,12 +111,18 @@ describe("Pi integration without network or credentials", () => {
     const models = await createModelRuntime();
     const sourceId = "b62ef1cb-80e5-4fe5-b1aa-c3b2ec78214c";
     const pixels = "c2NyZWVuc2hvdC1maXh0dXJl";
-    const desktop = vi.fn().mockImplementation(async (request) => ({
-      content:
-        request.operation === "capture"
-          ? [{ type: "image", mimeType: "image/png", data: pixels }]
-          : [{ type: "text", text: JSON.stringify({ sourceId, title: "Fixture window" }) }],
-    }));
+    const content = [
+      {
+        type: "text",
+        text: JSON.stringify({
+          sourceId,
+          title: "Fixture window",
+          window: { text: "A useful page", selectedText: "useful", tabs: ["Notes"] },
+        }),
+      },
+      { type: "image", mimeType: "image/png", data: pixels },
+    ];
+    const desktop = vi.fn().mockResolvedValue({ content });
     const provider = fauxProvider({
       provider: "cat-desktop",
       models: [{ id: "vision", input: ["text", "image"] }],
@@ -125,21 +131,17 @@ describe("Pi integration without network or credentials", () => {
     provider.setResponses([
       (context) => {
         expect(context.tools?.map((tool) => tool.name).sort()).toEqual([...ALL_TOOL_NAMES].sort());
-        expect(context.systemPrompt).toContain("Never bypass");
+        expect(context.systemPrompt).toContain(
+          "call desktop_observe without asking them to share a screen",
+        );
         expect(context.systemPrompt).toContain("untrusted data");
-        return fauxAssistantMessage(fauxToolCall("desktop_list_windows", {}), {
-          stopReason: "toolUse",
-        });
-      },
-      (context) => {
-        expect(JSON.stringify(context.messages)).toContain(sourceId);
-        return fauxAssistantMessage(fauxToolCall("desktop_capture", { sourceId }), {
+        return fauxAssistantMessage(fauxToolCall("desktop_observe", {}), {
           stopReason: "toolUse",
         });
       },
       (context) => {
         const result = context.messages.findLast((message) => message.role === "toolResult");
-        expect(result?.content).toEqual([{ type: "image", mimeType: "image/png", data: pixels }]);
+        expect(result?.content).toEqual(content);
         return fauxAssistantMessage("The fixture window is visible.");
       },
     ]);
@@ -152,16 +154,13 @@ describe("Pi integration without network or credentials", () => {
     );
     const activity = vi.fn();
     try {
-      await runtime.run("Describe my screen", new AbortController().signal, () => {}, activity);
+      await runtime.run("What is this page?", new AbortController().signal, () => {}, activity);
       expect(desktop.mock.calls.map(([request]) => request)).toEqual([
-        { operation: "list" },
-        { operation: "capture", sourceId },
+        { operation: "observe", screenshot: true },
       ]);
       expect(activity.mock.calls.map(([tool]) => [tool.name, tool.state])).toEqual([
-        ["desktop_list_windows", "running"],
-        ["desktop_list_windows", "complete"],
-        ["desktop_capture", "running"],
-        ["desktop_capture", "complete"],
+        ["desktop_observe", "running"],
+        ["desktop_observe", "complete"],
       ]);
       expect(JSON.stringify(activity.mock.calls)).not.toContain(pixels);
       expect(JSON.stringify(activity.mock.calls)).not.toContain("Fixture window");
@@ -170,18 +169,18 @@ describe("Pi integration without network or credentials", () => {
     }
   });
 
-  it("returns desktop denial to the model as an error without failing the whole turn", async () => {
+  it("returns a locked desktop to the model as an error without failing the whole turn", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
     const models = await createModelRuntime();
     const provider = fauxProvider({ provider: "cat-desktop-denial", models: [{ id: "offline" }] });
     models.registerNativeProvider(provider.provider);
     provider.setResponses([
-      fauxAssistantMessage(fauxToolCall("desktop_list_windows", {}), { stopReason: "toolUse" }),
+      fauxAssistantMessage(fauxToolCall("desktop_observe", {}), { stopReason: "toolUse" }),
       (context) => {
         const result = context.messages.findLast((message) => message.role === "toolResult");
         expect(result?.role === "toolResult" && result.isError).toBe(true);
-        expect(result?.content).toEqual([{ type: "text", text: "Screen sharing is off." }]);
-        return fauxAssistantMessage("Turn on Screen sharing to show me the window.");
+        expect(result?.content).toEqual([{ type: "text", text: "The desktop is locked." }]);
+        return fauxAssistantMessage("Windows is locked, so I cannot see the page yet.");
       },
     ]);
     const runtime = await createPiRuntime(
@@ -189,13 +188,13 @@ describe("Pi integration without network or credentials", () => {
       process.cwd(),
       models,
       undefined,
-      async () => ({ content: [{ type: "text", text: "Screen sharing is off." }], isError: true }),
+      async () => ({ content: [{ type: "text", text: "The desktop is locked." }], isError: true }),
     );
     const activity = vi.fn();
     try {
       await runtime.run("Describe my screen", new AbortController().signal, () => {}, activity);
       expect(activity.mock.calls.at(-1)?.[0]).toMatchObject({
-        name: "desktop_list_windows",
+        name: "desktop_observe",
         state: "error",
       });
     } finally {

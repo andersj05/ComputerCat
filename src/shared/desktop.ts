@@ -2,6 +2,11 @@ import { z } from "zod";
 
 // Native IDs are kept behind expiring, opaque source IDs issued by the broker.
 export const desktopRequestSchema = z.discriminatedUnion("operation", [
+  z.strictObject({
+    operation: z.literal("observe"),
+    sourceId: z.uuid().optional(),
+    screenshot: z.boolean(),
+  }),
   z.strictObject({ operation: z.literal("list") }),
   z.strictObject({ operation: z.literal("capture"), sourceId: z.uuid() }),
   z.strictObject({ operation: z.literal("read"), sourceId: z.uuid() }),
@@ -31,14 +36,6 @@ export type DesktopExecutor = (
   request: DesktopRequest,
   signal: AbortSignal,
 ) => Promise<DesktopResult>;
-export const desktopEnabledSchema = z.strictObject({ enabled: z.boolean() });
-export interface DesktopState {
-  revision: number;
-  enabled: boolean;
-  busy: boolean;
-  lastAction?: string;
-  error?: string;
-}
 export interface DesktopWindowText {
   title: string;
   app: string;

@@ -15,17 +15,58 @@ const LIMITS = {
 } as const;
 
 // This is fixed application code, never generated from a prompt or page. The only
-// input is a validated HWND passed as data in the child's private environment.
+// input is a validated HWND or current-window mode in the child's private environment.
 // Use a separate MTA process: providers can block, including when reading our UI.
 const READ_WINDOW_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $result = @{ title = ''; app = ''; text = ''; selectedText = ''; tabs = @(); truncated = $false }
+$identity = @{}
 try {
   Add-Type -AssemblyName UIAutomationClient
   Add-Type -AssemblyName UIAutomationTypes
-  $handleValue = [Int64]::Parse($env:COMPUTERCAT_WINDOW_HANDLE, [Globalization.CultureInfo]::InvariantCulture)
+  if ($env:COMPUTERCAT_WINDOW_HANDLE) {
+    $handleValue = [Int64]::Parse($env:COMPUTERCAT_WINDOW_HANDLE, [Globalization.CultureInfo]::InvariantCulture)
+  } else {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class CatWindowTarget {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr hwnd, uint command);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hwnd);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowTextLength(IntPtr hwnd);
+  [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hwnd, uint attribute, out int value, int size);
+}
+'@
+    $candidate = [CatWindowTarget]::GetForegroundWindow()
+    $target = 'foreground'
+    $visited = New-Object 'System.Collections.Generic.HashSet[long]'
+    $handleValue = 0L
+    for ($attempt = 0; $attempt -lt 200 -and $candidate -ne [IntPtr]::Zero; $attempt++) {
+      if (-not $visited.Add($candidate.ToInt64())) { break }
+      [uint32]$windowProcess = 0
+      [void][CatWindowTarget]::GetWindowThreadProcessId($candidate, [ref]$windowProcess)
+      [int]$cloaked = 0
+      [void][CatWindowTarget]::DwmGetWindowAttribute($candidate, 14, [ref]$cloaked, 4)
+      if ($windowProcess -ne [uint32]$env:COMPUTERCAT_OWNER_PID -and
+          [CatWindowTarget]::IsWindowVisible($candidate) -and
+          -not [CatWindowTarget]::IsIconic($candidate) -and $cloaked -eq 0 -and
+          [CatWindowTarget]::GetWindowTextLength($candidate) -gt 0) {
+        $handleValue = $candidate.ToInt64()
+        break
+      }
+      # Only infer the underlying app when Computer Cat itself has the foreground.
+      if ($attempt -eq 0 -and $windowProcess -ne [uint32]$env:COMPUTERCAT_OWNER_PID) { break }
+      $target = 'behind-assistant'
+      $candidate = [CatWindowTarget]::GetWindow($candidate, 2)
+    }
+    if ($handleValue -le 0) { throw 'unavailable' }
+    $identity = @{ nativeWindowId = $handleValue.ToString([Globalization.CultureInfo]::InvariantCulture); target = $target }
+  }
   $root = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]::new($handleValue))
   if ($null -eq $root) { throw 'unavailable' }
   $rootInfo = $root.Current
@@ -122,6 +163,7 @@ try {
 } catch {
   $result = @{ title = ''; app = ''; text = ''; selectedText = ''; tabs = @(); truncated = $false; unavailableReason = 'window-unavailable' }
 }
+foreach ($key in $identity.Keys) { $result[$key] = $identity[$key] }
 [Console]::Out.Write(($result | ConvertTo-Json -Compress -Depth 4))
 `;
 
@@ -134,6 +176,11 @@ const outputSchema = z
     tabs: z.array(z.string().max(LIMITS.tabTitle)).max(LIMITS.tabs),
     truncated: z.boolean(),
     unavailableReason: z.literal("window-unavailable").optional(),
+    nativeWindowId: z
+      .string()
+      .regex(/^[1-9]\d{0,18}$/)
+      .optional(),
+    target: z.enum(["foreground", "behind-assistant"]).optional(),
   })
   .strict();
 
@@ -151,6 +198,11 @@ function unavailable(reason: string): DesktopWindowText {
 
 function cancelled(): DOMException {
   return new DOMException("Desktop reading was cancelled.", "AbortError");
+}
+
+export interface CurrentWindowInspection extends DesktopWindowText {
+  nativeWindowId?: string;
+  target?: "foreground" | "behind-assistant";
 }
 
 interface ReaderOptions {
@@ -186,6 +238,18 @@ export class WindowsReader {
     ) {
       return unavailable("The selected window is no longer available. Choose it again.");
     }
+    return this.inspect(nativeWindowId, signal);
+  }
+
+  inspectCurrentWindow(signal: AbortSignal): Promise<CurrentWindowInspection> {
+    return this.inspect(undefined, signal);
+  }
+
+  private async inspect(
+    nativeWindowId: string | undefined,
+    signal: AbortSignal,
+  ): Promise<CurrentWindowInspection> {
+    if (signal.aborted) throw cancelled();
     if (this.platform !== "win32") {
       return unavailable("Reading application text is currently available on Windows only.");
     }
@@ -198,7 +262,7 @@ export class WindowsReader {
       const value = this.environment[key];
       if (value) env[key] = value;
     }
-    env.COMPUTERCAT_WINDOW_HANDLE = nativeWindowId;
+    env.COMPUTERCAT_WINDOW_HANDLE = nativeWindowId ?? "";
     env.COMPUTERCAT_OWNER_PID = String(process.pid);
 
     let child: ChildProcessWithoutNullStreams;
@@ -219,11 +283,11 @@ export class WindowsReader {
       return unavailable("Windows accessibility reading could not start. Try again.");
     }
 
-    return new Promise<DesktopWindowText>((resolve, reject) => {
+    return new Promise<CurrentWindowInspection>((resolve, reject) => {
       let done = false;
       let bytes = 0;
       const chunks: Buffer[] = [];
-      const finish = (result: DesktopWindowText | DOMException, kill = false) => {
+      const finish = (result: CurrentWindowInspection | DOMException, kill = false) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
@@ -278,18 +342,21 @@ export class WindowsReader {
         }
         try {
           const parsed = outputSchema.parse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-          finish(
-            parsed.unavailableReason
-              ? unavailable("This window does not expose readable accessibility content.")
-              : {
-                  title: parsed.title,
-                  app: parsed.app,
-                  text: parsed.text,
-                  selectedText: parsed.selectedText,
-                  tabs: parsed.tabs,
-                  truncated: parsed.truncated,
-                },
-          );
+          const text = parsed.unavailableReason
+            ? unavailable("This window does not expose readable accessibility content.")
+            : {
+                title: parsed.title,
+                app: parsed.app,
+                text: parsed.text,
+                selectedText: parsed.selectedText,
+                tabs: parsed.tabs,
+                truncated: parsed.truncated,
+              };
+          finish({
+            ...text,
+            ...(parsed.nativeWindowId ? { nativeWindowId: parsed.nativeWindowId } : {}),
+            ...(parsed.target ? { target: parsed.target } : {}),
+          });
         } catch {
           finish(unavailable("The application returned unreadable accessibility data."));
         }
@@ -308,4 +375,8 @@ export function inspectWindow(
   signal: AbortSignal,
 ): Promise<DesktopWindowText> {
   return new WindowsReader().inspectWindow(nativeWindowId, signal);
+}
+
+export function inspectCurrentWindow(signal: AbortSignal): Promise<CurrentWindowInspection> {
+  return new WindowsReader().inspectCurrentWindow(signal);
 }

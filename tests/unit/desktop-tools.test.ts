@@ -24,6 +24,23 @@ function invoke(tool: ToolDefinition | undefined, args = {}, signal?: AbortSigna
 afterEach(() => vi.useRealTimers());
 
 describe("desktop tools", () => {
+  it.each([
+    [true, {}, { operation: "observe", screenshot: true }],
+    [false, {}, { operation: "observe", screenshot: false }],
+    [true, { includeScreenshot: false }, { operation: "observe", screenshot: false }],
+    [true, { sourceId }, { operation: "observe", sourceId, screenshot: true }],
+  ])(
+    "observes current or named apps with image capability %s and options %j",
+    async (supportsImages, args, request) => {
+      const execute = vi.fn().mockResolvedValue(textResult);
+      const tool = createDesktopTools(execute, supportsImages).find(
+        (item) => item.name === "desktop_observe",
+      );
+      await invoke(tool, args);
+      expect(execute).toHaveBeenCalledWith(request, expect.any(AbortSignal));
+    },
+  );
+
   it("preserves model image blocks without copying observations into result details", async () => {
     const execute = vi.fn().mockResolvedValue(imageResult);
     const tools = createDesktopTools(execute, true);
@@ -66,7 +83,7 @@ describe("desktop tools", () => {
     const execute = vi
       .fn()
       .mockResolvedValueOnce({
-        content: [{ type: "text", text: "Screen sharing is off." }],
+        content: [{ type: "text", text: "The desktop is locked." }],
         isError: true,
       })
       .mockRejectedValueOnce(new Error("private-path-secret"))
@@ -74,7 +91,7 @@ describe("desktop tools", () => {
         content: [{ type: "image", data: "invalid@", mimeType: "image/png" }],
       });
     const tools = createDesktopTools(execute, true);
-    await expect(invoke(tools[0])).rejects.toThrow("Screen sharing is off.");
+    await expect(invoke(tools[0])).rejects.toThrow("The desktop is locked.");
     await expect(invoke(tools[0])).rejects.toThrow("The desktop observation failed.");
     await expect(invoke(tools[0])).rejects.toThrow("invalid response");
   });

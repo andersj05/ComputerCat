@@ -1,9 +1,20 @@
 import { BrowserWindow, desktopCapturer } from "electron";
 import type { DesktopWindowText } from "../../shared/desktop";
-import type { DesktopProvider, DesktopSource } from "./controller";
-import { inspectWindow } from "./windows-reader";
+import type { CurrentDesktopWindow, DesktopProvider, DesktopSource } from "./controller";
+import { inspectCurrentWindow, inspectWindow } from "./windows-reader";
 
 export class ElectronDesktopProvider implements DesktopProvider {
+  async current(signal: AbortSignal): Promise<CurrentDesktopWindow | undefined> {
+    const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal);
+    signal.throwIfAborted();
+    if (!nativeWindowId || !target) return undefined;
+    const source = (await this.list(signal)).find(
+      (item) =>
+        item.kind === "window" && /^window:(\d+):\d+$/.exec(item.id)?.[1] === nativeWindowId,
+    );
+    if (!source || (text.title && text.title !== source.name.slice(0, 512))) return undefined;
+    return { source, target, text };
+  }
   private isOwnWindow(id: string): boolean {
     const handle = /^window:(\d+):/.exec(id)?.[1];
     if (!handle) return false;

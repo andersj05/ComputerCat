@@ -179,21 +179,27 @@ Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/r
 
 ## D011: Make desktop context explicit, read-only and on demand
 
-Status: adopted and implemented, reviewed 2026-09-19.
+Status: superseded by D012 on 2026-09-19. The first implementation required a visible,
+memory-only sharing grant. The user explicitly rejected the Share screen workflow and
+requested agent-selected tools that act directly on screen questions.
 
-The user requested richer screen context in desktop conversations. Keep capture in main,
-with a visible sharing session, expiring source IDs, bounded private worker RPC and cancellable
-Windows UI Automation reads. Do not collect screenshots merely because voice or chat is active.
-Use Windows' existing accessibility providers without installing a browser extension or driver.
-This avoids a new privileged dependency and leaves app-specific gaps explicit.
+## D012: Let the agent choose desktop observations for user requests
 
-Observations, including screenshots, follow native Pi conversation persistence and are sent
-to the selected model. Disclose this in consent, keep grants memory-only and revoke them on
-context changes, lock/sleep and renderer restarts. UIA text excludes password controls;
-screenshots do not have automatic redaction. Input control needs a separate design.
-Existing file/shell tools retain OS privileges; this is not an OS sandbox.
+Status: adopted and implemented, reviewed 2026-09-19. Supersedes D011's sharing grant/UI.
 
-Evidence: [desktop design and verification](../desktop-context.md),
-[broker](../../src/main/desktop/controller.ts), [Pi tools](../../src/agent/desktop-tools.ts),
-[consent UI](../../src/renderer/src/DesktopSharing.tsx), and
-[native fixture](../../tests/smoke/windows-reader.spec.ts).
+Expose `desktop_observe` alongside window listing, capture and text reading. For “this page,”
+the harness finds the foreground app, or infers the app behind Computer Cat when the companion
+has focus. Return the target reason, text, selection, tabs and image together; keep useful
+partial results. Named windows use opaque IDs scoped to the current turn and sixty seconds.
+This makes screen context part of the agent's normal tool loop without a separate user gesture.
+Do not scan at startup or poll the desktop in the background.
+
+Keep bounded private worker RPC, Stop/cancellation, lock/sleep blocking, and read-only Windows
+accessibility. Unlock/resume restores availability automatically. The prompt treats desktop
+content as untrusted and forbids protected-surface workarounds. Images/text follow the existing
+model and local conversation retention policy. This is not an OS sandbox: file/shell tools
+retain user privileges. Input control and complete background browser access remain future work.
+
+Evidence: [desktop design](../desktop-context.md), [broker](../../src/main/desktop/controller.ts),
+[Pi tools](../../src/agent/desktop-tools.ts), [prompt](../../src/agent/runtime.ts), and
+[boundary tests](../../tests/unit/desktop-controller.test.ts).

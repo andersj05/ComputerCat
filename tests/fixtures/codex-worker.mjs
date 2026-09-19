@@ -27,11 +27,15 @@ globalThis.fetch = async (url, options) => {
     .map((part) => part.text ?? "")
     .join("\n");
   const readLine = userText.split("\n").find((line) => line.startsWith("read-fixture:"));
-  const latestUserText = (body.input.findLast((item) => item.role === "user")?.content ?? [])
-    .map((part) => part.text ?? "")
-    .join("\n");
-  const desktopCase = /^desktop-list-fixture:(denied|allowed)$/.exec(latestUserText)?.[1];
-  const desktopCallId = desktopCase ? `offline-desktop-${desktopCase}` : undefined;
+  // Image tool output may become a synthetic user message. Count only actual
+  // screen questions so a tool result keeps the same ID and later turns get new IDs.
+  const desktopQuestions = body.input
+    .filter((item) => item.role === "user")
+    .map((item) => (item.content ?? []).map((part) => part.text ?? "").join("\n"))
+    .filter((text) => /^What is this page\?/i.test(text));
+  const desktopCallId = desktopQuestions.length
+    ? `offline-desktop-${desktopQuestions.length}`
+    : undefined;
   const desktopResult = desktopCallId
     ? body.input.find(
         (item) => item.type === "function_call_output" && item.call_id === desktopCallId,
@@ -57,7 +61,7 @@ globalThis.fetch = async (url, options) => {
         id: "offline-tool-call",
         type: "function_call",
         call_id: needsRead ? "offline-read" : desktopCallId,
-        name: needsRead ? "read" : "desktop_list_windows",
+        name: needsRead ? "read" : "desktop_observe",
         arguments: needsRead
           ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
           : "{}",

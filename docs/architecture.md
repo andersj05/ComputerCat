@@ -1,8 +1,8 @@
 # Architecture
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
-a local demo mode that works without credentials. On-demand screen context requires an explicit
-sharing session. Mouse/keyboard control, external MCP servers and selected-fact user memory
+a local demo mode that works without credentials. The agent selects on-demand screen tools
+for relevant user requests. Mouse/keyboard control, external MCP servers and selected-fact user memory
 remain later features.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
@@ -107,7 +107,7 @@ leave the UI usable, and cancellation must not append output from an old turn to
 The user explicitly enabled the complete built-in Pi file and shell tool set on 2026-09-17.
 These tools have local user privileges, with no per-command approval broker. The system prompt
 requires authorization for otherwise unrequested destructive actions; it is not an OS sandbox.
-Desktop observation now uses the explicit sharing broker below. Future input-control and external
+Desktop observation now uses the on-demand broker below. Future input-control and external
 API tools need their own scope and authorization design.
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
@@ -115,12 +115,12 @@ permission design and tests for that new boundary.
 
 ## On-demand desktop context (reviewed 2026-09-19)
 
-The [sharing broker](../src/main/desktop/controller.ts) owns a memory-only grant and expiring
-opaque source IDs. Trusted renderers can request consent/status changes; they cannot request
+The [desktop broker](../src/main/desktop/controller.ts) makes read-only observations available
+to the agent during user turns, without a renderer sharing grant. Renderers cannot request
 pixels or generic native operations. Per-turn, correlated worker RPC validates desktop tool
-requests and responses. Main caps requests per turn and permits one OS observation at a time.
-Monotonic status revisions prevent delayed IPC acknowledgements from restoring a revoked grant in the UI.
-Stop, revocation, disposal and deadlines suppress late results. Non-cancellable Electron calls
+requests and responses. Opaque source IDs expire after sixty seconds, on a fresh listing, or
+when their owning turn ends. Main caps requests per turn and permits one OS observation at a time.
+Stop, context changes, disposal and deadlines suppress late results. Non-cancellable Electron calls
 retain their operation lock until settled, even after their result deadline.
 
 [Electron capture](../src/main/desktop/electron-provider.ts) lists sources without thumbnails
@@ -131,13 +131,15 @@ It does not focus, copy, click or change selection. Text, tab names and selectio
 application's accessibility provider; protected controls are excluded, but screenshots are not
 automatically redacted. The tool never falls back to clipboard or keyboard operations.
 
-The [Pi tools](../src/agent/desktop-tools.ts) preserve image content and reject screenshots for
-text-only models. Screen content is untrusted data. Native Pi session files persist observations,
-including images, under the existing per-conversation retention policy. The consent dialog
-discloses this. Renderer activity events contain only tool names/status, not observed content.
-The grant resets on chat/model changes, lock/sleep, renderer reload/crash and quit, and both
-windows expose Stop sharing. The existing shell tools remain unsandboxed; the screen broker
-is an application permission boundary, not a security boundary around the entire agent.
+The [Pi tools](../src/agent/desktop-tools.ts) include `desktop_observe`, which resolves the
+foreground external app, or infers the nearest visible app behind Computer Cat. Its result
+identifies that inference and combines accessible text with a screenshot, preserving either
+when the other fails. Named-window listing, reading and capture remain available. Text-only
+models automatically omit the screenshot from observation. Screen content is untrusted data.
+Native Pi session files persist observations, including images, under the existing per-chat
+retention policy. Renderer activity events contain only tool names/status, not observed content.
+Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.
+The existing shell tools remain unsandboxed; this is not a security boundary around the agent.
 See [desktop context](desktop-context.md) for usage, limitations and verification.
 
 ## Companion presentation and preferences

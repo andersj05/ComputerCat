@@ -1,10 +1,5 @@
 import type { VoiceAPI as importVoiceAPI } from "./voice";
 export const IPC = {
-  desktopSnapshot: "cat:desktop-snapshot",
-  desktopSetEnabled: "cat:desktop-set-enabled",
-  desktopChanged: "cat:desktop-changed",
-  desktopOpenSharing: "cat:desktop-open-sharing",
-  desktopSharingRequested: "cat:desktop-sharing-requested",
   voiceSnapshot: "cat:voiceSnapshot",
   voiceStart: "cat:voiceStart",
   voiceCaptureStarted: "cat:voiceCaptureStarted",
@@ -114,11 +109,6 @@ export const DEFAULT_PREFERENCES: PetPreferences = {
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
 export interface ComputerCatAPI extends importVoiceAPI {
-  desktopSnapshot(): Promise<import("./desktop").DesktopState>;
-  desktopOpenSharing(): Promise<void>;
-  onDesktopSharingRequested(listener: () => void): () => void;
-  desktopSetEnabled(request: unknown): Promise<import("./desktop").DesktopState>;
-  onDesktopChanged(listener: (state: import("./desktop").DesktopState) => void): () => void;
   info(): Promise<AppInfo>;
   snapshot(): Promise<ChatSnapshot>;
   send(request: SendRequest): Promise<ActionResult>;

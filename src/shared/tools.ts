@@ -10,6 +10,7 @@ export const PI_TOOL_NAMES = [
 ] as const;
 
 export const DESKTOP_TOOL_NAMES = [
+  "desktop_observe",
   "desktop_list_windows",
   "desktop_capture",
   "desktop_read_window",

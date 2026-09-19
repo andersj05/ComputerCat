@@ -11,8 +11,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   Options previews poses; disabled motion uses stills. Always-on-top recovers without focus;
   Find cat moves to the pointer display.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
-- Explicit [screen sharing](../desktop-context.md) supplies screenshots, windows, accessible text,
-  tabs and selection. Grants are session-only; app coverage varies.
+- Agent-selected [desktop tools](../desktop-context.md) observe the current app, screenshots,
+  windows, accessible text, tabs and selection on demand; app coverage varies. No sharing button.
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.

@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
 import { sendAndWaitForReply, showCatControls } from "./chat";
 
-async function launch(userData: string) {
+async function launch(userData: string, desktopFixture = false) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] => entry[1] !== undefined,
@@ -21,6 +21,7 @@ async function launch(userData: string) {
       COMPUTERCAT_MODEL: "offline-model",
       COMPUTERCAT_API_KEY: "test-only",
       COMPUTERCAT_SMOKE_TEST: "1",
+      COMPUTERCAT_DESKTOP_FIXTURE: desktopFixture ? "1" : "0",
       COMPUTERCAT_TEST_USER_DATA: userData,
     },
   });
@@ -211,6 +212,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
       "bash",
       "desktop_capture",
       "desktop_list_windows",
+      "desktop_observe",
       "desktop_read_window",
       "edit",
       "find",
@@ -319,13 +321,13 @@ test("a failed model save preserves the draft and current connection until retry
   }
 });
 
-test("the real Codex worker enforces desktop sharing before returning on-demand context", async () => {
+test("screen questions automatically observe through the real worker and recover after unlock", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
-  const { electron, page, pet } = await launch(userData);
+  const { electron, page, pet } = await launch(userData, true);
   try {
     await interceptCodex(electron);
-    // Production smoke mode has an empty provider. Fail the test if any real
+    // Smoke mode uses generated context. Fail the test if any real
     // enumeration/capture path is accidentally reached through the worker RPC.
     await electron.evaluate(({ desktopCapturer }) => {
       Reflect.set(globalThis, "desktopCaptureCalls", 0);
@@ -350,41 +352,58 @@ test("the real Codex worker enforces desktop sharing before returning on-demand 
     await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
     await page.getByRole("button", { name: "OK", exact: true }).click();
 
-    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
-    const denied = await sendAndWaitForReply(page, "desktop-list-fixture:denied");
-    await expect(denied).toContainText("Screen sharing is off.");
-    await expect(denied.getByRole("list", { name: "Tool activity" })).toContainText(
-      "desktop_list_windows · error",
-    );
-    expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
-
-    await page.getByRole("button", { name: "Share screen…" }).click();
-    await page
-      .getByRole("dialog", { name: "Share your screen" })
-      .getByRole("button", { name: "Start sharing", exact: true })
-      .click();
-    await expect(page.getByRole("dialog", { name: "Share your screen" })).toBeHidden();
-    await expect(pet.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible();
-    const allowed = await sendAndWaitForReply(page, "desktop-list-fixture:allowed");
-    await expect(allowed).toContainText('"sources":[]');
-    await expect(allowed).toContainText('"observedAt":');
+    await expect(page.getByRole("button", { name: /Share screen|Stop sharing/ })).toHaveCount(0);
+    await expect(pet.getByRole("button", { name: /Share screen|Stop sharing/ })).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        Object.keys(window.computerCat).filter((key) => /desktop|sharing/i.test(key)),
+      ),
+    ).toEqual([]);
+    const allowed = await sendAndWaitForReply(page, "What is this page?");
+    await expect(allowed).toContainText("Fixture help page");
+    await expect(allowed).toContainText("This help page explains saving a document.");
+    await expect(allowed).toContainText("Save your changes");
     await expect(allowed.getByRole("list", { name: "Tool activity" })).toContainText(
-      "desktop_list_windows · complete",
+      "desktop_observe · complete",
     );
-    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(true);
 
     const requests = await electron.evaluate(
       () => Reflect.get(globalThis, "offlineCodex").requests,
     );
-    expect(requests).toHaveLength(4);
-    const result = requests[3].input.find(
+    expect(requests).toHaveLength(2);
+    const result = requests[1].input.find(
       (item: { type: string; call_id?: string }) =>
-        item.type === "function_call_output" && item.call_id === "offline-desktop-allowed",
+        item.type === "function_call_output" && item.call_id === "offline-desktop-1",
     );
-    expect(JSON.parse(result.output)).toMatchObject({ sources: [], truncated: false });
+    const metadata =
+      typeof result.output === "string"
+        ? result.output
+        : result.output.find((part: { type: string; text?: string }) => part.type === "input_text")
+            ?.text;
+    expect(JSON.parse(metadata)).toMatchObject({
+      target: "behind-assistant",
+      title: "Fixture help page",
+      window: { selectedText: "Save your changes" },
+    });
+    expect(JSON.stringify(requests[1].input)).toContain("data:image/png;base64,");
+
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("lock-screen");
+    });
+    const locked = await sendAndWaitForReply(page, "What is this page? Check while locked.");
+    await expect(locked).toContainText("locked");
+    await expect(locked.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_observe · error",
+    );
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("unlock-screen");
+    });
+    const resumed = await sendAndWaitForReply(page, "What is this page? Check again.");
+    await expect(resumed).toContainText("This help page explains saving a document.");
+    await expect(resumed.getByRole("list", { name: "Tool activity" })).toContainText(
+      "desktop_observe · complete",
+    );
     expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
-    await pet.getByRole("button", { name: "Stop sharing", exact: true }).click();
-    expect((await page.evaluate(() => window.computerCat.desktopSnapshot())).enabled).toBe(false);
   } finally {
     await electron.close();
     await cleanup(userData);

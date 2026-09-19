@@ -29,12 +29,10 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 
 ## Controls and dialogs
 
-Screen sharing (reviewed 2026-09-19) uses a compact Share screen action in chat and beside the
-cat's model control. Cat consent opens in chat so its scope and retention copy remain readable.
-Start sharing is explicit; Cancel has initial focus. A green indicator and Stop sharing remain
-visible in both windows, including when cat controls hide. Never start capture from opening
-the consent dialog. See [sharing UI](../src/renderer/src/DesktopSharing.tsx) and
-[smoke coverage](../tests/smoke/desktop-context.spec.ts).
+Desktop context (reviewed 2026-09-19) is selected by the agent through tools when the user asks
+about the screen. There is no Share screen button or consent dialog. The existing tool activity
+and Stop controls communicate progress and cancellation in chat and on the cat. See
+[desktop context](desktop-context.md) and [worker smoke coverage](../tests/smoke/codex.spec.ts).
 
 Use the same blue caption, cream buttons, dotted keyboard focus, green checks, blue fieldset
 legends, and orange selected-tab edge throughout. Caption buttons perform native window

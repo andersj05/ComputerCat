@@ -1,11 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ sources: vi.fn(), windows: vi.fn(), inspect: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  sources: vi.fn(),
+  windows: vi.fn(),
+  inspect: vi.fn(),
+  current: vi.fn(),
+}));
 vi.mock("electron", () => ({
   desktopCapturer: { getSources: mocks.sources },
   BrowserWindow: { getAllWindows: mocks.windows },
 }));
-vi.mock("../../src/main/desktop/windows-reader", () => ({ inspectWindow: mocks.inspect }));
+vi.mock("../../src/main/desktop/windows-reader", () => ({
+  inspectWindow: mocks.inspect,
+  inspectCurrentWindow: mocks.current,
+}));
 
 import { ElectronDesktopProvider } from "../../src/main/desktop/electron-provider";
 
@@ -35,6 +43,57 @@ function setup() {
 afterEach(() => vi.resetAllMocks());
 
 describe("Electron desktop adapter", () => {
+  it("resolves the native current app to an opaque broker source without leaking its handle", async () => {
+    const { provider, abort } = setup();
+    mocks.current.mockResolvedValue({
+      ...(await mocks.inspect()),
+      nativeWindowId: "123",
+      target: "behind-assistant",
+    });
+    const result = await provider.current(abort.signal);
+    expect(result).toMatchObject({
+      source: fixture,
+      target: "behind-assistant",
+      text: { text: "text" },
+    });
+    expect(result?.text).not.toHaveProperty("nativeWindowId");
+    expect(mocks.current).toHaveBeenCalledWith(abort.signal);
+    expect(mocks.sources.mock.calls[0]?.[0].thumbnailSize).toEqual({ width: 0, height: 0 });
+  });
+
+  it.each(["closed", "renamed", "unknown"])(
+    "does not substitute another window when the current target is %s",
+    async (reason) => {
+      const { provider, abort } = setup();
+      mocks.current.mockResolvedValue({
+        ...(await mocks.inspect()),
+        nativeWindowId: reason === "closed" ? "999" : reason === "unknown" ? undefined : "123",
+        target: "foreground",
+        ...(reason === "renamed" ? { title: "New title" } : {}),
+      });
+      expect(await provider.current(abort.signal)).toBeUndefined();
+    },
+  );
+
+  it("keeps the current source available for capture when its text is inaccessible", async () => {
+    const { provider, abort } = setup();
+    mocks.current.mockResolvedValue({
+      title: "",
+      app: "",
+      text: "",
+      selectedText: "",
+      tabs: [],
+      truncated: false,
+      unavailableReason: "Unavailable",
+      nativeWindowId: "123",
+      target: "foreground",
+    });
+    expect(await provider.current(abort.signal)).toMatchObject({
+      source: fixture,
+      text: { unavailableReason: "Unavailable" },
+    });
+  });
+
   it("lists without pixels or icons and excludes our own native windows", async () => {
     const { provider, abort } = setup();
     const handle = Buffer.alloc(8);

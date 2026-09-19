@@ -46,6 +46,43 @@ function setup(platform: NodeJS.Platform = "win32") {
 afterEach(() => vi.useRealTimers());
 
 describe("read-only Windows accessibility supervisor", () => {
+  it.each(["foreground", "behind-assistant"] as const)(
+    "returns the current app identity with %s provenance",
+    async (target) => {
+      const { reader, launch, finish } = setup();
+      const result = reader.inspectCurrentWindow(new AbortController().signal);
+      expect(launch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({
+            COMPUTERCAT_WINDOW_HANDLE: "",
+            COMPUTERCAT_OWNER_PID: String(process.pid),
+          }),
+        }),
+      );
+      finish({ ...sample, nativeWindowId: "123", target });
+      await expect(result).resolves.toEqual({ ...sample, nativeWindowId: "123", target });
+    },
+  );
+
+  it("keeps validated current-window identity when its text cannot be read", async () => {
+    const { reader, finish } = setup();
+    const result = reader.inspectCurrentWindow(new AbortController().signal);
+    finish({
+      ...sample,
+      nativeWindowId: "123",
+      target: "foreground",
+      unavailableReason: "window-unavailable",
+    });
+    await expect(result).resolves.toMatchObject({
+      nativeWindowId: "123",
+      target: "foreground",
+      text: "",
+      unavailableReason: expect.stringContaining("does not expose"),
+    });
+  });
+
   it("starts a hidden, fixed Windows helper with only validated input and allowlisted environment", async () => {
     const { reader, launch, finish } = setup();
     const result = reader.inspectWindow("123456", new AbortController().signal);
@@ -165,6 +202,8 @@ describe("read-only Windows accessibility supervisor", () => {
     { ...sample, unavailableReason: "private-native-error" },
     { ...sample, extra: "private-data" },
     { ...sample, truncated: "yes" },
+    { ...sample, nativeWindowId: "123;command", target: "foreground" },
+    { ...sample, nativeWindowId: "123", target: "guessed" },
     { text: "only a fragment" },
     null,
   ])("sanitizes malformed or unbounded helper output %#", async (value) => {

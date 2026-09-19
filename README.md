@@ -53,17 +53,18 @@ That development context is separate from the app's conversation memory.
 
 ## Help with your screen
 
-Choose **Share screen…** from chat or the cat, review what will be shared, and choose
-**Start sharing**. Then ask a connected model something like “What does this error mean in
-my browser?” or “Summarize the text I selected in this document.” You can type or use Talk.
-The cat can list open windows, take a screenshot, and read accessible application text,
-exposed browser tab names, and selected text. Screenshots require a model that accepts images;
-the local demo never reads the desktop. No screenshots are taken simply by enabling sharing.
+Ask a connected model “What is this page?”, “What does this error mean?” or “Summarize the
+text I selected.” You can type or use Talk. The agent chooses desktop tools automatically;
+there is no Share screen button. It can identify the current app, combine a screenshot with
+accessible text, inspect named windows, and read exposed browser tabs and selected text.
+When the cat or chat has focus, the app behind it is used as a starting point.
 
-**Stop sharing** stays visible on the cat and in chat. Sharing also ends on a chat/model change,
-lock, sleep, renderer reload, or app exit. It starts off each time. Captured content can include
-private information; it goes to the selected model and remains in the chat's local model
-context until that conversation is deleted. Stopping sharing prevents new observations.
+Observations happen on tool calls during your request, not in a background screen feed.
+**Stop** cancels the reply and pending observations. Windows lock/sleep blocks observation;
+tools are available again after unlock/resume. Screenshots need an image-capable model;
+text-only models receive accessible text, and the local demo never reads the desktop.
+Captured content goes to the selected model and remains in the chat's local model context,
+including images, until that conversation is deleted.
 
 Text and tab support depends on the application's Windows accessibility provider. The cat
 does not have access to every browser tab's contents and cannot select text, click, or type
