@@ -155,7 +155,7 @@ clean-machine tests remain release gates.
 
 Consequences: native Windows build/distribution and sizeable model downloads become project
 responsibilities. Audio stays outside Pi and saved chat; sent text uses existing conversation
-retention. Speech output, screenshots and desktop control remain independent future scope.
+retention. Speech output and desktop control remain independent future scope; desktop observation is D011.
 No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
 [contracts](../implementation/whisper/contracts.md) and [delivery gates](../implementation/whisper/delivery.md).
 
@@ -176,3 +176,24 @@ or always-listening mode is introduced. CPU recognition latency remains model-de
 
 Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/renderer/src/voice/PetVoice.tsx),
 [boundary tests](../../tests/unit/voice-controller.test.ts) and [Electron checks](../../tests/smoke/voice.spec.ts).
+
+## D011: Make desktop context explicit, read-only and on demand
+
+Status: adopted and implemented, reviewed 2026-09-19.
+
+The user requested richer screen context in desktop conversations. Keep capture in main,
+with a visible sharing session, expiring source IDs, bounded private worker RPC and cancellable
+Windows UI Automation reads. Do not collect screenshots merely because voice or chat is active.
+Use Windows' existing accessibility providers without installing a browser extension or driver.
+This avoids a new privileged dependency and leaves app-specific gaps explicit.
+
+Observations, including screenshots, follow native Pi conversation persistence and are sent
+to the selected model. Disclose this in consent, keep grants memory-only and revoke them on
+context changes, lock/sleep and renderer restarts. UIA text excludes password controls;
+screenshots do not have automatic redaction. Input control needs a separate design.
+Existing file/shell tools retain OS privileges; this is not an OS sandbox.
+
+Evidence: [desktop design and verification](../desktop-context.md),
+[broker](../../src/main/desktop/controller.ts), [Pi tools](../../src/agent/desktop-tools.ts),
+[consent UI](../../src/renderer/src/DesktopSharing.tsx), and
+[native fixture](../../tests/smoke/windows-reader.spec.ts).

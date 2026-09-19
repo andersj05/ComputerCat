@@ -4,14 +4,15 @@ Reviewed: 2026-09-19. Recheck checkout and tests.
 
 ## What exists
 
-Computer Cat is a Windows-first Electron/React/TypeScript companion with a pinned Pi SDK.
-Use Node from
-[.node-version](../../.node-version) and exact dependencies in [package.json](../../package.json).
+Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
+[package.json](../../package.json) and [.node-version](../../.node-version).
 
 - The draggable cat has toggle controls, glow and eleven [activity poses](../cat-motion.md).
   Options previews poses; disabled motion uses stills. Always-on-top recovers without focus;
   Find cat moves to the pointer display.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
+- Explicit [screen sharing](../desktop-context.md) supplies screenshots, windows, accessible text,
+  tabs and selection. Grants are session-only; app coverage varies.
 - Default demo mode produces deterministic local replies without credentials or API calls.
   Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.
   History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
@@ -23,7 +24,6 @@ Use Node from
 - Project development memory lives in [this directory](README.md). Its entry points are shared
   across supported coding clients and checked by `npm run memory:check`.
 
-See [XP design](../windows-xp-design.md) and [desktop smoke tests](../../tests/smoke/desktop.spec.ts).
 [Codex smoke tests](../../tests/smoke/codex.spec.ts) use offline OAuth/model fixtures.
 
 ## Persistence boundaries
@@ -57,7 +57,7 @@ an OS sandbox. Developer memory is never loaded into the in-app agent. See
 
 ## Not implemented
 
-Screen capture, computer control, external MCP connections, selected-fact user memory, speech output,
+Computer control, external MCP connections, selected-fact user memory, speech output,
 credential settings for other providers, code signing, and automatic app updates remain
 future work. The [research plan](../research-and-build-plan.md) discusses these; it is not a
 completion checklist. A worker process isolates crashes but is not an OS security sandbox.

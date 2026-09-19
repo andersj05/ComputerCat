@@ -1,6 +1,6 @@
 # Desktop context
 
-Reviewed: 2026-09-19. Desktop observation design and implementation contract.
+Reviewed: 2026-09-19. Implemented for Windows; application accessibility coverage varies.
 
 Computer Cat's screen tools are read-only and on demand. The user starts a memory-only
 sharing session through **Share screen**. The grant covers open-window titles, screenshots
@@ -41,6 +41,31 @@ anything visible on the chosen surface. There is no automatic secret redaction.
 Windows are excluded from listing when they belong to Computer Cat, but a whole-display
 screenshot can include the cat or chat. Electron enumerates thumbnails for the selected source
 class during capture; only the chosen image leaves main. No background screenshot polling runs.
+
+## Verification
+
+Offline [broker](../tests/unit/desktop-controller.test.ts),
+[capture](../tests/unit/desktop-provider.test.ts),
+[worker](../tests/unit/worker-runtime.test.ts) and
+[tool](../tests/unit/desktop-tools.test.ts) tests cover denied grants, stale sources, invalid
+requests, image preservation, text-only models, timeouts, transport failure and late-result
+suppression. [Real Pi tests](../tests/unit/pi-runtime.test.ts) pass image blocks through the
+actual SDK loop without a paid provider.
+
+[Sharing smoke tests](../tests/smoke/desktop-context.spec.ts) exercise both Electron windows,
+consent, renderer trust, narrow layouts and lifecycle revocation with real desktop capture
+disabled. The [native Windows smoke](../tests/smoke/windows-reader.spec.ts) reads only a
+synthetic WPF fixture window and verifies title, text, selected text, tab names, password
+exclusion and unchanged selection. The [supervisor tests](../tests/unit/windows-reader.test.ts)
+cover malformed/oversized output, timeout, spawn failure and cancellation. Actual third-party
+browser/app coverage and live model answer quality are not established by these fixtures.
+
+The static helper uses Microsoft's read-only
+[GetSelection](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.textpattern.getselection),
+[GetVisibleRanges](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.textpattern.getvisibleranges)
+and [IsPassword](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.automationelementinformation.ispassword)
+APIs. A legacy WinForms RichTextBox fixture did not expose selection through TextPattern;
+the WPF fixture did. Missing selection is reported without a clipboard/input fallback.
 
 See the [broker](../src/main/desktop/controller.ts),
 [capture provider](../src/main/desktop/electron-provider.ts),

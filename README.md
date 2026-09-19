@@ -44,12 +44,30 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
   enabled voice keeps a **Voice options** link beside Talk.
 
-The initial foundation includes the companion UI and Pi conversation adapter. **Screen capture,
-computer control, external MCP connections, and long-term memory are not implemented yet.**
+The companion includes on-demand screen context for connected models. **Computer control,
+external MCP connections, and long-term user memory are not implemented yet.**
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Help with your screen
+
+Choose **Share screen…** from chat or the cat, review what will be shared, and choose
+**Start sharing**. Then ask a connected model something like “What does this error mean in
+my browser?” or “Summarize the text I selected in this document.” You can type or use Talk.
+The cat can list open windows, take a screenshot, and read accessible application text,
+exposed browser tab names, and selected text. Screenshots require a model that accepts images;
+the local demo never reads the desktop. No screenshots are taken simply by enabling sharing.
+
+**Stop sharing** stays visible on the cat and in chat. Sharing also ends on a chat/model change,
+lock, sleep, renderer reload, or app exit. It starts off each time. Captured content can include
+private information; it goes to the selected model and remains in the chat's local model
+context until that conversation is deleted. Stopping sharing prevents new observations.
+
+Text and tab support depends on the application's Windows accessibility provider. The cat
+does not have access to every browser tab's contents and cannot select text, click, or type
+through these tools. See [desktop context](docs/desktop-context.md) for limits and verification.
 
 ## Local voice input (Windows x64)
 
