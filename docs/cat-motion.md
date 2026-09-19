@@ -50,6 +50,8 @@ Overlapping shoulders, a small fur backing and a generous neck overlap avoid exp
 and head move. The boots never transform. Pixel props use the same warm outline palette.
 [Motion CSS](../src/renderer/src/pet-motion.css) owns each activity's static pose and animation.
 Activity changes retain the SVG instead of restarting the whole rig on every streamed token.
+The pet's grid column can shrink independently of its controls; compact small-size buttons
+keep Talk and Stop inside the window without widening or shifting the artwork.
 
 Options → Desktop cat previews every activity at the staged size and animation preference.
 The selector is local preview state, not a saved setting or command to the live cat. Selection

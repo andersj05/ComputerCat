@@ -75,6 +75,7 @@ export function Pet({
     <main
       className={`pet-wrap ${preferences.animation ? "animated" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
       data-motion-paused={hidden || dragging}
+      data-size={preferences.size}
       style={{
         position: "absolute",
         right: 0,

@@ -989,6 +989,7 @@ input:disabled {
 .pet-wrap {
   height: 100%;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 30px minmax(0, 1fr) 26px 23px;
   gap: 2px;
   padding: 3px 7px 5px;
@@ -1134,6 +1135,16 @@ input:disabled {
 }
 .pet-options {
   width: 24px;
+}
+:where(.pet-wrap[data-size="small"]) .pet-dock {
+  gap: 2px;
+}
+:where(.pet-wrap[data-size="small"]) .pet-dock .xp-button {
+  padding-inline: 3px;
+  font-size: 10px;
+}
+:where(.pet-wrap[data-size="small"]) .pet-options {
+  width: 20px;
 }
 .mic-icon {
   vertical-align: -2px;
