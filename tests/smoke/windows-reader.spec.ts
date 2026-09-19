@@ -70,6 +70,32 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
     expect(result.selectedText).toBe("violet cat");
     expect(result.tabs).toEqual(["Alpha fixture tab", "Beta fixture tab"]);
     expect(JSON.stringify(result)).not.toContain("fixture-password-never-report");
+    // Exercise the compiled foreground-selection code against this owned window.
+    // Substitute only its starting HWND: never inspect the user's actual foreground.
+    const currentReader = new WindowsReader({
+      launch: (command, args, options) => {
+        const encoded = args.at(-1);
+        if (!encoded) throw new Error("Missing helper code");
+        const code = Buffer.from(encoded, "base64").toString("utf16le");
+        const original = "$candidate = [CatWindowTarget]::GetForegroundWindow()";
+        if (!code.includes(original)) throw new Error("Unknown foreground fixture seam");
+        const fixtureCode = code.replace(original, `$candidate = [IntPtr]::new(${handle})`);
+        return spawn(
+          command,
+          [...args.slice(0, -1), Buffer.from(fixtureCode, "utf16le").toString("base64")],
+          { ...options, stdio: "pipe" },
+        );
+      },
+    });
+    const current = await currentReader.inspectCurrentWindow(new AbortController().signal);
+    expect(current).toMatchObject({
+      nativeWindowId: handle,
+      target: "foreground",
+      title: result.title,
+      selectedText: "violet cat",
+      tabs: result.tabs,
+    });
+    expect(current.unavailableReason).toBeUndefined();
     child.stdin.write("status\n");
     expect(await nextLine()).toBe("status:2:10");
   } finally {
