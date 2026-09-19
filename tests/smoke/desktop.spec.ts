@@ -398,6 +398,65 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
   }
 });
 
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("settings shortcuts preserve drafts and identify pending changes across tabs", async ({}, testInfo) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    const composer = page.getByRole("textbox", { name: "Message Computer Cat" });
+    const options = page.getByRole("dialog", { name: "Options", exact: true });
+    await composer.fill("Keep this draft while I set things up.");
+    await page.getByRole("button", { name: "Set up voice…", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("tabpanel", { name: "Voice", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Acceleration")).toBeHidden();
+    await page.getByLabel("Speech model", { exact: true }).selectOption("base.en");
+    await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+    await expect(page.getByRole("button", { name: "Download model", exact: true })).toBeEnabled();
+    await expect(page.locator(".settings-actions .save-status")).toContainText("Unsaved changes");
+    await expect(page.getByRole("tab", { name: "Voice", exact: true })).toHaveAccessibleDescription(
+      "Unsaved changes in this tab",
+    );
+    // Opening settings and changing the draft never starts capture or a download.
+    expect(
+      await page.evaluate(async () => {
+        const voice = await window.computerCat.voiceSnapshot();
+        return { phase: voice.phase, download: voice.download, model: voice.settings?.modelId };
+      }),
+    ).toEqual({ phase: "idle", download: undefined, model: "large-v3-turbo" });
+    await page.screenshot({ path: testInfo.outputPath("settings-voice-setup.png") });
+    await page.getByText("Microphone & performance", { exact: true }).click();
+    await expect(page.getByLabel("Acceleration")).toBeVisible();
+    await expect(page.getByLabel("Microphone", { exact: true })).toHaveValue("");
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    const preview = page.locator(".preview-surface .pet-art");
+    const mediumHeight = await preview.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    );
+    await page.getByRole("radio", { name: "Small", exact: true }).check();
+    expect(
+      await preview.evaluate((element) => element.getBoundingClientRect().height),
+    ).toBeLessThan(mediumHeight);
+    await expect(page.locator(".tab-dirty")).toHaveCount(2);
+    await options.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(composer).toBeFocused();
+    await expect(composer).toHaveValue("Keep this draft while I set things up.");
+    await page.getByRole("button", { name: "Models & sign-in…", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Models", exact: true })).toBeFocused();
+    await expect(options.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+    await expect(page.locator(".tab-dirty")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("settings-models.png") });
+    await page.keyboard.press("Escape");
+    await expect(composer).toBeFocused();
+    await expect(composer).toHaveValue("Keep this draft while I set things up.");
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
 test("Options stage, cancel, apply, and persist cat settings alongside saved chat", async () => {
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));

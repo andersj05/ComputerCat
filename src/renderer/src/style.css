@@ -678,8 +678,8 @@ textarea::placeholder {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  height: 174px;
-  padding: 12px 6px;
+  height: 160px;
+  padding: 6px;
   margin-bottom: 5px;
   border: 1px solid #aca899;
   box-shadow:
@@ -843,6 +843,13 @@ input:disabled {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid #dfded3;
+}
+.voice-option select {
+  width: 100%;
+  min-width: 0;
+  min-height: 23px;
+  border: 1px solid #7f9db9;
+  background: #fff;
 }
 .model-row select {
   min-width: 0;
@@ -1440,11 +1447,44 @@ input:focus-visible + span {
   gap: 8px;
   margin: 6px 0;
 }
+.voice-options fieldset {
+  padding: 8px 10px 10px;
+}
+.voice-advanced {
+  margin-top: 12px;
+}
+.voice-advanced summary {
+  padding: 3px 0;
+  color: #0046d5;
+}
+.voice-advanced fieldset {
+  margin-top: 8px;
+}
+summary:focus-visible,
+select:focus-visible,
+.options-dialog input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: 1px dotted #003c74;
+  outline-offset: 2px;
+}
+.download-progress {
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+  flex-direction: column;
+  gap: 5px;
+}
+.download-progress progress {
+  width: 100%;
+  accent-color: #259121;
+}
 .voice-assets {
   margin-top: 8px;
 }
 .voice-assets > .voice-install-status {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .voice-review {
   display: flex;

@@ -64,8 +64,11 @@ preference. Preserve transparent pixels around the desktop pet at every size.
 Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
 Finish recording and Cancel recording; a persistent Listening label appears on both chat
 and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
-Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Download/Remove are explicit
-immediate operations with size/progress. The panel scrolls within the existing property sheet.
+Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Speech-model selection and its
+explicit immediate Download/Remove actions come first, followed by enabling voice and language.
+Microphone and performance controls expand on demand. Downloads show model name and progress;
+a saved microphone remains selected even before devices are listed. The panel scrolls within
+the property sheet. Reviewed 2026-09-19 against [voice options](../src/renderer/src/voice/VoiceOptions.tsx).
 See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
 [smoke coverage](../tests/smoke/voice.spec.ts).
 

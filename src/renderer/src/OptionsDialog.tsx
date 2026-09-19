@@ -370,15 +370,11 @@ export function OptionsDialog({
                     />
                     <span>Animate cat</span>
                   </label>
-                  <p className="field-help">
-                    Keep your cat above other windows, or let it sit behind them.
-                  </p>
                 </fieldset>
               </div>
             </div>
             <p className="option-note">
-              Click your cat to show its controls. Drag it to move. Find cat brings it to the screen
-              under your pointer.
+              Click for controls. Drag to move. Find cat brings it to the screen under your pointer.
             </p>
           </div>
           <div
