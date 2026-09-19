@@ -31,13 +31,13 @@ legends, and orange selected-tab edge throughout. Caption buttons perform native
 operations through the typed preload bridge. Close hides chat while the desktop pet stays open.
 
 Options is an XP property sheet with Desktop cat, Models, Voice, and General tabs. Stage changes until Apply
-or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If saving fails,
-keep the dialog and draft open, show the error there, and leave the running cat unchanged.
+or OK. Cancel, Escape, and the dialog's close button discard unapplied changes. If a pet
+preference save fails, keep the draft open and the running cat unchanged.
 When saving several tabs, keep successful saves, identify them in the error, and focus the
 tab that failed. Its draft stays available for retry. Reviewed 2026-09-19 against
 [Options](../src/renderer/src/OptionsDialog.tsx) and [desktop coverage](../tests/smoke/desktop.spec.ts).
 Models uses native select controls for the default connection, model, and reasoning. Saving a
-default does not replace an existing conversation; New conversation applies it. Account sign-in
+default keeps existing messages and their model; new or empty chats use the new default. Account sign-in
 and Disconnect take effect immediately, separately from staged defaults. Closing Options cancels
 an unfinished sign-in. Authentication stays in the user's browser; the property sheet shows status,
 device codes, and an optional callback-URL fallback, never saved credentials.
