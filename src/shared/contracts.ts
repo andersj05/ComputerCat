@@ -20,6 +20,7 @@ export const IPC = {
   info: "cat:info",
   snapshot: "cat:snapshot",
   send: "cat:send",
+  copyReply: "cat:copy-reply",
   stop: "cat:stop",
   clear: "cat:clear",
   conversations: "cat:conversations",
@@ -29,6 +30,11 @@ export const IPC = {
   openModels: "cat:open-models",
   modelsRequested: "cat:models-requested",
   openChat: "cat:open-chat",
+  openHistory: "cat:open-history",
+  historyRequested: "cat:history-requested",
+  petExpanded: "cat:pet-expanded",
+  resizePetPanel: "cat:resize-pet-panel",
+  petTalkRequested: "cat:pet-talk-requested",
   openOptions: "cat:open-options",
   openHarnessGuide: "cat:open-harness-guide",
   optionsRequested: "cat:options-requested",
@@ -51,6 +57,12 @@ export const IPC = {
   codexCode: "cat:codex-code",
   codexDisconnect: "cat:codex-disconnect",
 } as const;
+
+export type PetResizeEdge = "top" | "left" | "top-left";
+export type PetResizeRequest =
+  | { phase: "start"; edge: PetResizeEdge }
+  | { phase: "move" | "end" | "cancel" }
+  | { phase: "step"; axis: "width" | "height"; delta: -40 | -10 | 10 | 40 };
 
 export interface SendRequest {
   id: string;
@@ -90,6 +102,7 @@ export interface AppInfo {
   configured: boolean;
   shortcut: string;
   stopShortcut: string;
+  talkShortcut?: string;
   preferences: PetPreferences;
   maximized: boolean;
   models: ModelState;
@@ -113,6 +126,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   info(): Promise<AppInfo>;
   snapshot(): Promise<ChatSnapshot>;
   send(request: SendRequest): Promise<ActionResult>;
+  copyReply(messageId: string): Promise<ActionResult>;
   stop(): Promise<void>;
   clear(): Promise<ActionResult>;
   conversations(): Promise<ConversationSummary[]>;
@@ -122,6 +136,11 @@ export interface ComputerCatAPI extends importVoiceAPI {
   openModels(): Promise<void>;
   onModelsRequested(listener: () => void): () => void;
   openChat(): Promise<void>;
+  openHistory(): Promise<void>;
+  onHistoryRequested(listener: () => void): () => void;
+  onPetTalkRequested(listener: () => void): () => void;
+  setPetExpanded(expanded: boolean): Promise<void>;
+  resizePetPanel(request: PetResizeRequest): Promise<void>;
   openOptions(tab?: "voice"): Promise<void>;
   openHarnessGuide(): Promise<ActionResult>;
   onOptionsRequested(listener: (tab?: "voice") => void): () => void;

@@ -8,18 +8,18 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 
 - One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,
   hero headings, or repeated brand introductions.
-- The toolbar contains New conversation, History, Options, and Desktop. A compact native
-  model/reasoning row below it changes the current chat without resetting its context.
+- In the full chat window, the toolbar contains New conversation, History, Options and Desktop.
+  A compact model/reasoning row below it changes the current chat without resetting its context.
 - Two plain starter links prepare editable drafts. They do not send anything automatically.
 - Speaker names and text form a plain chat log. Streaming appears in the status bar; Stop stays
   next to the message box and is also available from the cat.
-- One status bar reports activity and the current mode. Put details in Options instead of
+- The full chat window's status bar reports activity and the current mode. Put details in Options instead of
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
-- The desktop shows only the cat until clicked. Clicking toggles a silhouette glow and reveals
-  Chat, Talk, Options, Stop during replies or recording, and the model selector. Escape, window blur, or choosing
-  an action hides the controls. Drag the body to move it; there is no separate grip.
-  Keep the artwork size and position stable when controls appear.
+- With the panel closed, Talk, Chat and Options sit beside the cat; Stop replaces Talk during work.
+  Chat opens the desktop conversation panel without a microphone; the dock then hides.
+  Clicking the cat while the panel is closed toggles its model shortcut; Escape and blur hide it. Drag the body
+  to move it, retaining an open panel and the artwork size. Reviewed 2026-09-19.
 - Animate the original artwork with planted boots, articulated paws, expressive head movement,
   blinks and an occasional wink. Use distinct poses and small pixel props for listening,
   transcription, thinking, tool work, text replies, review and completion; see [cat motion](cat-motion.md).
@@ -72,7 +72,7 @@ Reviewed 2026-09-19 against [Options](../src/renderer/src/OptionsDialog.tsx) and
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 
-Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
+In the full chat window, voice controls sit immediately above the composer. Talk changes to
 Finish recording and Cancel recording; a persistent Listening label appears on both chat
 and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
 Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Speech-model selection and its
@@ -83,14 +83,31 @@ the property sheet. Reviewed 2026-09-19 against [voice options](../src/renderer/
 See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
 [smoke coverage](../tests/smoke/voice.spec.ts).
 
-Talk on the desktop cat opens a cream speech balloon above the original artwork, keeping
+Talk on the desktop cat opens an XP panel with a blue caption and cream frame above the original artwork, keeping
 chat hidden and the cat's size/foot position stable except when fitting the display work area.
 Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
 Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
 Finish releases the microphone and produces an editable message; only Send submits it.
-The reply stays in the balloon. Close cancels capture but keeps an already reviewed draft
+The conversation takes most of the balloon: a small caption, a scrolling reading pane and a
+single-line input that grows only as needed. Keep New chat visible in the caption, with its
+small document-plus icon. Actions (⋯), expand and close share that caption; the composer has one
+contextual microphone/send/stop icon. Hide the duplicate controls below the cat while the panel
+is open. History, Copy reply, full chat, model selection and voice settings live in the actions menu. Ctrl+N starts a new chat; Enter sends and Shift+Enter adds a line.
+Tool activity collapses to one named status line with failures; expand it to inspect the steps.
+During capture, the live preview lives in the reading pane, with only status and finish/cancel
+icons below it. Scrolling up pauses following streamed text; a floating Latest reply returns to
+the end. The top-left corner grip and top/left edges resize the panel toward the available desktop,
+keeping the cat's feet fixed. The grip is keyboard-focusable: arrows resize by 10 DIP, Shift+arrows
+by 40 DIP. Bound resizing to a useful minimum and the current display work area. Escape, focus loss,
+closing, hiding and display changes end a gesture; late movement must not resize anything.
+Keep the selected panel size across close/reopen during the app run, independently of pet size.
+Expand/compact remains a quick preset. Copy reply copies the complete latest answer.
+Close cancels capture but keeps an already reviewed draft
 in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.
+Ctrl+Alt+Space and the tray Talk action start or finish a recording. Existing drafts reopen for
+review. The cat retains a clickable Reply ready indicator for unseen completions. Reviewed
+2026-09-19 against [the panel](../src/renderer/src/voice/PetVoice.tsx) and desktop smoke coverage.
 
 ## References
 

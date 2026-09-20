@@ -18,9 +18,16 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Click the pixel cat to make it glow and reveal Chat, Options, and model controls; Stop is
-  available during replies. Click again, press Escape, or choose an action to hide the controls.
-- Drag the cat itself to move it. Otherwise, only the cat is visible.
+- Talk starts voice; Chat opens a compact conversation panel above the cat. Its input shows one
+  microphone, send or stop icon as needed. Enter sends; Shift+Enter adds a line. The ⋯ menu holds
+  History, Copy reply, model selection, voice settings and Open chat window. New chat stays in the caption.
+  Controls below the cat hide while the panel is open. Drag the cat's body to move it.
+- Drag the panel's top-left grip, top edge or left edge to resize it while the cat stays anchored.
+  Focus the grip and use arrow keys (Shift for larger steps) to resize with the keyboard.
+  The panel remembers its size when reopened during the same app run; Expand toggles preset sizes.
+- The panel prioritizes conversation text, with tool activity collapsed into an expandable status
+  line. Scrolling up holds your place and Latest reply returns
+  to new output. Click the cat for its model shortcut when the panel is closed.
 - Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
 - The cat listens, thinks, takes notes, taps a tiny keyboard, and animates its face while
   text replies arrive. A happy flourish marks a finished reply. Try all eleven activity poses
@@ -37,6 +44,8 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   tool catalog and [guidance for extending the harness](docs/harness-guide.md).
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
+  `Ctrl+Alt+Space` opens Talk at the cat; press it again to finish recording.
+  The tray has the same Talk / Finish action. A Reply ready button reopens a completed answer.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
 - Conversations save automatically on this computer. **History** lets you find, reopen, or delete them.
 - **New conversation** keeps the old chat in History; it only asks before discarding an unsent draft.
@@ -81,7 +90,8 @@ through these tools. See [desktop context](docs/desktop-context.md) for limits a
    Remove take effect immediately; downloads can be cancelled and restarted.
 2. Check **Enable voice input**, choose English or automatic detection for Turbo, and Apply.
    Voice starts disabled. Installed weights prepare in the background when enabled and on startup;
-   this never opens the microphone. The model unloads after five minutes idle.
+   this never opens the microphone. Models stay ready while voice is enabled, including after
+   cancelling a short recording. Microphone & performance can opt into unloading after five idle minutes.
 3. Click **Talk** on the cat to open its speech bubble without opening chat. Wait for **Listening**,
    speak, then choose **Finish recording**. Provisional text updates during recording as local
    recognition completes. Recordings are limited to two minutes.

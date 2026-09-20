@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { helperEnvironment, WhisperRuntime } from "../../src/main/voice/whisper-runtime";
 import { DEFAULT_VOICE } from "../../src/shared/voice";
 
@@ -15,6 +15,26 @@ function runtime(mode = "") {
   );
 }
 describe("Whisper process supervision", () => {
+  it("keeps enabled voice loaded past five minutes, with an opt-out idle unload", async () => {
+    const r = runtime();
+    const signal = new AbortController().signal;
+    try {
+      await r.prepare(model, DEFAULT_VOICE, signal);
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const dispose = vi.spyOn(r, "dispose");
+      await vi.advanceTimersByTimeAsync(300001);
+      expect(dispose).not.toHaveBeenCalled();
+      expect(await r.transcribe(new Uint8Array(32000), "en", signal)).toBe(
+        "Do not delete the folder.",
+      );
+      await r.prepare(model, { ...DEFAULT_VOICE, keepReady: false }, signal);
+      await vi.advanceTimersByTimeAsync(300001);
+      expect(dispose).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      await r.dispose();
+    }
+  });
   it("passes only allowlisted environment, loads once and transcribes independent utterances", async () => {
     expect(
       helperEnvironment({ SystemRoot: "Windows", OPENAI_API_KEY: "secret", PATH: "unsafe" }),

@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   app,
   BrowserWindow,
+  clipboard,
   globalShortcut,
   type IpcMainInvokeEvent,
   ipcMain,
@@ -26,6 +27,7 @@ import {
   loginRequestSchema,
   modelSettingsSchema,
   petDragSchema,
+  petResizeSchema,
 } from "../shared/validation";
 import { sessionSchema, VoiceError } from "../shared/voice";
 import { ChatController } from "./chat-controller";
@@ -36,7 +38,7 @@ import { desktopFixture } from "./desktop/fixture-provider";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
-import { keepInWorkArea, PetDrag } from "./pet-window";
+import { keepInWorkArea, PetDrag, PetResize, resizeFromAnchor } from "./pet-window";
 import { PreferencesStore } from "./preferences";
 import { EncryptedSecretStore } from "./secret-store";
 import { VoiceController } from "./voice/controller";
@@ -83,7 +85,13 @@ let codex: CodexAuth;
 let disconnecting = false;
 let shortcutRegistered = false;
 let stopShortcutRegistered = false;
+let talkShortcutRegistered = false;
 const petDrag = new PetDrag();
+const petResize = new PetResize();
+function cancelPetGestures(): void {
+  petDrag.cancel();
+  petResize.cancel();
+}
 let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
 const harnessGuide = new HarnessGuide(
@@ -114,25 +122,55 @@ const petSizes = {
   large: { width: 228, height: 352 },
 };
 let petVoiceOpen = false;
+// Panel dimensions survive closing/reopening during this app run, independently of cat size.
+let petPanelSize = { width: 400, height: 340 };
+let placedPetBounds: Rectangle | undefined;
 function petWindowSize() {
   const size = petSizes[preferences.snapshot().size];
-  return petVoiceOpen ? { width: 340, height: size.height + 210 } : size;
+  return petVoiceOpen
+    ? { width: petPanelSize.width, height: size.height + petPanelSize.height }
+    : size;
+}
+function petResizeLimits() {
+  const height = petSizes[preferences.snapshot().size].height;
+  return { minWidth: 360, minHeight: height + 240, maxWidth: 1200, maxHeight: height + 800 };
+}
+function applyPanelResize(bounds: Rectangle, area: Rectangle): void {
+  placePet(bounds, area);
+  petPanelSize = {
+    width: bounds.width,
+    height: bounds.height - petSizes[preferences.snapshot().size].height,
+  };
 }
 
 function placePet(bounds: Rectangle, area: Rectangle): void {
-  const target = keepInWorkArea(bounds, area);
+  const target = keepInWorkArea(
+    {
+      ...bounds,
+      width: Math.min(bounds.width, area.width),
+      height: Math.min(bounds.height, area.height),
+    },
+    area,
+  );
   // Move first so Windows resolves the destination DPI before applying the DIP size.
   pet.setPosition(target.x, target.y);
   pet.setBounds(target);
   const actual = pet.getBounds();
   const fitted = keepInWorkArea(actual, area);
   if (fitted.x !== actual.x || fitted.y !== actual.y) pet.setPosition(fitted.x, fitted.y);
+  // Native bounds may round up at fractional DPI. Never feed that size into the next gesture.
+  placedPetBounds = {
+    ...target,
+    x: target.x + fitted.x - actual.x,
+    y: target.y + fitted.y - actual.y,
+  };
 }
 
 function applyPetPreferences(): void {
   if (!pet || pet.isDestroyed()) return;
+  cancelPetGestures();
   const settings = preferences.snapshot();
-  const bounds = pet.getBounds();
+  const bounds = placedPetBounds ?? pet.getBounds();
   const size = petWindowSize();
   const area = screen.getDisplayMatching(bounds).workArea;
   placePet(
@@ -156,6 +194,7 @@ function raisePet(): void {
 
 function findPet(): void {
   if (!pet || pet.isDestroyed()) return;
+  cancelPetGestures();
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   // Off-screen Windows bounds can report a different size after a DPI transition.
   const size = petWindowSize();
@@ -170,6 +209,23 @@ function findPet(): void {
   pet.showInactive();
   pet.moveTop();
   raisePet();
+}
+
+function talkToPet(): void {
+  if (!pet || pet.isDestroyed()) return;
+  const state = voice.snapshot();
+  if (voice.busy) {
+    if (state.phase === "recording" && state.sessionId)
+      void voice.action(() => voice.requestFinish({ sessionId: state.sessionId }));
+    const owner = captureWindow();
+    owner?.show();
+    owner?.focus();
+    return;
+  }
+  if (!pet.isVisible()) findPet();
+  pet.show();
+  pet.focus();
+  pet.webContents.send(IPC.petTalkRequested);
 }
 
 function showChat(): void {
@@ -380,6 +436,7 @@ else {
         },
       );
       await voice.refresh();
+      void voice.warm();
       const permissionOwner = (contents: Electron.WebContents | null) =>
         contents
           ? {
@@ -512,6 +569,7 @@ else {
           models: modelState,
           shortcut: shortcutRegistered ? "Ctrl+Shift+Space" : "Use the cat or tray icon",
           stopShortcut: stopShortcutRegistered ? "Ctrl+Shift+Escape" : "Use the Stop reply button",
+          talkShortcut: talkShortcutRegistered ? "Ctrl+Alt+Space" : "Use the Talk button",
           preferences: preferences.snapshot(),
           maximized: chat?.isMaximized() ?? false,
         };
@@ -519,6 +577,22 @@ else {
       ipcMain.handle(IPC.snapshot, (event) => {
         assertSender(event);
         return controller.snapshot();
+      });
+      ipcMain.handle(IPC.copyReply, async (event, id: unknown) => {
+        assertSender(event);
+        if (typeof id !== "string" || !id || id.length > 128)
+          return { ok: false, message: "Choose a completed reply to copy." };
+        const message = controller
+          .snapshot()
+          .messages.find((item) => item.id === id && item.role === "assistant");
+        if (!message?.text || message.state === "streaming")
+          return { ok: false, message: "This reply is no longer available to copy." };
+        try {
+          await clipboard.writeText(message.text);
+          return { ok: true };
+        } catch {
+          return { ok: false, message: "Couldn't copy. Select the reply and press Ctrl+C." };
+        }
       });
       ipcMain.handle(IPC.send, (event, request: unknown) => {
         assertSender(event);
@@ -591,9 +665,15 @@ else {
         stopAll();
       });
       ipcMain.handle(IPC.clear, (event) => {
-        assertSender(event, true);
+        assertSender(event);
         desktop.cancel();
         return voice.transition(() => controller.clear());
+      });
+      ipcMain.handle(IPC.openHistory, (event, ...args: unknown[]) => {
+        assertSender(event);
+        if (args.length) throw new Error("History accepts no arguments.");
+        showChat();
+        return voice.transition(() => chat.webContents.send(IPC.historyRequested));
       });
       ipcMain.handle(IPC.openChat, (event) => {
         assertSender(event);
@@ -615,24 +695,70 @@ else {
         if (trusted.get(event.sender.id)?.role !== "pet")
           throw new Error("Only the companion can move itself.");
         const phase = petDragSchema.parse(request);
-        if (phase === "start") petDrag.start(screen.getCursorScreenPoint(), pet.getBounds());
+        if (phase === "start") {
+          petResize.cancel();
+          petDrag.start(screen.getCursorScreenPoint(), placedPetBounds ?? pet.getBounds());
+        }
         if (phase === "move" || phase === "end") {
           const next = petDrag.move(screen.getCursorScreenPoint());
           if (next) {
-            placePet(
-              { ...next, ...petSizes[preferences.snapshot().size] },
-              screen.getDisplayMatching(next).workArea,
-            );
+            placePet({ ...next, ...petWindowSize() }, screen.getDisplayMatching(next).workArea);
           }
         }
         if (phase === "cancel") petDrag.cancel();
         return { moved: phase === "end" ? petDrag.end() : false };
+      });
+      ipcMain.handle(IPC.resizePetPanel, (event, request: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet")
+          throw new Error("Only the companion can resize its panel.");
+        const value = petResizeSchema.parse(request);
+        if (value.phase === "cancel") {
+          petResize.cancel();
+          return;
+        }
+        if (!petVoiceOpen || !pet.isVisible()) throw new Error("The cat panel is not open.");
+        const bounds = placedPetBounds ?? pet.getBounds();
+        const area = screen.getDisplayMatching(bounds).workArea;
+        if (value.phase === "start") {
+          petDrag.cancel();
+          petResize.start(
+            screen.getCursorScreenPoint(),
+            bounds,
+            value.edge,
+            area,
+            petResizeLimits(),
+          );
+        } else if (value.phase === "step") {
+          cancelPetGestures();
+          const next = resizeFromAnchor(
+            bounds,
+            {
+              width: bounds.width + (value.axis === "width" ? value.delta : 0),
+              height: bounds.height + (value.axis === "height" ? value.delta : 0),
+            },
+            area,
+            petResizeLimits(),
+          );
+          applyPanelResize(next, area);
+        } else {
+          const next = petResize.move(screen.getCursorScreenPoint());
+          if (next) applyPanelResize(next, area);
+          if (value.phase === "end") petResize.cancel();
+        }
       });
       ipcMain.handle(IPC.petVoiceOpen, (event, open: unknown) => {
         assertSender(event);
         if (trusted.get(event.sender.id)?.role !== "pet" || typeof open !== "boolean")
           throw new Error("Invalid cat voice panel request.");
         petVoiceOpen = open;
+        applyPetPreferences();
+      });
+      ipcMain.handle(IPC.petExpanded, (event, expanded: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet" || typeof expanded !== "boolean")
+          throw new Error("Invalid cat panel size request.");
+        petPanelSize = expanded ? { width: 580, height: 470 } : { width: 400, height: 340 };
         applyPetPreferences();
       });
       ipcMain.handle(IPC.hideChat, (event) => {
@@ -672,6 +798,8 @@ else {
         !smoke && globalShortcut.register("CommandOrControl+Shift+Space", showChat);
       stopShortcutRegistered =
         !smoke && globalShortcut.register("CommandOrControl+Shift+Escape", stopAll);
+      talkShortcutRegistered =
+        !smoke && globalShortcut.register("CommandOrControl+Alt+Space", talkToPet);
       chat = await createWindow("chat");
       pet = await createWindow("pet");
       for (const win of [chat, pet]) {
@@ -702,19 +830,22 @@ else {
           });
         });
       }
-      void voice.warm();
-      powerMonitor.on("suspend", () => void voice.dispose());
-      powerMonitor.on("lock-screen", () => void voice.dispose());
+      powerMonitor.on("suspend", () => void voice.setBlocked("suspended", true));
+      powerMonitor.on("lock-screen", () => void voice.setBlocked("locked", true));
+      powerMonitor.on("resume", () => void voice.setBlocked("suspended", false));
+      powerMonitor.on("unlock-screen", () => void voice.setBlocked("locked", false));
       powerMonitor.on("suspend", () => desktop.setBlocked("suspended", true));
       powerMonitor.on("lock-screen", () => desktop.setBlocked("locked", true));
       powerMonitor.on("resume", () => desktop.setBlocked("suspended", false));
       powerMonitor.on("unlock-screen", () => desktop.setBlocked("locked", false));
       pet.on("blur", () => {
-        petDrag.cancel();
+        cancelPetGestures();
         raisePet();
       });
-      pet.on("hide", () => petDrag.cancel());
-      pet.webContents.on("did-start-loading", () => petDrag.cancel());
+      pet.on("hide", cancelPetGestures);
+      pet.webContents.on("did-start-loading", cancelPetGestures);
+      powerMonitor.on("suspend", cancelPetGestures);
+      powerMonitor.on("lock-screen", cancelPetGestures);
       pet.on("show", raisePet);
       powerMonitor.on("resume", raisePet);
       powerMonitor.on("unlock-screen", raisePet);
@@ -741,6 +872,7 @@ else {
         tray.setToolTip("Computer Cat");
         tray.setContextMenu(
           Menu.buildFromTemplate([
+            { label: "Talk / Finish recording", click: talkToPet },
             { label: "Open chat", click: showChat },
             { label: "Find cat", click: findPet },
             { label: "Stop current reply", click: stopAll },
@@ -770,7 +902,7 @@ app.on("before-quit", (event) => {
   }
   quitting = true;
   clearInterval(presenceTimer);
-  petDrag.cancel();
+  cancelPetGestures();
   codex?.dispose();
   globalShortcut.unregisterAll();
   tray?.destroy();

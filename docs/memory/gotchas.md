@@ -28,6 +28,12 @@ based only on a sandboxed result. Do not print tokens while diagnosing this.
 Evidence: [project instructions](../../AGENTS.md); remote dev reference refreshed successfully
 from the host during the audit. No authentication change was necessary.
 
+## Machine-local editor settings
+
+Reviewed: 2026-09-19. `.vscode/settings.json` can contain absolute native-build paths.
+It is ignored by [Git](../../.gitignore) and the Git-aware formatter; existing local files
+are preserved. Suggested extensions can still be shared.
+
 ## PowerShell may select npm.ps1
 
 Reviewed: 2026-09-17. Scope: Windows command invocation.
@@ -183,3 +189,29 @@ deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader
 uses the same initialization and supplies TEMP/TMP for its C# compilation.
 The native fixture passes locally; hosted timing is still an environment-dependent check.
 See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).
+
+## Preserve requested window dimensions at fractional DPI
+
+Reviewed: 2026-09-19. Scope: the transparent desktop cat on Windows.
+
+Electron's native bounds and renderer viewport can round by one DIP at fractional display
+scales. Feeding the native size into every resize step accumulates growth and moves the cat
+anchor. Keep the last requested bounds in main, apply screen-edge corrections there, and use
+those bounds for subsequent drag/resize gestures and panel reopening. Allow for endpoint
+rounding when comparing native/renderer observations in tests, while requiring repeated
+opposite steps to return to the same size.
+Evidence: [window placement](../../src/main/index.ts), [resize geometry](../../src/main/pet-window.ts)
+and [pointer/keyboard resize checks](../../tests/smoke/desktop.spec.ts).
+
+## Protected branch promotion
+
+Reviewed: 2026-09-19 against the GitHub branch protections and
+[ancestry sync PR](https://github.com/andersj05/ComputerCat/pull/27).
+
+Both dev and main require pull requests plus the Quality and Windows desktop checks.
+Main also requires the source branch to be up to date. A previous main promotion creates
+a merge commit that dev may not contain, even when their files previously matched.
+Before promotion, fetch origin and check whether origin/main is an ancestor of origin/dev.
+If not, start a feat/ sync branch from origin/dev, merge origin/main, and merge that PR into
+dev first. Direct pushes and GitHub's Update branch operation cannot update protected dev.
+Then merge the dev-to-main PR after its checks pass. Keep branch protections enabled.

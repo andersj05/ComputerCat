@@ -52,6 +52,59 @@ function setup(enabled = true) {
 }
 afterEach(() => vi.useRealTimers());
 describe("voice session boundary", () => {
+  it("keeps background preparation running through chat and Options transitions", async () => {
+    const { voice, runtime, capture } = setup();
+    await voice.refresh();
+    let ready!: () => void;
+    let signal!: AbortSignal;
+    runtime.prepare.mockImplementationOnce(async (...args: unknown[]) => {
+      signal = args[2] as AbortSignal;
+      await new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+    });
+    const warming = voice.warm();
+    await vi.advanceTimersByTimeAsync(0);
+    const showOptions = vi.fn();
+    await voice.transition(showOptions);
+    expect(showOptions).toHaveBeenCalledOnce();
+    expect(signal.aborted).toBe(false);
+    ready();
+    await warming;
+    expect(voice.snapshot().availability).toBe("ready");
+    expect(capture).not.toHaveBeenCalled();
+    await voice.dispose();
+  });
+  it("releases the microphone but reuses a loaded model after cancelling a recording", async () => {
+    const { voice, runtime } = setup();
+    await voice.start("pet");
+    const sessionId = voice.snapshot().sessionId ?? "missing";
+    voice.captureStarted({ sessionId });
+    voice.released({ sessionId });
+    await voice.cancel();
+    expect(voice.permissionGranted).toBe(false);
+    expect(voice.busy).toBe(false);
+    expect(runtime.dispose).not.toHaveBeenCalled();
+    await voice.dispose();
+    expect(runtime.dispose).toHaveBeenCalledOnce();
+  });
+  it("releases models on lock/sleep and preloads only after both blocks clear", async () => {
+    const { voice, runtime, capture } = setup();
+    await voice.refresh();
+    await voice.warm();
+    await voice.setBlocked("locked", true);
+    await voice.setBlocked("suspended", true);
+    await expect(voice.start()).rejects.toThrow("busy");
+    await voice.setBlocked("suspended", false);
+    expect(runtime.prepare).toHaveBeenCalledTimes(1);
+    await voice.setBlocked("locked", false);
+    await voice.warm();
+    expect(runtime.prepare).toHaveBeenCalledTimes(2);
+    expect(capture).not.toHaveBeenCalled();
+    await voice.dispose();
+    await voice.warm();
+    expect(runtime.prepare).toHaveBeenCalledTimes(2);
+  });
   it("does not preload disabled voice and permits retry after a failed warm-up", async () => {
     const disabled = setup(false);
     await disabled.voice.refresh();

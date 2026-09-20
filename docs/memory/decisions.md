@@ -164,14 +164,23 @@ No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
 Status: adopted 2026-09-18. Supersedes the pet-to-chat routing in the initial Whisper plan.
 
 The user's Talk gesture chooses the trusted capture window. Cat-origin voice stays in a
-compact balloon with provisional text, Finish/Cancel, an editable draft, explicit Send and
-the assistant's reply. This avoids the context switch into chat while preserving review
+desktop conversation panel with provisional text, Finish/Cancel, a typed or dictated draft,
+explicit Send, tool progress and expandable replies (reviewed 2026-09-19). This avoids the context switch into chat while preserving review
 before the agent acts. Each renderer retains its own unsent drafts; only sent text is shared.
 Previews serialize with final inference and never become an agent message automatically.
 
+Reviewed 2026-09-19: prioritize message space over persistent controls. The cat panel uses one
+contextual microphone/send/stop control, collapses tool details and puts secondary actions under
+⋯. Keep New chat directly visible in the XP caption for quick access. Hide the dock while the panel is open. This addresses the crowded reading area without growing
+the default window. Its top/left resize grip preserves the cat anchor and keeps the chosen size
+for this app run. See [XP guidance](../windows-xp-design.md) and
+[layout and keyboard checks](../../tests/smoke/desktop.spec.ts).
+
 Installed, enabled weights preload on startup and after applying voice settings without a
-microphone grant. Keep the five-minute idle unload to bound memory use, so Talk after a long
-idle can still require preparation. No automatic download, model replacement, cloud fallback
+microphone grant. Reviewed 2026-09-19: enabled models now stay resident by default for fast
+repeat Talk; the Voice performance setting offers the former five-minute idle unload.
+Cancelling capture without inference retains prepared weights, and chat transitions preserve
+an in-flight preload. Lock/sleep frees weights and unlock/resume prepares them again. No automatic download, model replacement, cloud fallback
 or always-listening mode is introduced. CPU recognition latency remains model-dependent.
 
 Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/renderer/src/voice/PetVoice.tsx),
