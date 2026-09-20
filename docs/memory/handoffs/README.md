@@ -27,3 +27,8 @@ do not infer all current work from the files present in one branch.
 
 - [Local Whisper speech input](2026-09-17-local-whisper.md): Windows CPU implementation and automated tests
   are complete on `feat/local-whisper-input`; microphone/clean-machine release qualification remains.
+
+## Evaluation baseline
+
+- [First local Luna run](2026-09-20-luna-live-evaluations.md): runner and offline checks are complete;
+  the first live measurement needs the app connection restored.
