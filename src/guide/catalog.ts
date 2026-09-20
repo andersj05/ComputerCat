@@ -15,6 +15,14 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  desktop_search_browser: {
+    title: "Search in your browser",
+    purpose: "Continue research without an API key when direct search is unavailable.",
+    returns:
+      "Dispatch status and the Google search URL; the cat must observe the browser to read results.",
+    limit:
+      "Changes browser focus. Does not prove the page loaded, read hidden tabs or bypass browser challenges.",
+  },
   desktop_read_page: {
     title: "Read page identity",
     purpose: "Identify the document or find its source address without a screenshot.",
@@ -61,10 +69,11 @@ const descriptions = {
   },
   web_search: {
     title: "Search the public web",
-    purpose: "Find current sources through optional Brave Search.",
-    returns: "Up to five titles, URLs and snippets with retrieval time.",
+    purpose: "Find current sources without requiring an API key.",
+    returns:
+      "Up to five source links and snippets, or a browser-search dispatch that the cat must observe.",
     limit:
-      "Requires a separate configured API key. No paid development calls. Read a source page before relying on details; snippets are not full pages.",
+      "Tries configured Brave, keyless DuckDuckGo, then the default browser. Browser fallback changes focus and may require you to handle a challenge. Snippets are not full pages.",
   },
   desktop_get_environment: {
     title: "Get time and standard folders",

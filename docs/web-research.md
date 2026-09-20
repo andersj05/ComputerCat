@@ -5,7 +5,7 @@ Reviewed: 2026-09-20. Four public web tools are registered with Pi alongside des
 Public HTTP reading and static HTML extraction live in
 [public-http.ts](../src/main/web/public-http.ts) and [extract.ts](../src/main/web/extract.ts).
 The [service](../src/main/web/controller.ts) now supports cached page reading, literal-text
-finding and optional Brave Search, with 15-second deadlines and eight pages per turn.
+finding and public search, with 15-second deadlines and eight pages per turn.
 Page references expire after five minutes or the turn ends. The private worker channel routes
 `web_read`, `web_read_more`, `web_find` and `web_search` to main with a separate 20-call turn
 budget. Stop cancels requests and suppresses late results. Desktop lock does not block public
@@ -32,8 +32,17 @@ requirements compatible with Node 24.12.0. Reviewed primary sources:
 [htmlparser2](https://github.com/fb55/htmlparser2),
 [ipaddr.js](https://github.com/whitequark/ipaddr.js), and
 [Node HTTP](https://nodejs.org/docs/latest-v24.x/api/http.html).
-Search uses a separately supplied `COMPUTERCAT_BRAVE_SEARCH_API_KEY` and fixed endpoint documented by
-[Brave](https://api-dashboard.search.brave.com/api-reference/web/search/get).
+Search first uses Brave when `COMPUTERCAT_BRAVE_SEARCH_API_KEY` is supplied, then tries the
+[DuckDuckGo HTML interface](https://duckduckgo.com/duckduckgo-help-pages/features/non-javascript)
+without a key. Each direct provider has a five-second deadline. Failed responses and browser
+challenges trigger a Google search in the default browser through the existing desktop broker.
+This action respects desktop lock/sleep and cancellation; it changes browser focus. A
+`browser-opened` result is dispatch only: the agent must observe and verify the query and actual
+results before answering. It must not bypass CAPTCHA or sign-in. Explicit `desktop_search_browser`
+offers the same fallback. The Brave key stays at its
+[fixed endpoint](https://api-dashboard.search.brave.com/api-reference/web/search/get), never in fallback requests.
+The direct HTML provider can challenge automated requests (observed in a public probe on
+2026-09-20); browser recovery is therefore part of the feature, not a guaranteed silent API.
 No search account, subscription, or paid API call is created by development or tests.
 
 Foundation tests: [web-reading.test.ts](../tests/unit/web-reading.test.ts) covers public/private

@@ -23,6 +23,7 @@ export const DESKTOP_TOOL_NAMES = [
 ] as const;
 
 export const DESKTOP_UTILITY_TOOL_NAMES = [
+  "desktop_search_browser",
   "desktop_get_environment",
   "desktop_read_clipboard",
   "desktop_write_clipboard",

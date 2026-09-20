@@ -78,12 +78,12 @@ describe("web research service", () => {
       ).isError,
     ).toBe(true);
   });
-  it("does not make a network call when optional search has no key", async () => {
+  it("searches without a key and gives an actionable fallback when direct search fails", async () => {
     const { execute, fetcher } = setup();
     const response = await execute({ operation: "search", query: "news" });
     expect(response.isError).toBe(true);
-    expect(response.content[0]?.text).toContain("not configured");
-    expect(fetcher.get).not.toHaveBeenCalled();
+    expect(response.content[0]?.text).toContain("desktop_search_browser");
+    expect(fetcher.get.mock.calls[0]?.[0]).toBe("https://html.duckduckgo.com/html/?q=news");
   });
   it("uses the fixed search endpoint, bounds results and keeps the key out of model output", async () => {
     const { execute, fetcher } = setup("private-key-canary");

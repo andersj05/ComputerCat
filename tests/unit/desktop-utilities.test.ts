@@ -50,6 +50,18 @@ function invoke(tool: ToolDefinition | undefined, params = {}, signal?: AbortSig
 }
 
 describe("desktop utilities through the privileged broker", () => {
+  it("encodes browser search terms as data and honors the desktop lock", async () => {
+    const { host, controller, execute } = setup();
+    const query = 'name & site:x.com "profile"';
+    const response = metadata(await execute({ action: "search-browser", query }));
+    const url = new URL(host.openUrl.mock.calls[0]?.[0] ?? "");
+    expect(url.origin).toBe("https://www.google.com");
+    expect(url.searchParams.get("q")).toBe(query);
+    expect(response).toMatchObject({ status: "dispatched", nextTool: "desktop_observe" });
+    controller.setBlocked("locked", true);
+    expect((await execute({ action: "search-browser", query })).isError).toBe(true);
+    expect(host.openUrl).toHaveBeenCalledOnce();
+  });
   it("returns environment on demand without consulting the clipboard", async () => {
     const { host, execute } = setup();
     expect(metadata(await execute({ action: "environment" }))).toMatchObject({
@@ -230,6 +242,11 @@ describe("utility tools in the agent", () => {
       .mockResolvedValue({ content: [{ type: "text", text: "private fixture" }] });
     const tools = createDesktopUtilityTools(execute);
     const calls = [
+      [
+        "desktop_search_browser",
+        { query: "public account" },
+        { action: "search-browser", query: "public account" },
+      ],
       ["desktop_get_environment", {}, { action: "environment" }],
       ["desktop_read_clipboard", {}, { action: "clipboard-read" }],
       [

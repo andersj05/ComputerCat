@@ -353,6 +353,12 @@ else {
             new WebController(
               smoke ? webFixture : undefined,
               smoke ? "fixture-search-key" : readSearchKey(process.env),
+              Date.now,
+              (query, signal) =>
+                desktop.execute(
+                  { operation: "utility", request: { action: "search-browser", query } },
+                  signal,
+                ),
             ).execute,
           ),
         publishModels,

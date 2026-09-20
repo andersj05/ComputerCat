@@ -11,10 +11,10 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
-- Six [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
+- Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, open links/folders and reveal files. Launch results confirm dispatch, not UI success.
-- Four [web tools](../web-research.md) read, page and find public static text, plus optional Brave
-  search using a separate main-process key. Page references expire after five minutes or turn end.
+- Four [web tools](../web-research.md) read, page and find public static text, plus keyless search
+  with optional Brave and browser recovery. Page references expire after five minutes or turn end.
 - Demo replies are deterministic and offline. App-owned Codex login and direct model selection
   work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.

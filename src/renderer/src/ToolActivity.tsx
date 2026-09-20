@@ -3,6 +3,7 @@ import type { ToolActivity as Activity } from "../../shared/tools";
 import { Icon, type IconName } from "./Icon";
 
 const TOOL_ICONS: Record<Activity["name"], IconName> = {
+  desktop_search_browser: "search",
   read: "file",
   write: "file",
   edit: "file",
@@ -34,6 +35,7 @@ const TOOL_ICONS: Record<Activity["name"], IconName> = {
 };
 
 export const TOOL_LABELS: Record<Activity["name"], string> = {
+  desktop_search_browser: "Search in browser",
   read: "Read file",
   write: "Write file",
   edit: "Edit file",

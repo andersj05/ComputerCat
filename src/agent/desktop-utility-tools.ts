@@ -58,6 +58,19 @@ export function createDesktopUtilityTools(execute: DesktopExecutor): ToolDefinit
   );
   return [
     defineTool({
+      name: "desktop_search_browser",
+      label: "Search in browser",
+      description:
+        "Open a Google search in the default browser, without an API key, when direct web search is unavailable or browser results are needed. Use the account name/handle or topic already known; do not ask the user to paste it again. This changes browser focus and only confirms dispatch. Next call desktop_observe, verify the search query, read visible results and cite observed URLs. Never solve or bypass a CAPTCHA. Queries are sent to Google; include only task-relevant public terms.",
+      parameters: Type.Object(
+        { query: Type.String({ minLength: 1, maxLength: 600 }) },
+        { additionalProperties: false },
+      ),
+      executionMode: "sequential",
+      execute: (_id, params, signal) =>
+        run({ action: "search-browser", query: params.query }, signal),
+    }),
+    defineTool({
       name: "desktop_get_environment",
       label: "Get time and folders",
       description:
