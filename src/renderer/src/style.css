@@ -1388,17 +1388,84 @@ input:disabled {
 }
 .tool-progress {
   margin: 6px 0;
-  padding: 5px 7px;
-  background: #edf3fa;
-  border-left: 2px solid #7c9ab9;
+  padding: 4px 6px;
+  background: #f5f7fa;
+  border: 1px solid #bdcbd9;
+  border-radius: 3px;
+  box-shadow: inset 0 1px #fff;
 }
 .tool-progress.compact {
-  padding: 0;
-  background: transparent;
-  border: 0;
+  padding: 3px 5px;
 }
 .tool-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
   font-size: 11px;
+  text-decoration: none;
+  color: #244e88;
+}
+.tool-chevron {
+  width: 8px;
+  flex-shrink: 0;
+}
+.tool-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.tool-count {
+  color: #5c6674;
+  font-size: 10px;
+}
+.tool-failures {
+  color: #a12217;
+}
+.tool-progress[data-running="true"] {
+  border-color: #88abd1;
+  background: #f0f6fd;
+}
+:where(.tool-progress) .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.tool-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tool-toggle:hover .tool-summary > span:first-child {
+  text-decoration: underline;
+}
+.tool-toggle:focus-visible {
+  outline: 1px dotted #244e88;
+  outline-offset: 2px;
+}
+:where(.tool-progress .tool-activity) li + li {
+  border-top: 1px solid #dce4ec;
+}
+:where(.tool-activity [data-state="complete"]) .tool-state-mark {
+  color: #347544;
+}
+.tool-activity [data-state="stopped"] {
+  color: #66717d;
+}
+:where(.tool-activity [data-state="running"]) .tool-state-mark {
+  animation: tool-pulse 1.2s ease-in-out infinite;
+}
+@keyframes tool-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.tool-activity [data-state="running"]) .tool-state-mark {
+    animation: none;
+  }
 }
 .tool-progress .tool-activity {
   list-style: none;
@@ -1407,18 +1474,21 @@ input:disabled {
 }
 .tool-progress .tool-activity li {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
-  padding: 3px 0;
+  padding: 5px 2px;
   font-size: 11px;
 }
 .tool-activity small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
   white-space: nowrap;
 }
 .tool-state-mark {
   width: 10px;
-  color: #347544;
+  text-align: center;
 }
 .tool-activity [data-state="running"] {
   color: #244e88;
