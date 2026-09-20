@@ -36,6 +36,30 @@ export function gradeLiveTask(world: FixtureWorld, trace: LiveTrace): Review {
     world.fetched.some(
       (entry) => url(entry.url, source) && (turn === undefined || turn === entry.turn),
     );
+  const rejectedMissingSource = trace.calls.some((call) => {
+    if (!call.complete) return false;
+    if (call.name === "web_read" && call.error && call.input && typeof call.input === "object") {
+      const input = call.input as Record<string, unknown>;
+      return Object.keys(input).length === 1 && url(input.url, MISSING);
+    }
+    if (call.name !== "web_read_many" || !call.output || typeof call.output !== "object")
+      return false;
+    const content = (call.output as { content?: unknown }).content;
+    return (
+      Array.isArray(content) &&
+      content.some((block) => {
+        if (block?.type !== "text" || typeof block.text !== "string") return false;
+        const data = object(block.text);
+        return (
+          Array.isArray(data.results) &&
+          data.results.some(
+            (result) =>
+              result && url(result.requestedUrl, MISSING) && typeof result.error === "string",
+          )
+        );
+      })
+    );
+  });
   const observed = (turn: number) => world.observations.some((entry) => entry.turn === turn);
   let outcome = false;
   let evidence = false;
@@ -97,7 +121,8 @@ export function gradeLiveTask(world: FixtureWorld, trace: LiveTrace): Review {
       outcome =
         same(answer.availableTitle, "Example Domain") && url(answer.unavailableUrl, MISSING);
       evidence =
-        read(EXAMPLE) && trace.calls.some((call) => JSON.stringify(call.input).includes(MISSING));
+        read(EXAMPLE) &&
+        (world.failedSources.some((source) => url(source, MISSING)) || rejectedMissingSource);
       break;
     case "clipboard-copy":
       outcome = world.clipboard === "CAT-EVAL-427: ready for review";
@@ -107,7 +132,10 @@ export function gradeLiveTask(world: FixtureWorld, trace: LiveTrace): Review {
       outcome =
         world.files.get(world.filePath)?.replaceAll("\r\n", "\n") ===
         "Draft report: DONE\nSend invoice: TODO\n";
-      evidence = world.writes.length > 0 && world.reads.some((entry) => entry.afterWrite);
+      evidence =
+        world.writes.length > 0 &&
+        calls.findLastIndex((call) => call.name === "read") >
+          calls.findLastIndex((call) => call.name === "write" || call.name === "edit");
       break;
     case "reveal-file":
       outcome = world.launches.some(

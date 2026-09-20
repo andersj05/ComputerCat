@@ -21,9 +21,29 @@ async function main() {
       tasks: { type: "string" },
       repeats: { type: "string", default: "3" },
       check: { type: "boolean" },
+      help: { type: "boolean" },
       "user-data": { type: "string" },
     },
     allowPositionals: false,
+  });
+  if (values.help || (!values.run && !values.check)) {
+    console.log(
+      "Computer Cat live evaluations: Luna / Medium, controlled tool fixtures.\n" +
+        "npm run eval:live -- --check                         Check sign-in without a model call\n" +
+        "npm run eval:live -- --run luna-baseline             Four tasks, three attempts each\n" +
+        "npm run eval:live -- --run luna-quick --repeats 1    Four tasks, one attempt each\n" +
+        "npm run eval:live -- --run luna-full --tasks all     Twelve tasks, three attempts each\n" +
+        "Use --tasks comma-separated-IDs and --repeats 1-3. Quit Computer Cat before running.\n" +
+        "Reports and synthetic traces are stored in .local/evals/RUN. See docs/live-evaluations.md.",
+    );
+    return;
+  }
+  const abort = new AbortController();
+  process.stdin.setEncoding("utf8");
+  let controlInput = "";
+  process.stdin.on("data", (chunk) => {
+    controlInput = (controlInput + String(chunk)).slice(-32);
+    if (controlInput.includes("cancel\n")) abort.abort();
   });
   const root = resolve(process.cwd());
   const userData = values["user-data"]
@@ -102,7 +122,6 @@ async function main() {
     console.log(
       `Running ${run.trials.length} live-model attempts with Luna / Medium; controlled fixtures. Maximum ${LIMITS.batchRequests} model requests per batch.`,
     );
-    const abort = new AbortController();
     const interrupt = () => abort.abort();
     process.on("SIGINT", interrupt);
     process.on("SIGTERM", interrupt);

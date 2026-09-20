@@ -28,7 +28,7 @@ const child = spawn(
   {
     cwd: root,
     windowsHide: true,
-    stdio: "inherit",
+    stdio: ["pipe", "inherit", "inherit"],
     env: {
       ...workerEnvironment(process.env),
       COMPUTERCAT_LIVE_EVAL: "1",
@@ -36,15 +36,20 @@ const child = spawn(
     },
   },
 );
+child.stdin?.on("error", () => {}); // The host may already be exiting when cancellation is sent.
 let interrupted = false;
+let forceStop;
 process.on("SIGINT", () => {
   interrupted = true;
-  child.kill();
+  child.stdin?.write("cancel\n");
+  forceStop ??= setTimeout(() => child.kill(), 35_000);
+  forceStop.unref();
 });
 child.on("error", () => {
   console.error("Could not start the local Electron evaluation host.");
   process.exitCode = 1;
 });
 child.on("exit", (code) => {
+  clearTimeout(forceStop);
   process.exitCode = interrupted ? 130 : (code ?? 1);
 });

@@ -34,6 +34,7 @@ export class FixtureWorld {
   readonly writes: string[] = [];
   readonly reads: { path: string; turn: number; afterWrite: boolean }[] = [];
   readonly violations: string[] = [];
+  readonly failedSources: string[] = [];
   readonly fetched: { url: string; turn: number }[] = [];
   readonly observations: { text: string; turn: number }[] = [];
   readonly launches: { kind: string; value: string; turn: number }[] = [];
@@ -127,7 +128,13 @@ export class FixtureWorld {
                 : `<div class="result"><a class="result__a" href="${PROFILE}">GitHub organization</a><span class="result__snippet">Official GitHub organization</span></div>`;
             return { url, contentType: "text/html", body };
           }
-          const body = this.document(url);
+          let body: string;
+          try {
+            body = this.document(url);
+          } catch (error) {
+            this.failedSources.push(url);
+            throw error;
+          }
           this.fetched.push({ url: new URL(url).href, turn: this.turn });
           return { url, contentType: "text/html", body };
         },

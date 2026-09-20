@@ -45,7 +45,9 @@ needs server-side model entitlement and available usage; preflight alone cannot 
 Luna runs through the production [Pi runtime](../src/agent/pi-runtime.ts), system prompt and all
 35 tool definitions. The [fixture adapters](../src/agent/evaluation/fixtures.ts) replace tool
 execution with controlled synthetic state. The actual desktop/web controllers still validate
-requests, extract pages, manage source references and perform browser-search recovery.
+requests, extract pages, manage source references and perform browser-search recovery. The live
+runner calls this runtime directly inside its separate host; it does not exercise the app worker
+IPC or renderer. Those paths remain covered by the Electron integration suite.
 
 | Component | Live evaluation behavior |
 | --- | --- |
@@ -76,8 +78,9 @@ The entire batch permits at most 96 model requests. Agent and provider HTTP retr
 The pinned Codex transport does not map `maxTokens` into its request body, so the runner does not
 claim a hard token cap. Request/time limits bound runaway loops; token usage is measured afterward.
 A provider failure stops the batch; remaining trials stay unscored, with no complete pass rate.
-Ctrl+C stops the host. Already saved attempts remain available; an interrupted current attempt
-may remain unscored. Do not combine an interrupted run with cherry-picked retries.
+Ctrl+C requests cancellation and lets a completed credential rotation save before shutdown;
+the launcher force-stops an unresponsive host after 35 seconds. Already saved attempts remain
+available; an interrupted current attempt may remain unscored. Do not combine an interrupted run with cherry-picked retries.
 
 Runs stay in ignored `.local/evals/RUN/`: a manifest, fresh fixtures, one JSON trace per completed
 attempt and a Markdown report. Traces contain only synthetic task responses/tool inputs/results,

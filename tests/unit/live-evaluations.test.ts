@@ -165,6 +165,64 @@ describe("live evaluation harness with an offline model", () => {
     expect(() => compareRuns(manual, live)).toThrow();
     expect(renderReport(live)).toContain("CONTROLLED TOOL FIXTURES");
   });
+  it("enforces the per-attempt request limit even when the batch has room", async () => {
+    const { provider, run } = await setup("screen-summary");
+    provider.setResponses(
+      Array.from({ length: 8 }, () => tool("desktop_observe", { includeScreenshot: false })),
+    );
+    const trace = await run(20);
+    expect(trace.requests).toBe(6);
+    expect(provider.state.callCount).toBe(6);
+    expect(trace.error).toBe("Model request budget reached");
+  });
+  it("cancels a streamed response and allows a clean next turn", async () => {
+    const { provider, run, world } = await setup("stop-and-resume");
+    provider.setResponses([
+      fauxAssistantMessage("A space station guide begins."),
+      fauxAssistantMessage("stopped successfully"),
+    ]);
+    const trace = await run();
+    expect(trace.cancelledInMs).not.toBeNull();
+    expect(gradeLiveTask(world, trace).grades).toEqual({
+      outcome: "pass",
+      evidence: "pass",
+      scope: "pass",
+    });
+  });
+  it("does not count edit-internal reads as verification after the last mutation", async () => {
+    const { provider, run, world } = await setup("file-edit");
+    provider.setResponses([
+      tool("read", { path: world.filePath }),
+      tool("edit", {
+        path: world.filePath,
+        edits: [{ oldText: "Draft report: TODO", newText: "Draft report: TEMP" }],
+      }),
+      tool("edit", {
+        path: world.filePath,
+        edits: [{ oldText: "Draft report: TEMP", newText: "Draft report: DONE" }],
+      }),
+      fauxAssistantMessage("Done."),
+    ]);
+    const trace = await run();
+    expect(gradeLiveTask(world, trace).grades).toMatchObject({ outcome: "pass", evidence: "fail" });
+  });
+  it("records an actual failed source request while preserving the successful source", async () => {
+    const { provider, run, world } = await setup("partial-source-failure");
+    provider.setResponses([
+      tool("web_read_many", {
+        urls: ["https://example.com", "https://computercat-eval.invalid/missing"],
+      }),
+      fauxAssistantMessage(
+        '{"availableTitle":"Example Domain","unavailableUrl":"https://computercat-eval.invalid/missing"}',
+      ),
+    ]);
+    const trace = await run();
+    expect(gradeLiveTask(world, trace).grades).toEqual({
+      outcome: "pass",
+      evidence: "pass",
+      scope: "pass",
+    });
+  });
   it("keeps stale facts from passing the changed-page task", async () => {
     const { provider, run, world } = await setup("fresh-context");
     provider.setResponses([
