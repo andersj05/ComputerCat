@@ -1429,11 +1429,6 @@ input:disabled {
   border-color: #88abd1;
   background: #f0f6fd;
 }
-:where(.tool-progress) .icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
 .tool-label {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1444,9 +1439,6 @@ input:disabled {
 .tool-toggle:focus-visible {
   outline: 1px dotted #244e88;
   outline-offset: 2px;
-}
-:where(.tool-progress .tool-activity) li + li {
-  border-top: 1px solid #dce4ec;
 }
 :where(.tool-activity [data-state="complete"]) .tool-state-mark {
   color: #347544;
@@ -1478,6 +1470,9 @@ input:disabled {
   gap: 6px;
   padding: 5px 2px;
   font-size: 11px;
+}
+.tool-progress .tool-activity li + li {
+  border-top: 1px solid #dce4ec;
 }
 .tool-activity small {
   display: flex;

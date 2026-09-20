@@ -104,6 +104,6 @@ writeFileSync(asset("app-icon.ico"), Buffer.concat([directory, ...frames]));
 writeFileSync(asset("app-icon.png"), png(256));
 writeFileSync(
   asset("app-icon.svg"),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">\n${shapes.map(({ x, y, w, h, fill }) => `  <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`).join("\n")}\n</svg>\n`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">\n  <title>Computer Cat</title>\n${shapes.map(({ x, y, w, h, fill }) => `  <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`).join("\n")}\n</svg>\n`,
 );
 console.log("Generated app-icon.svg, app-icon.png and nine-size app-icon.ico.");

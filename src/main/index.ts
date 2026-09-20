@@ -8,7 +8,6 @@ import {
   type IpcMainInvokeEvent,
   ipcMain,
   Menu,
-  nativeImage,
   powerMonitor,
   type Rectangle,
   safeStorage,
@@ -888,9 +887,7 @@ else {
         }
       });
       if (!smoke) {
-        tray = new Tray(
-          nativeImage.createFromPath(appIconPath()).resize({ width: 24, height: 24 }),
-        );
+        tray = new Tray(appIconPath());
         tray.setToolTip("Computer Cat");
         tray.setContextMenu(
           Menu.buildFromTemplate([

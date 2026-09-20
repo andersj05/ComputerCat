@@ -1456,9 +1456,12 @@ test("cat panel shows tool progress and long replies without losing the reading 
       );
     await publish("", true);
     await expect(panel.getByRole("list", { name: "Tool activity" })).toHaveCount(0);
-    await expect(panel.getByRole("button", { name: /Read window… · 2 steps/ })).toBeVisible();
+    await expect(panel.getByRole("button", { name: /Read window… 2 steps/ })).toBeVisible();
     await expect(panel.getByRole("button", { name: "Stop reply", exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: /Read window… · 2 steps/ }).click();
+    await panel.getByRole("button", { name: /Read window… 2 steps/ }).focus();
+    await pet.keyboard.press("Enter");
+    await expect(panel.locator(".tool-toggle")).toHaveAttribute("aria-expanded", "true");
+    await expect(panel.locator(".tool-activity .icon")).toHaveCount(2);
     await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Running…");
     await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Read screen");
     await pet.screenshot({

@@ -97,28 +97,31 @@ export function ToolActivity({ tools, compact = false }: { tools: Activity[]; co
           </span>
         </span>
       </button>
-      {(!compact || expanded) && (
-        <ul id={listId} className="tool-activity" aria-label="Tool activity">
-          {visible.map((tool) => (
-            <li key={tool.id} data-state={tool.state} title={tool.name}>
-              <Icon name={TOOL_ICONS[tool.name]} />
-              <span className="tool-label">{TOOL_LABELS[tool.name]}</span>
-              <small>
-                <span className="tool-state-mark" aria-hidden="true">
-                  {tool.state === "running"
-                    ? "●"
-                    : tool.state === "complete"
-                      ? "✓"
-                      : tool.state === "error"
-                        ? "!"
-                        : "■"}
-                </span>
-                {states[tool.state]}
-              </small>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul
+        id={listId}
+        className="tool-activity"
+        aria-label="Tool activity"
+        hidden={compact && !expanded}
+      >
+        {visible.map((tool) => (
+          <li key={tool.id} data-state={tool.state} title={tool.name}>
+            <Icon name={TOOL_ICONS[tool.name]} />
+            <span className="tool-label">{TOOL_LABELS[tool.name]}</span>
+            <small>
+              <span className="tool-state-mark" aria-hidden="true">
+                {tool.state === "running"
+                  ? "●"
+                  : tool.state === "complete"
+                    ? "✓"
+                    : tool.state === "error"
+                      ? "!"
+                      : "■"}
+              </span>
+              {states[tool.state]}
+            </small>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
