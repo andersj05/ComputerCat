@@ -253,6 +253,13 @@ function assertSender(event: IpcMainInvokeEvent, chatOnly = false): void {
   }
 }
 
+function appIconPath(): string {
+  const filename = process.platform === "win32" ? "app-icon.ico" : "app-icon.png";
+  return app.isPackaged
+    ? join(process.resourcesPath, filename)
+    : join(app.getAppPath(), "assets", filename);
+}
+
 async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   const isPet = role === "pet";
   const area = screen.getPrimaryDisplay().workArea;
@@ -269,6 +276,7 @@ async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
     minWidth: isPet ? 148 : 500,
     minHeight: isPet ? 244 : 420,
     title: isPet ? "Computer Cat companion" : "Computer Cat",
+    icon: appIconPath(),
     frame: false,
     transparent: isPet,
     backgroundColor: isPet ? "#00000000" : "#ece9d8",
@@ -880,10 +888,9 @@ else {
         }
       });
       if (!smoke) {
-        const artwork = app.isPackaged
-          ? join(process.resourcesPath, "computer_cat.png")
-          : join(app.getAppPath(), "assets/computer_cat.png");
-        tray = new Tray(nativeImage.createFromPath(artwork).resize({ height: 24 }));
+        tray = new Tray(
+          nativeImage.createFromPath(appIconPath()).resize({ width: 24, height: 24 }),
+        );
         tray.setToolTip("Computer Cat");
         tray.setContextMenu(
           Menu.buildFromTemplate([

@@ -4,6 +4,11 @@ The transparent cat is the app's character. Keep its full silhouette and origina
 The surrounding interface follows XP's desktop conventions: a compact messenger window, a
 Luna caption, Tahoma text, cream controls, inset white panes, and small colored toolbar icons.
 
+The app mark is an original pixel cat in a cream CRT monitor, shared by window captions,
+the taskbar, tray and Windows installer. [The generator](../scripts/generate-icons.mjs) writes
+the SVG, 256-pixel PNG and multi-size Windows ICO in assets; run `npm run icons:generate`
+after editing its pixel shapes. The desktop pet retains its original artwork. Reviewed 2026-09-20.
+
 ## Layout and copy
 
 - One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,

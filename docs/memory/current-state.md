@@ -8,6 +8,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 [package.json](../../package.json) and [.node-version](../../.node-version).
 
 - The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
+- The [retro CRT-cat icon](../../assets/app-icon.svg) identifies app windows, tray and installer;
+  tool activity uses colored pixel icons and labeled progress in both chat views.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Seven [desktop tools](../desktop-context.md) observe apps, windows, screenshots and regions,
   accessible text, tabs and selection on demand. Capture targets one source; app coverage varies.

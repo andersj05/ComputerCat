@@ -1,4 +1,4 @@
-import catImage from "../../../assets/computer_cat.png";
+import catImage from "../../../assets/app-icon.svg";
 
 export function WindowCaption({
   title,
