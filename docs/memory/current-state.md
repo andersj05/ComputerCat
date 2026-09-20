@@ -19,7 +19,7 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   typed tool catalog and extension guidance.
 - Local Whisper uses explicit downloads, background preparation and Talk/Finish/Cancel.
   Enabled models stay ready by default; Voice performance offers an idle-unload option.
-  The cat's panel prioritizes replies, with a compact input and secondary actions under ⋯.
+  The XP cat panel keeps New chat visible, with a compact input and secondary actions under ⋯.
   Tool steps expand on demand; drafts follow conversations in both windows.
   Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
   See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).

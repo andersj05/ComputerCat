@@ -171,7 +171,7 @@ Previews serialize with final inference and never become an agent message automa
 
 Reviewed 2026-09-19: prioritize message space over persistent controls. The cat panel uses one
 contextual microphone/send/stop control, collapses tool details and puts secondary actions under
-⋯. Hide the dock while the panel is open. This addresses the crowded reading area without growing
+⋯. Keep New chat directly visible in the XP caption for quick access. Hide the dock while the panel is open. This addresses the crowded reading area without growing
 the default window. See [XP guidance](../windows-xp-design.md) and
 [layout and keyboard checks](../../tests/smoke/desktop.spec.ts).
 

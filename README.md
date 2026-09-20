@@ -20,7 +20,7 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 
 - Talk starts voice; Chat opens a compact conversation panel above the cat. Its input shows one
   microphone, send or stop icon as needed. Enter sends; Shift+Enter adds a line. The ⋯ menu holds
-  New chat, History, Copy reply, model selection, voice settings and Open chat window.
+  History, Copy reply, model selection, voice settings and Open chat window. New chat stays in the caption.
   Controls below the cat hide while the panel is open. Drag the cat's body to move it.
 - The panel prioritizes conversation text, with tool activity collapsed into an expandable status
   line. Expand gives long replies more room; scrolling up holds your place and Latest reply returns

@@ -1304,14 +1304,15 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     const actions = panel.getByRole("button", { name: "Conversation actions" });
     const content = panel.getByRole("region", { name: "Cat conversation" });
     await expect(pet.locator(".pet-dock")).toBeHidden();
-    await expect(panel.getByRole("button")).toHaveCount(4);
+    await expect(panel.getByRole("button")).toHaveCount(5);
     expect(
       await content.evaluate(
         (el) => el.clientHeight / (el.closest(".pet-voice")?.clientHeight || 1),
       ),
     ).toBeGreaterThan(0.7);
     await actions.click();
-    await expect(panel.getByRole("button", { name: "New chat", exact: true })).toBeFocused();
+    await expect(panel.getByRole("button", { name: "New chat", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "History…" })).toBeFocused();
     await pet.keyboard.press("Escape");
     await expect(actions).toHaveAttribute("aria-expanded", "false");
     await expect(actions).toBeFocused();
@@ -1329,7 +1330,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     await input.fill("A message from the desktop cat");
     expect(await input.evaluate((el) => el.clientHeight)).toBeLessThanOrEqual(32);
     await expect(panel.getByRole("button", { name: "Send message" })).toBeVisible();
-    await expect(panel.getByRole("button")).toHaveCount(4);
+    await expect(panel.getByRole("button")).toHaveCount(5);
     await input.press("Enter");
     await expect(panel.locator(".pet-message.assistant")).toHaveAttribute("data-state", "complete");
     await expect(input).toHaveValue("");
@@ -1358,7 +1359,6 @@ test("cat panel supports typing, new chats, retained drafts, and history without
       async () => (await window.computerCat.snapshot()).conversationId,
     );
     await input.fill("Keep this draft with its conversation");
-    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(panel.getByRole("alertdialog")).toBeVisible();
     await expect(panel.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
@@ -1373,7 +1373,6 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     if (!firstId) throw Error("Missing conversation ID");
     await page.evaluate((id) => window.computerCat.openConversation(id), firstId);
     await expect(input).toHaveValue("Keep this draft with its conversation");
-    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "New chat", exact: true }).click();
     await panel.getByRole("button", { name: "Start new chat", exact: true }).click();
     await expect(input).toHaveValue("");

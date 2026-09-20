@@ -83,16 +83,16 @@ the property sheet. Reviewed 2026-09-19 against [voice options](../src/renderer/
 See [voice controls](../src/renderer/src/voice/VoiceControls.tsx) and
 [smoke coverage](../tests/smoke/voice.spec.ts).
 
-Talk on the desktop cat opens a cream speech balloon above the original artwork, keeping
+Talk on the desktop cat opens an XP panel with a blue caption and cream frame above the original artwork, keeping
 chat hidden and the cat's size/foot position stable except when fitting the display work area.
 Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
 Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
 Finish releases the microphone and produces an editable message; only Send submits it.
 The conversation takes most of the balloon: a small caption, a scrolling reading pane and a
-single-line input that grows only as needed. Keep the default panel to four buttons: actions (⋯),
-expand, close and one contextual microphone/send/stop icon. Hide the duplicate controls below the
-cat while the panel is open. New chat, History, Copy reply, full chat, model selection and voice
-settings live in the actions menu. Ctrl+N starts a new chat; Enter sends and Shift+Enter adds a line.
+single-line input that grows only as needed. Keep New chat visible in the caption, with its
+small document-plus icon. Actions (⋯), expand and close share that caption; the composer has one
+contextual microphone/send/stop icon. Hide the duplicate controls below the cat while the panel
+is open. History, Copy reply, full chat, model selection and voice settings live in the actions menu. Ctrl+N starts a new chat; Enter sends and Shift+Enter adds a line.
 Tool activity collapses to one named status line with failures; expand it to inspect the steps.
 During capture, the live preview lives in the reading pane, with only status and finish/cancel
 icons below it. Scrolling up pauses following streamed text; a floating Latest reply returns to

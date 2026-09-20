@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChatSnapshot } from "../../../shared/contracts";
 import { type VoiceSnapshot, voiceMessages } from "../../../shared/voice";
+import { Icon } from "../Icon";
 import { MarkdownMessage } from "../MarkdownMessage";
 import { ToolActivity } from "../ToolActivity";
 import { voiceStatus } from "./VoiceControls";
@@ -168,10 +169,19 @@ export function PetVoice({
       <div className="pet-voice-heading">
         <strong title={chat.title}>{chat.title || "Computer Cat"}</strong>
         <div className="pet-caption-actions">
+          <button
+            type="button"
+            className="xp-button pet-new-chat"
+            onClick={() => action(newChat)}
+            disabled={disabled || confirmClear}
+            title="New chat (Ctrl+N)"
+          >
+            <Icon name="new" /> New chat
+          </button>
           <div className="pet-menu" ref={menu}>
             <button
               type="button"
-              className="xp-button"
+              className="pet-caption-control"
               ref={menuButton}
               aria-label="Conversation actions"
               aria-expanded={menuOpen}
@@ -184,15 +194,6 @@ export function PetVoice({
             </button>
             {menuOpen && (
               <div className="pet-menu-actions" id="pet-conversation-actions">
-                <button
-                  type="button"
-                  className="pet-menu-action"
-                  disabled={disabled}
-                  onClick={() => action(newChat)}
-                  title="New conversation (Ctrl+N)"
-                >
-                  New chat <small aria-hidden="true">Ctrl+N</small>
-                </button>
                 <button
                   type="button"
                   className="pet-menu-action"
@@ -247,7 +248,7 @@ export function PetVoice({
           </div>
           <button
             type="button"
-            className="xp-button"
+            className="pet-caption-control"
             onClick={expand}
             aria-label={expanded ? "Compact cat panel" : "Expand cat panel"}
             title={expanded ? "Compact view" : "More room to read"}
@@ -256,7 +257,7 @@ export function PetVoice({
           </button>
           <button
             type="button"
-            className="xp-button"
+            className="pet-caption-control pet-caption-close"
             aria-label="Close voice bubble"
             title="Close panel (Escape); keep your draft"
             onClick={close}
