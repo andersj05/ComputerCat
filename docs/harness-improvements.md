@@ -149,6 +149,8 @@ Automated coverage for this increment lives in
 in-memory clipboard and inert launches; actual default-browser/file-manager behavior and
 live-model tool selection are not established by those fixtures.
 
-The first increment was verified on 2026-09-20 with Node 24.12.0: `npm run verify` passed memory checks, lint,
-type checking, 266 tests and the production build; `npm run test:smoke` passed all 23
-Electron checks. The guide's rendered catalog was visually inspected with all 21 tools.
+The utility and web increments were verified on 2026-09-20 with Node 24.12.0:
+`npm run verify` passed memory checks, lint, type checking, 332 tests and the production build;
+`npm run test:smoke` passed all 24 Electron checks. The 25-tool guide was visually inspected
+at desktop and narrow widths. See [web validation and limitations](web-research.md) for the
+four-tool research flow, citation opening and final focused check.

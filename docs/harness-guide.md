@@ -41,5 +41,6 @@ The [Electron guide smoke test](../tests/smoke/desktop.spec.ts) opens the export
 a preload or server. It exercises the diagram, example-to-tool links, filtering, narrow layouts,
 printing, reload, network denial, launch failure/retry, sender restrictions and preserved settings
 drafts. It also supports `COMPUTERCAT_PACKAGED_EXECUTABLE` to check the same path from an app bundle.
-The guide smoke check was verified against development and unpacked Windows builds on 2026-09-19.
+The 25-tool guide was checked in development on 2026-09-20, including web filters and the
+research example. The earlier guide was also verified against an unpacked Windows build on 2026-09-19.
 Its hidden preview uses offscreen rendering so it can produce screenshots without opening a browser.

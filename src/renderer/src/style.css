@@ -337,7 +337,7 @@ label,
   margin: 6px 0;
 }
 .markdown-message a {
-  color: var(--deep-blue);
+  color: var(--blue);
   text-decoration: underline;
   overflow-wrap: anywhere;
 }
