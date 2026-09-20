@@ -16,7 +16,7 @@ supersedes the earlier cloud-first speech-input recommendation.
 Add free, local speech-to-text to the existing Windows desktop app. The first complete flow is:
 
 1. Enable voice and explicitly download a supported speech model in Options.
-2. Click **Talk** in chat or the cat's revealed controls. The initiating window owns the
+2. Click **Talk** in chat or beside the cat. **Ctrl+Alt+Space** starts or finishes a recording. The initiating window owns the
    microphone; the cat opens a speech bubble without opening chat. Wait for **Listening**.
 3. Provisional previews update during recording. **Finish recording** stops the microphone
    and waits for final local recognition.
@@ -187,8 +187,10 @@ words before selecting thresholds; do not treat amplitude alone as reliable spee
   typed Send during capture/transcription at the main boundary as well as in the UI.
 - While a session is active, changing speech settings/model assets is blocked except disabling
   voice, which cancels first. Serialize simultaneous IPC transitions to avoid races.
-- Keep the helper warm after preparation; unload after five minutes idle, on disable, suspend,
-  or quit. Cancel the idle timer on new work. No microphone stays open to keep a model warm.
+- Reviewed 2026-09-19: keep enabled models resident by default. The Voice performance setting
+  can opt into a five-minute idle unload. Disable, lock/suspend and quit release the helper;
+  unlock/resume prepares it again. Chat transitions preserve preparation, and cancellation
+  without inference retains the loaded model. No microphone stays open to keep a model warm.
 
 Preserve the [XP design](../../windows-xp-design.md): one compact composer, existing status bar,
 native-looking buttons, stable pet silhouette, keyboard focus, and minimum 500 by 420 layout.
