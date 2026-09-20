@@ -7,7 +7,7 @@ reference. The clickable map explains the companion, Pi/model loop, desktop brok
 file/shell and public web branches, and saved context. Examples trace screen, selection, detail, file, web and voice
 questions without executing them. The catalog searches all registered tools; the remaining
 pages explain extension points, context retention and current limits.
-The catalog separates seven desktop observations, six everyday utilities, four public web tools
+The catalog separates ten desktop observations, six everyday utilities, four public web tools
 and eight Pi tools. The research example explains key-free page reading and optional Brave search.
 Utilities can change clipboard contents and launch browser/file-manager windows; the guide
 distinguishes OS dispatch from verified UI results. See [harness research](harness-improvements.md).

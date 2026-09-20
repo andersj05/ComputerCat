@@ -131,6 +131,33 @@ test("native accessibility reads only an owned fixture, excludes passwords, and 
     expect(tabs.tabs).toEqual(result.tabs);
     expect(tabs.text).toBe("");
     expect(tabs.selectedText).toBe("");
+    const page = await new WindowsReader().inspectWindow(
+      handle,
+      new AbortController().signal,
+      "page",
+    );
+    expect(page.unavailableReason).toBeUndefined();
+    expect(page.pages).toEqual([{ title: "Fixture document", url: "https://example.com/fixture" }]);
+    expect(page.text).toBe("");
+    expect(page.selectedText).toBe("");
+    expect(page.tabs).toEqual([]);
+    const controls = await new WindowsReader().inspectWindow(
+      handle,
+      new AbortController().signal,
+      "controls",
+    );
+    expect(controls.controls).toContainEqual({
+      role: "Button",
+      name: "Save fixture",
+      enabled: false,
+    });
+    expect(controls.controls).toContainEqual({ role: "Edit", name: "Note editor", enabled: true });
+    expect(controls.text).toBe("");
+    expect(controls.selectedText).toBe("");
+    expect(controls.tabs).toEqual([]);
+    expect(JSON.stringify(controls)).not.toContain("Private password");
+    expect(JSON.stringify(controls)).not.toContain("fixture-password-never-report");
+    expect(JSON.stringify(controls)).not.toContain("A violet cat");
     child.stdin.write("status\n");
     expect(await nextLine("selection status")).toBe("status:2:10");
     child.stdin.write("select-spaces\n");

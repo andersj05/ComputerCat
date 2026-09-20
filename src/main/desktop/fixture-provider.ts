@@ -11,6 +11,8 @@ export function desktopFixture(enabled: boolean): DesktopProvider {
     text: "This help page explains saving a document.",
     selectedText: "Save your changes",
     tabs: ["Fixture help page", "Fixture notes"],
+    pages: [{ title: "Fixture help page", url: "https://example.com/help" }],
+    controls: [{ role: "Button", name: "Save document", enabled: true }],
     truncated: false,
   };
   return {

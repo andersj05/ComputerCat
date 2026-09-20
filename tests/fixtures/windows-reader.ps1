@@ -7,14 +7,36 @@ Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Xaml
+Add-Type -AssemblyName UIAutomationProvider
+Add-Type -AssemblyName UIAutomationTypes
+Add-Type -ReferencedAssemblies @(
+  [System.Windows.Controls.TextBox].Assembly.Location,
+  [System.Windows.Automation.Peers.AutomationPeer].Assembly.Location,
+  [System.Windows.DependencyObject].Assembly.Location,
+  [System.Windows.Markup.IQueryAmbient].Assembly.Location,
+  [System.Windows.Automation.Provider.IValueProvider].Assembly.Location,
+  [System.Windows.Automation.AutomationIdentifier].Assembly.Location
+) -TypeDefinition @'
+using System.Windows.Controls;
+using System.Windows.Automation.Peers;
+public class FixtureDocument : TextBox {
+  protected override AutomationPeer OnCreateAutomationPeer() { return new FixtureDocumentPeer(this); }
+}
+public class FixtureDocumentPeer : TextBoxAutomationPeer {
+  public FixtureDocumentPeer(FixtureDocument owner) : base(owner) {}
+  protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Document; }
+}
+'@
 $form = [System.Windows.Markup.XamlReader]::Parse(@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Computer Cat accessibility fixture" Width="600" Height="320"
+        Title="Computer Cat accessibility fixture" Width="600" Height="430"
         ShowInTaskbar="False" WindowStartupLocation="CenterScreen">
-  <StackPanel Margin="12">
-    <TextBox Name="Editor" Height="65" Text="A violet cat studies this example."
+  <StackPanel Name="Contents" Margin="12">
+    <TextBox Name="Editor" AutomationProperties.Name="Note editor" Height="65" Text="A violet cat studies this example."
              TextWrapping="Wrap" AcceptsReturn="True" />
-    <PasswordBox Name="Password" Height="26" Margin="0,12" />
+    <PasswordBox Name="Password" AutomationProperties.Name="Private password" Height="26" Margin="0,12" />
+    <Button Content="Save fixture" IsEnabled="False" Height="24" />
     <TabControl Height="125">
       <TabItem Header="Alpha fixture tab"><TextBlock Text="Alpha page content" /></TabItem>
       <TabItem Header="Beta fixture tab"><TextBlock Text="Beta page content" /></TabItem>
@@ -25,6 +47,12 @@ $form = [System.Windows.Markup.XamlReader]::Parse(@'
 $editor = $form.FindName('Editor')
 $password = $form.FindName('Password')
 $password.Password = 'fixture-password-never-report'
+$document = New-Object FixtureDocument
+$document.Text = 'https://example.com/fixture'
+$document.IsReadOnly = $true
+$document.Height = 24
+[System.Windows.Automation.AutomationProperties]::SetName($document, 'Fixture document')
+[void]$form.FindName('Contents').Children.Add($document)
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Concurrent;

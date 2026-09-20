@@ -129,11 +129,11 @@ public static class CatWindowTarget {
         if ($state.pages.Count -ge 8) { $result.truncated = $true; return }
         $page = @{ title = $name }
         $valuePattern = $null
-        if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
+        try { if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
           # A document's Value may be a URL in some browsers. Never guess from page text.
           $value = $valuePattern.Current.Value
           if ($value.Length -le 2081 -and $value -match '^https?://') { $page.url = $value }
-        }
+        } } catch { $result.truncated = $true }
         $state.pages.Add($page)
         # Do not traverse the page body or nested frames for a page-identity request.
         return

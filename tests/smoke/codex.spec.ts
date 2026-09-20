@@ -505,6 +505,9 @@ test("screen questions automatically observe through the real worker and recover
     const file = join(userData, "utility-fixture.txt");
     await writeFile(file, "utility fixture");
     const utilities = [
+      { name: "desktop_read_page", args: {}, expected: "https://example.com/help" },
+      { name: "desktop_list_controls", args: {}, expected: "Save document" },
+      { name: "desktop_find_text", args: { query: "saving" }, expected: "searchedCharacters" },
       { name: "desktop_get_environment", args: {}, expected: "fixture-time" },
       { name: "desktop_read_clipboard", args: {}, expected: "Fixture clipboard text" },
       { name: "desktop_write_clipboard", args: { text: "copied by fixture" }, expected: "written" },
@@ -520,6 +523,7 @@ test("screen questions automatically observe through the real worker and recover
       );
       await expect(reply).toContainText(expected);
       await expect(reply.getByRole("list", { name: "Tool activity" })).toContainText("Done");
+      await expect(reply.locator(".tool-activity .icon")).toHaveCount(1);
     }
   } finally {
     await electron.close();
