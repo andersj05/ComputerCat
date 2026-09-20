@@ -5,13 +5,11 @@ import type { WebResult } from "../../src/shared/web";
 const meta = (result: WebResult) => JSON.parse(result.content[0]?.text ?? "{}");
 function setup(key = "") {
   const fetcher = {
-    get: vi
-      .fn<WebFetcher["get"]>()
-      .mockResolvedValue({
-        url: "https://example.com/article",
-        contentType: "text/html",
-        body: `<title>Fixture</title><p>${"hello ".repeat(2000)}needle at end</p>`,
-      }),
+    get: vi.fn<WebFetcher["get"]>().mockResolvedValue({
+      url: "https://example.com/article",
+      contentType: "text/html",
+      body: `<title>Fixture</title><p>${"hello ".repeat(2000)}needle at end</p>`,
+    }),
   };
   const turn = new AbortController();
   let now = 1_000_000;
@@ -50,6 +48,17 @@ describe("web research service", () => {
     expect(found.matches[0].text).toContain("needle at end");
     expect(found.retrievedAt).toBe(first.retrievedAt);
     expect(fetcher.get).toHaveBeenCalledOnce();
+  });
+  it("keeps original Unicode offsets and treats find queries as literal text", async () => {
+    const { execute, fetcher } = setup();
+    const body = `${"İ".repeat(800)}[Needle.*]${"end ".repeat(100)}`;
+    fetcher.get.mockResolvedValue({ url: "https://example.com", contentType: "text/plain", body });
+    const first = meta(await execute({ operation: "read", url: "https://example.com" }));
+    const found = meta(
+      await execute({ operation: "find", pageId: first.pageId, query: "[needle.*]" }),
+    );
+    expect(found.matches).toEqual([{ start: 600, end: 1160, text: body.slice(600, 1160) }]);
+    expect(found.moreMatches).toBe(false);
   });
   it("expires cached pages on time, turn end and conversation changes", async () => {
     const { execute, controller, turn, expire } = setup();
@@ -115,13 +124,11 @@ describe("web research service", () => {
   });
   it("sanitizes malformed provider results and failures", async () => {
     const { execute, fetcher } = setup("private-key-canary");
-    fetcher.get
-      .mockRejectedValueOnce(new Error("private-key-canary"))
-      .mockResolvedValueOnce({
-        url: "https://example.com",
-        contentType: "application/json",
-        body: "not json",
-      });
+    fetcher.get.mockRejectedValueOnce(new Error("private-key-canary")).mockResolvedValueOnce({
+      url: "https://example.com",
+      contentType: "application/json",
+      body: "not json",
+    });
     for (let i = 0; i < 2; i++) {
       const response = await execute({ operation: "search", query: "test" });
       expect(response.isError).toBe(true);

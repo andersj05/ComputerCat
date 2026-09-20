@@ -5,7 +5,7 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workerEnvironment } from "../../src/agent/config";
 import { createModelRuntime, createPiRuntime } from "../../src/agent/pi-runtime";
-import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../../src/shared/tools";
+import { ALL_TOOL_NAMES, PI_TOOL_NAMES, WEB_TOOL_NAMES } from "../../src/shared/tools";
 
 const fixtureDirectories: string[] = [];
 afterEach(async () => {
@@ -130,7 +130,11 @@ describe("Pi integration without network or credentials", () => {
     models.registerNativeProvider(provider.provider);
     provider.setResponses([
       (context) => {
-        expect(context.tools?.map((tool) => tool.name).sort()).toEqual([...ALL_TOOL_NAMES].sort());
+        expect(context.tools?.map((tool) => tool.name).sort()).toEqual(
+          ALL_TOOL_NAMES.filter(
+            (name) => !(WEB_TOOL_NAMES as readonly string[]).includes(name),
+          ).sort(),
+        );
         expect(context.systemPrompt).toContain(
           "call desktop_observe without asking them to share a screen",
         );

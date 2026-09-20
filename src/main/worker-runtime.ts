@@ -5,6 +5,7 @@ import { workerConfigSchema, workerEventSchema } from "../agent/protocol";
 import { type AgentRuntime, UserFacingError } from "../agent/runtime";
 import { type DesktopExecutor, desktopError, desktopResultSchema } from "../shared/desktop";
 import type { ToolActivity } from "../shared/tools";
+import { type WebExecutor, webError, webResultSchema } from "../shared/web";
 
 export class WorkerRuntime implements AgentRuntime {
   private child: UtilityProcess | undefined;
@@ -23,6 +24,7 @@ export class WorkerRuntime implements AgentRuntime {
     },
     private readonly toolCache?: { directory: string; allowDownloads: boolean },
     private readonly desktop?: DesktopExecutor,
+    private readonly web?: WebExecutor,
   ) {}
 
   async run(
@@ -87,6 +89,8 @@ export class WorkerRuntime implements AgentRuntime {
       const desktopSignal = AbortSignal.any([signal, this.lifetime.signal, observations.signal]);
       const calls = new Set<string>();
       let desktopBusy = false;
+      const webCalls = new Set<string>();
+      let webBusy = false;
       let settled = false;
       let stopTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = setTimeout(
@@ -133,6 +137,42 @@ export class WorkerRuntime implements AgentRuntime {
         const parsed = workerEventSchema.safeParse(input);
         if (!parsed.success || parsed.data.id !== id) return;
         const event = parsed.data;
+        if (event.type === "web-request" && !desktopSignal.aborted) {
+          if (webCalls.has(event.callId)) return;
+          const reply = (result: unknown) => {
+            if (desktopSignal.aborted || settled || this.child !== child) return;
+            const checked = webResultSchema.safeParse(result);
+            post({
+              type: "web-result",
+              id,
+              callId: event.callId,
+              result: checked.success ? checked.data : webError("Invalid web response."),
+            });
+          };
+          if (webCalls.size >= 20) {
+            reply(webError("Web tool limit reached for this reply. Ask the user to continue."));
+            return;
+          }
+          webCalls.add(event.callId);
+          if (!this.web || webBusy) {
+            reply(
+              webError(
+                webBusy ? "Another web request is in progress." : "Web tools are unavailable.",
+              ),
+            );
+            return;
+          }
+          webBusy = true;
+          void Promise.resolve()
+            .then(() => {
+              desktopSignal.throwIfAborted();
+              return this.web?.(event.request, desktopSignal);
+            })
+            .then(reply, () => reply(webError("The web request failed or was cancelled.")))
+            .finally(() => {
+              webBusy = false;
+            });
+        }
         if (event.type === "desktop-request" && !desktopSignal.aborted) {
           if (calls.has(event.callId)) return;
           const reply = (result: unknown) => {

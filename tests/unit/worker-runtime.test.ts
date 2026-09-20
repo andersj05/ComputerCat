@@ -9,6 +9,7 @@ import type { RuntimeConfig } from "../../src/agent/config";
 import type { WorkerRequest } from "../../src/agent/protocol";
 import { WorkerRuntime } from "../../src/main/worker-runtime";
 import type { DesktopExecutor, DesktopRequest, DesktopResult } from "../../src/shared/desktop";
+import type { WebExecutor } from "../../src/shared/web";
 
 const config: RuntimeConfig = {
   mode: "pi",
@@ -83,6 +84,53 @@ async function startDesktopRuntime(desktop?: DesktopExecutor) {
 }
 
 describe("private desktop worker requests", () => {
+  it("routes web calls independently, rejects duplicates and suppresses late results", async () => {
+    const child = new TestWorker();
+    fork.mockReturnValue(child);
+    let complete: (result: unknown) => void = () => {};
+    const web = vi.fn<WebExecutor>().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve as (result: unknown) => void;
+        }),
+    );
+    const runtime = new WorkerRuntime(
+      "worker.js",
+      "/test",
+      resolveConfig,
+      undefined,
+      undefined,
+      undefined,
+      web,
+    );
+    const abort = new AbortController();
+    const delta = vi.fn();
+    const activity = vi.fn();
+    const running = runtime.run("Read a page", abort.signal, delta, activity);
+    await Promise.resolve();
+    const id = child.postMessage.mock.calls[0]?.[0].id;
+    const request = {
+      type: "web-request",
+      id,
+      callId: randomUUID(),
+      request: { operation: "read", url: "https://example.com" },
+    };
+    child.emit("message", request);
+    child.emit("message", request);
+    await dispatchDesktop();
+    expect(web).toHaveBeenCalledOnce();
+    abort.abort();
+    complete({ content: [{ type: "text", text: "private page" }] });
+    await dispatchDesktop();
+    expect(child.postMessage.mock.calls.some(([message]) => message.type === "web-result")).toBe(
+      false,
+    );
+    expect(delta).not.toHaveBeenCalled();
+    expect(activity).not.toHaveBeenCalled();
+    child.emit("message", { type: "done", id });
+    await running;
+    runtime.dispose();
+  });
   it("returns image blocks privately and never forwards observation content to renderer callbacks", async () => {
     const desktop = vi.fn<DesktopExecutor>().mockResolvedValue(desktopImage);
     const test = await startDesktopRuntime(desktop);

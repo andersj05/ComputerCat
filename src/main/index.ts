@@ -47,6 +47,8 @@ import { VoiceModelStore } from "./voice/model-store";
 import { allowMicrophone } from "./voice/permissions";
 import { VoiceSettingsStore } from "./voice/settings";
 import { WhisperRuntime } from "./voice/whisper-runtime";
+import { readSearchKey, WebController } from "./web/controller";
+import { webFixture } from "./web/fixture";
 import { WorkerRuntime } from "./worker-runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -340,6 +342,10 @@ else {
             context,
             { directory: join(app.getPath("userData"), "pi-runtime"), allowDownloads: !smoke },
             (request, signal) => desktop.execute(request, signal),
+            new WebController(
+              smoke ? webFixture : undefined,
+              smoke ? "fixture-search-key" : readSearchKey(process.env),
+            ).execute,
           ),
         publishModels,
       );

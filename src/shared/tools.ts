@@ -28,10 +28,13 @@ export const DESKTOP_UTILITY_TOOL_NAMES = [
   "desktop_reveal_file",
 ] as const;
 
+export const WEB_TOOL_NAMES = ["web_read", "web_read_more", "web_find", "web_search"] as const;
+
 export const ALL_TOOL_NAMES = [
   ...PI_TOOL_NAMES,
   ...DESKTOP_TOOL_NAMES,
   ...DESKTOP_UTILITY_TOOL_NAMES,
+  ...WEB_TOOL_NAMES,
 ] as const;
 
 export interface ToolActivity {

@@ -3,6 +3,7 @@ import {
   DESKTOP_TOOL_NAMES,
   DESKTOP_UTILITY_TOOL_NAMES,
   type ToolActivity,
+  WEB_TOOL_NAMES,
 } from "../shared/tools";
 
 interface ToolGuide {
@@ -14,6 +15,35 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  web_read: {
+    title: "Read a public web page",
+    purpose: "Read a known URL without opening the browser.",
+    returns:
+      "Title, source URL, retrieval time, links and the first 8,000 characters with a page reference.",
+    limit:
+      "Static public HTML/text/Markdown/JSON only. No cookies, JavaScript, sign-in, PDFs, images or private-network access. Source text is capped at 100,000 characters.",
+  },
+  web_read_more: {
+    title: "Read more of a page",
+    purpose: "Continue through a long page already retrieved this turn.",
+    returns: "The next 8,000 characters at a supplied offset from the same snapshot.",
+    limit:
+      "References expire after five minutes or the turn ends. A truncated source cannot supply text beyond the extraction cap.",
+  },
+  web_find: {
+    title: "Find text on a page",
+    purpose: "Locate a phrase in a previously retrieved page.",
+    returns: "Up to five excerpts with offsets and an indication of further matches.",
+    limit:
+      "Literal case-insensitive search of retained text only; it cannot see hidden or dynamic content.",
+  },
+  web_search: {
+    title: "Search the public web",
+    purpose: "Find current sources through optional Brave Search.",
+    returns: "Up to five titles, URLs and snippets with retrieval time.",
+    limit:
+      "Requires a separate configured API key. No paid development calls. Read a source page before relying on details; snippets are not full pages.",
+  },
   desktop_get_environment: {
     title: "Get time and standard folders",
     purpose: "Find the current date, time zone, OS and common folder locations without guessing.",
@@ -162,6 +192,8 @@ export const guideTools = ALL_TOOL_NAMES.map((name) => ({
     ? "desktop"
     : (DESKTOP_UTILITY_TOOL_NAMES as readonly string[]).includes(name)
       ? "utilities"
-      : "files",
+      : (WEB_TOOL_NAMES as readonly string[]).includes(name)
+        ? "web"
+        : "files",
   ...descriptions[name],
 }));

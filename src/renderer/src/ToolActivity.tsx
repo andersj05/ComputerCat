@@ -23,6 +23,10 @@ export const TOOL_LABELS: Record<Activity["name"], string> = {
   desktop_open_url: "Open web link",
   desktop_open_folder: "Open folder",
   desktop_reveal_file: "Show file in folder",
+  web_read: "Read web page",
+  web_read_more: "Read more of page",
+  web_find: "Find text on page",
+  web_search: "Search web",
 };
 const states = { running: "Running…", complete: "Done", error: "Failed", stopped: "Stopped" };
 

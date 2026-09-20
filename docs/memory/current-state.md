@@ -13,6 +13,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   accessible text, tabs and selection on demand. Capture targets one source; app coverage varies.
 - Six [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, open links/folders and reveal files. Launch results confirm dispatch, not UI success.
+- Four [web tools](../web-research.md) read, page and find public static text, plus optional Brave
+  search using a separate main-process key. Page references expire after five minutes or turn end.
 - Demo replies are deterministic and offline. App-owned Codex login and direct model selection
   work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
@@ -22,7 +24,6 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   Enabled models stay ready unless idle unload is selected. CPU portable/AVX2 only; no saved audio.
   Cat panel size/drafts persist during this run; New chat stays visible and secondary actions use ⋯.
   See the [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md).
-- [Developer memory](README.md) is shared across coding clients and checked by `npm run memory:check`.
 
 ## Persistence boundaries
 
@@ -37,8 +38,7 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 
 Pi discovers no agent files, extensions, skills or prompts, including developer memory.
 Its eight file/search/shell tools run from Desktop with OS user permissions and report activity.
-The worker is not an OS sandbox. See [architecture](../architecture.md) and
-[Pi tests](../../tests/unit/pi-runtime.test.ts).
+The worker is not an OS sandbox; see [architecture](../architecture.md).
 
 ## Find the implementation
 
@@ -55,7 +55,7 @@ The worker is not an OS sandbox. See [architecture](../architecture.md) and
 
 ## Not implemented
 
-Mouse/keyboard control, web search/page retrieval, external MCP, selected-fact user memory, speech output, other-provider
+Mouse/keyboard control, full browser integration, external MCP, selected-fact user memory, speech output, other-provider
 credential settings, signing and app updates remain future work. The
 [research plan](../research-and-build-plan.md) proposes these; it is not a completion checklist.
 

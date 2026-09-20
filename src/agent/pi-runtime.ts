@@ -12,10 +12,12 @@ import {
 import type { ChatMessage } from "../shared/contracts";
 import type { DesktopExecutor } from "../shared/desktop";
 import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../shared/tools";
+import type { WebExecutor } from "../shared/web";
 import type { RuntimeConfig } from "./config";
 import { createDesktopTools } from "./desktop-tools";
 import { createDesktopUtilityTools } from "./desktop-utility-tools";
 import { type AgentRuntime, SYSTEM_PROMPT, UserFacingError } from "./runtime";
+import { createWebTools } from "./web-tools";
 
 export function isolatedResources(): ResourceLoader {
   const extensions = { extensions: [], errors: [], runtime: createExtensionRuntime() };
@@ -65,6 +67,7 @@ export async function createPiRuntime(
   injectedModels?: ModelRuntime,
   saved?: { sessionFile: string; history: ChatMessage[] },
   desktop?: DesktopExecutor,
+  web?: WebExecutor,
 ): Promise<AgentRuntime> {
   const models = injectedModels ?? (await createModelRuntime());
   const model = models.getModel(config.provider, config.model);
@@ -115,20 +118,22 @@ export async function createPiRuntime(
         timestamp: Date.now(),
       });
   }
+  const customTools = [
+    ...(desktop
+      ? [
+          ...createDesktopTools(desktop, model.input.includes("image")),
+          ...createDesktopUtilityTools(desktop),
+        ]
+      : []),
+    ...(web ? createWebTools(web) : []),
+  ];
   const { session } = await createAgentSession({
     cwd,
     modelRuntime: models,
     model,
     ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
-    tools: desktop ? [...ALL_TOOL_NAMES] : [...PI_TOOL_NAMES],
-    ...(desktop
-      ? {
-          customTools: [
-            ...createDesktopTools(desktop, model.input.includes("image")),
-            ...createDesktopUtilityTools(desktop),
-          ],
-        }
-      : {}),
+    tools: [...PI_TOOL_NAMES, ...customTools.map((tool) => tool.name)],
+    customTools,
     resourceLoader: isolatedResources(),
     sessionManager: manager,
     settingsManager: SettingsManager.inMemory({

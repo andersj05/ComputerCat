@@ -159,17 +159,17 @@ export class WebController {
         note,
       };
       if (request.operation === "find") {
-        const lower = page.text.toLowerCase();
-        const query = request.query.toLowerCase();
+        // Match on the original string: lowercasing can change Unicode string length.
+        const query = new RegExp(request.query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu");
         const matches: { start: number; end: number; text: string }[] = [];
-        let position = lower.indexOf(query);
-        while (position >= 0 && matches.length < 5) {
-          const start = Math.max(0, position - 200);
-          const end = Math.min(page.text.length, position + query.length + 350);
+        let match = query.exec(page.text);
+        while (match && matches.length < 5) {
+          const start = Math.max(0, match.index - 200);
+          const end = Math.min(page.text.length, match.index + match[0].length + 350);
           matches.push({ start, end, text: page.text.slice(start, end) });
-          position = lower.indexOf(query, position + query.length);
+          match = query.exec(page.text);
         }
-        return result({ ...source, query: request.query, matches, moreMatches: position >= 0 });
+        return result({ ...source, query: request.query, matches, moreMatches: Boolean(match) });
       }
       const start = request.operation === "page" ? request.start : 0;
       if (start > page.text.length)
