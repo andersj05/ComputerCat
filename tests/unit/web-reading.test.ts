@@ -68,14 +68,12 @@ describe("public web destination policy", () => {
         { address: "93.184.216.34", family: 4 },
         { address: "10.0.0.1", family: 4 },
       ]);
-    const transport = vi
-      .fn<HttpTransport>()
-      .mockResolvedValue({
-        status: 302,
-        location: "https://other.example.com/page",
-        contentType: "text/html",
-        body: "",
-      });
+    const transport = vi.fn<HttpTransport>().mockResolvedValue({
+      status: 302,
+      location: "https://other.example.com/page",
+      contentType: "text/html",
+      body: "",
+    });
     const reader = new PublicHttp(resolve, transport);
     await expect(reader.get("https://example.com", new AbortController().signal)).rejects.toThrow(
       "private network",

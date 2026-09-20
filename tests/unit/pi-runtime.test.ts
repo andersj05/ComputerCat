@@ -304,6 +304,7 @@ describe("Pi integration without network or credentials", () => {
       OPENAI_API_KEY: "unrelated-secret",
       NODE_OPTIONS: "--require bad.js",
       COMPUTERCAT_API_KEY: "chosen-secret",
+      COMPUTERCAT_BRAVE_SEARCH_API_KEY: "main-only-search-secret",
     });
     expect(env).toEqual({
       PI_OFFLINE: "1",

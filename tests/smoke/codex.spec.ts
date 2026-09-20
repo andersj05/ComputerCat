@@ -287,6 +287,70 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
   }
 });
 
+test("public web research crosses the real worker with offline sources and citations", async () => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
+  const { electron, page } = await launch(userData);
+  try {
+    await interceptCodex(electron);
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: "Use a device code" }).click();
+    await expect(page.getByRole("textbox", { name: "Sign-in code" })).toHaveValue("TEST-CODE");
+    await electron.evaluate(() => {
+      Reflect.get(globalThis, "offlineCodex").allowLogin = true;
+    });
+    await expect(page.getByText("Connected to ChatGPT", { exact: true })).toBeVisible();
+    await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
+    await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("lock-screen");
+    });
+    const reply = await sendAndWaitForReply(page, "web-fixture:research the fixture guide");
+    await expect(reply).toContainText("Offline web research complete");
+    await expect(reply.getByRole("link", { name: "Fixture web guide" })).toHaveAttribute(
+      "href",
+      "https://example.com/guide",
+    );
+    await reply.getByRole("button", { name: /Tool activity/ }).click();
+    const activity = reply.getByRole("list", { name: "Tool activity" });
+    for (const label of ["Search web", "Read web page", "Find text on page", "Read more of page"])
+      await expect(activity).toContainText(new RegExp(`${label}.*Done`));
+    const requests = await electron.evaluate(
+      () => Reflect.get(globalThis, "offlineCodex").requests,
+    );
+    expect(requests).toHaveLength(5);
+    const outputs = requests
+      .at(-1)
+      .input.filter((entry: { type: string }) => entry.type === "function_call_output");
+    const data = outputs.map((entry: { output: string | { type: string; text: string }[] }) =>
+      JSON.parse(
+        typeof entry.output === "string"
+          ? entry.output
+          : (entry.output.find((part) => part.type === "input_text")?.text ?? "{}"),
+      ),
+    );
+    expect(data[0].results[0].url).toBe("https://example.com/guide");
+    expect(data[1]).toMatchObject({ title: "Fixture web guide", start: 0, nextStart: 8000 });
+    expect(data[1].text).toContain("Offline page evidence.");
+    expect(data[2].matches[0].text).toContain("needle for web_find");
+    expect(data[3]).toMatchObject({
+      pageId: data[1].pageId,
+      start: 8000,
+      nextStart: null,
+      retrievedAt: data[1].retrievedAt,
+    });
+    expect(JSON.stringify(requests)).not.toContain("fixture-search-key");
+    expect(
+      await page.evaluate(() => Object.keys(window.computerCat).filter((key) => /^web/i.test(key))),
+    ).toEqual([]);
+  } finally {
+    await electron.close();
+    await cleanup(userData);
+  }
+});
+
 test("a failed model save preserves the draft and current connection until retry", async () => {
   const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
   await mkdir(join(userData, "models.json.tmp"));

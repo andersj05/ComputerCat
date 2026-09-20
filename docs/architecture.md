@@ -66,7 +66,7 @@ images reduced to alt text, and links displayed without navigation. The app neve
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
-observation tools and six desktop utilities, and native Pi sessions are saved per conversation.
+observation tools, six desktop utilities and four public web tools; native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
@@ -115,6 +115,24 @@ API tools need their own scope and authorization design.
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.
+
+## Public web research (reviewed 2026-09-20)
+
+The [web tools](../src/agent/web-tools.ts) use a separate typed private worker channel.
+[Main](../src/main/web/controller.ts) owns public network access, the optional Brave key,
+eight cached pages per turn, five-minute page references and 15-second request deadlines.
+The worker enforces a separate 20-call budget and suppresses late results on Stop, turn end,
+chat change or disposal. No renderer/preload web method is added. Desktop lock/sleep gates
+desktop operations independently; public web tools remain usable.
+
+[Public HTTP](../src/main/web/public-http.ts) checks public-only URLs, every DNS answer and
+redirect, then pins the vetted address to the actual socket. Responses are bounded at 2 MB;
+static extraction retains up to 100,000 characters and returns 8,000-character slices with
+source metadata. No cookies, proxy environment or JavaScript is used. Search credentials go
+only to the fixed Brave origin, with redirects rejected; they never enter worker configuration
+or renderer state. Retrieved content persists in Pi context like other tool results. These
+restrictions govern these four tools; existing shell tools still have OS user permissions.
+See [design, sources and tests](web-research.md).
 
 ## On-demand desktop context (reviewed 2026-09-19)
 

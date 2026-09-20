@@ -12,8 +12,8 @@ gap was a reliable way to perform ordinary desktop jobs: native actions, web res
 structured browser access and app controls. More tools alone will not fix uncertain targets,
 stale evidence or claiming success before checking the result.
 
-The selected first increment adds six everyday utilities without new dependencies. Follow it
-with web research and browser interaction, then native application control. Expand connected
+The first increment added six everyday utilities without new dependencies. The second adds
+[public web research](web-research.md). Follow with browser interaction and native application control. Expand connected
 services and user memory as separate capabilities. This order is a project recommendation
 based on the inspected gaps, not measured comparative performance.
 
@@ -21,7 +21,7 @@ based on the inspected gaps, not measured comparative performance.
 | --- | --- | --- |
 | Everyday desktop jobs | Even opening Downloads or copying an answer required generated shell commands | Implemented six narrow native tools below |
 | Fresh environment | Static prompt lacked a dedicated current-time/standard-folder source | Implemented `desktop_get_environment` |
-| Public web research | No search results, page extraction or citation tools; visible browser text is incomplete | Next: search plus bounded page reading with source URLs and retrieval times |
+| Public web research | No search results, page extraction or citation tools; visible browser text is incomplete | Implemented four tools: static page reading, pagination, text finding and optional Brave search with source metadata |
 | Browser interaction | Windows accessibility exposes some text/tabs, but cannot navigate or fill forms | Prototype a structured browser adapter with an explicit session/profile |
 | Native app interaction | Observation has source IDs but no actionable element identities | Evaluate a supervised driver with fresh window/element references |
 | Connections | Static tool-name union and intentionally empty Pi resource loader | Add configured, namespaced tools through a registry before general MCP support |
@@ -30,7 +30,7 @@ based on the inspected gaps, not measured comparative performance.
 
 ## Implemented first increment
 
-The app now registers 21 tools when its desktop executor is available. The six additions are
+The first increment grew the app from 15 to 21 tools; web research brings the full app to 25. The six desktop additions are
 defined in [utility tools](../src/agent/desktop-utility-tools.ts), validated in the
 [shared contract](../src/shared/desktop-utilities.ts), executed by the
 [main service](../src/main/desktop/utilities.ts) and backed by
@@ -135,7 +135,7 @@ evaluations. Do not claim model task success from canned model fixtures.
 | Open a web link | Valid URL only; dispatch distinguished from page load |
 | Stop during a slow operation | No queued side effects or late results; uncertainty for already dispatched work |
 | Ask about selected text in an unsupported app | Honest limitation; no implicit clipboard fallback |
-| Research a current topic (future) | Retrieved sources and dates, useful citations, provider failure handled |
+| Research a current topic | Retrieved sources and dates, useful citations, provider failure handled |
 | Fill but do not submit a form (future) | Exact session/element targeting; values verified; no submission |
 | Operate a moved or stale app control (future) | Fresh observation or refusal, never an unverified coordinate retry |
 | Malicious page/clipboard instructions | Treated as data; no unrelated commands, credential reads or external submissions |
@@ -149,6 +149,6 @@ Automated coverage for this increment lives in
 in-memory clipboard and inert launches; actual default-browser/file-manager behavior and
 live-model tool selection are not established by those fixtures.
 
-Verified on 2026-09-20 with Node 24.12.0: `npm run verify` passed memory checks, lint,
+The first increment was verified on 2026-09-20 with Node 24.12.0: `npm run verify` passed memory checks, lint,
 type checking, 266 tests and the production build; `npm run test:smoke` passed all 23
 Electron checks. The guide's rendered catalog was visually inspected with all 21 tools.
