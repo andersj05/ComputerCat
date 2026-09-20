@@ -256,10 +256,10 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await pet.locator("#pet-voice-draft").press("Enter");
     await expect(page.locator(".message.user")).toContainText("Keep the folder, please.");
     await expect(pet.locator(".pet-voice-reply")).not.toBeEmpty();
-    await expect(pet.getByRole("button", { name: "Talk again" })).toBeVisible();
+    await expect(pet.getByRole("button", { name: "Talk", exact: true })).toBeVisible();
     expect(await chatVisible()).toBe(false);
     await pet.screenshot({ path: testInfo.outputPath("pet-reply.png") });
-    await pet.getByRole("button", { name: "Talk again" }).click();
+    await pet.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
     await expect(pet.locator(".pet-voice")).toHaveCount(0);

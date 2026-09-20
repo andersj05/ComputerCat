@@ -18,12 +18,13 @@ npm run dev
 The first launch may download Electron. The app starts in **local demo mode**: sample replies,
 no credentials, and no API calls. The supplied pixel artwork is in `assets/computer_cat.png`.
 
-- Talk, Chat, and Options stay beside the cat. Talk starts voice; Chat opens a desktop conversation
-  panel where you can type, create a New chat, reopen History, or change model. Stop stays visible
-  during replies. Click the cat for its model shortcut; drag its body to move it.
-- The panel shows conversation text and named tool activity, with an expandable step list. Expand
-  gives long replies more room; scrolling up holds your place and Latest reply returns to new output.
-  Copy reply copies the full answer; the arrow in the caption opens the full chat window.
+- Talk starts voice; Chat opens a compact conversation panel above the cat. Its input shows one
+  microphone, send or stop icon as needed. Enter sends; Shift+Enter adds a line. The ⋯ menu holds
+  New chat, History, Copy reply, model selection, voice settings and Open chat window.
+  Controls below the cat hide while the panel is open. Drag the cat's body to move it.
+- The panel prioritizes conversation text, with tool activity collapsed into an expandable status
+  line. Expand gives long replies more room; scrolling up holds your place and Latest reply returns
+  to new output. Click the cat for its model shortcut when the panel is closed.
 - Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
 - The cat listens, thinks, takes notes, taps a tiny keyboard, and animates its face while
   text replies arrive. A happy flourish marks a finished reply. Try all eleven activity poses

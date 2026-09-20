@@ -88,6 +88,7 @@ export function Pet({
       className={`pet-wrap ${preferences.animation ? "animated" : ""} ${dragging ? "dragging" : ""} ${controlsVisible ? "selected" : ""}`}
       data-motion-paused={hidden || dragging}
       data-size={preferences.size}
+      data-panel-open={panelOpen}
       style={{
         position: "absolute",
         right: 0,
@@ -121,11 +122,11 @@ export function Pet({
         type="button"
         className="pet-button"
         ref={catButton}
-        aria-expanded={controlsVisible}
+        aria-expanded={controlsVisible && !panelOpen}
         aria-controls="pet-model-controls"
         aria-describedby="pet-activity-status"
         onClick={(event) => {
-          if (event.detail === 0) setControlsVisible((visible) => !visible);
+          if (event.detail === 0 && !panelOpen) setControlsVisible((visible) => !visible);
         }}
         onPointerDown={(event) => {
           if (event.button !== 0 || pointer.current !== null) return;
@@ -144,7 +145,7 @@ export function Pet({
           event.currentTarget.releasePointerCapture(event.pointerId);
           setDragging(false);
           void drag("end").then(({ moved }) => {
-            if (!moved) setControlsVisible((visible) => !visible);
+            if (!moved && !panelOpen) setControlsVisible((visible) => !visible);
           });
         }}
         onLostPointerCapture={() => {
@@ -208,7 +209,7 @@ export function Pet({
         type="button"
         className="xp-button pet-model"
         id="pet-model-controls"
-        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
+        style={{ visibility: controlsVisible && !panelOpen ? "visible" : "hidden" }}
         onClick={() => act(openModels)}
         aria-label="Choose model"
         title={`Change model: ${modelLabel}`}

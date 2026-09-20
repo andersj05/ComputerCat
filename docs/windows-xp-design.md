@@ -88,11 +88,16 @@ chat hidden and the cat's size/foot position stable except when fitting the disp
 Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
 Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
 Finish releases the microphone and produces an editable message; only Send submits it.
-The whole conversation stays in the balloon alongside the composer. New chat and History are
-reachable from its toolbar. Expand enlarges the reading pane; the caption arrow opens full chat.
-Tool activity shows readable names, current state, failures and an expandable step list. Scrolling
-up pauses following streamed text; Latest reply returns to the end. Copy reply copies the complete
-text. Close cancels capture but keeps an already reviewed draft
+The conversation takes most of the balloon: a small caption, a scrolling reading pane and a
+single-line input that grows only as needed. Keep the default panel to four buttons: actions (⋯),
+expand, close and one contextual microphone/send/stop icon. Hide the duplicate controls below the
+cat while the panel is open. New chat, History, Copy reply, full chat, model selection and voice
+settings live in the actions menu. Ctrl+N starts a new chat; Enter sends and Shift+Enter adds a line.
+Tool activity collapses to one named status line with failures; expand it to inspect the steps.
+During capture, the live preview lives in the reading pane, with only status and finish/cancel
+icons below it. Scrolling up pauses following streamed text; a floating Latest reply returns to
+the end. Expand enlarges the reading pane. Copy reply copies the complete latest answer.
+Close cancels capture but keeps an already reviewed draft
 in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.
 Ctrl+Alt+Space and the tray Talk action start or finish a recording. Existing drafts reopen for

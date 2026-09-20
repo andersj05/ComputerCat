@@ -673,6 +673,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
       )
       .toBe(true);
     await pet.getByRole("button", { name: "Chat", exact: true }).click();
+    await pet.getByRole("button", { name: "Conversation actions" }).click();
     await pet.getByRole("button", { name: "Open chat window" }).click();
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
     await expect
@@ -696,6 +697,7 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
         )
         .toBe(false);
       await pet.getByRole("button", { name: "Chat", exact: true }).click();
+      await pet.getByRole("button", { name: "Conversation actions" }).click();
       await pet.getByRole("button", { name: "Open chat window" }).click();
       await pet.getByRole("button", { name: "Close voice bubble" }).click();
       await expect
@@ -1241,6 +1243,7 @@ test("cat presence, direct controls, drag gestures, and motion preferences", asy
     expect((await petState()).chatVisible).toBe(false);
     await showCatControls(pet);
     await pet.getByRole("button", { name: "Chat", exact: true }).click();
+    await pet.getByRole("button", { name: "Conversation actions" }).click();
     await pet.getByRole("button", { name: "Open chat window" }).click();
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
     await expect.poll(async () => (await petState()).chatVisible).toBe(true);
@@ -1298,15 +1301,48 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     await pet.getByRole("button", { name: "Chat", exact: true }).click();
     const panel = pet.locator(".pet-voice");
     const input = panel.getByRole("textbox", { name: "Message Computer Cat" });
+    const actions = panel.getByRole("button", { name: "Conversation actions" });
+    const content = panel.getByRole("region", { name: "Cat conversation" });
+    await expect(pet.locator(".pet-dock")).toBeHidden();
+    await expect(panel.getByRole("button")).toHaveCount(4);
+    expect(
+      await content.evaluate(
+        (el) => el.clientHeight / (el.closest(".pet-voice")?.clientHeight || 1),
+      ),
+    ).toBeGreaterThan(0.7);
+    await actions.click();
+    await expect(panel.getByRole("button", { name: "New chat", exact: true })).toBeFocused();
+    await pet.keyboard.press("Escape");
+    await expect(actions).toHaveAttribute("aria-expanded", "false");
+    await expect(actions).toBeFocused();
+    await expect(panel).toBeVisible();
+    await actions.click();
+    await input.click();
+    await expect(actions).toHaveAttribute("aria-expanded", "false");
+    await input.fill("First line");
+    await input.press("Shift+Enter");
+    await expect(input).toHaveValue("First line\n");
+    await expect(panel.locator(".pet-message")).toHaveCount(0);
+    await input.fill(Array.from({ length: 12 }, (_, i) => `Line ${i}`).join("\n"));
+    expect(await input.evaluate((el) => el.clientHeight)).toBeLessThanOrEqual(84);
+    expect(await content.evaluate((el) => el.clientHeight)).toBeGreaterThan(200);
     await input.fill("A message from the desktop cat");
+    expect(await input.evaluate((el) => el.clientHeight)).toBeLessThanOrEqual(32);
+    await expect(panel.getByRole("button", { name: "Send message" })).toBeVisible();
+    await expect(panel.getByRole("button")).toHaveCount(4);
     await input.press("Enter");
     await expect(panel.locator(".pet-message.assistant")).toHaveAttribute("data-state", "complete");
     await expect(input).toHaveValue("");
+    await pet.screenshot({
+      path: testInfo.outputPath("cat-panel-conversation.png"),
+      omitBackground: true,
+    });
     await electron.evaluate(({ clipboard }) => {
       clipboard.writeText = async (value) => {
         Reflect.set(globalThis, "copiedReply", value);
       };
     });
+    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "Copy reply", exact: true }).click();
     await expect(panel.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
     expect(await electron.evaluate(() => Reflect.get(globalThis, "copiedReply"))).toBe(
@@ -1322,6 +1358,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
       async () => (await window.computerCat.snapshot()).conversationId,
     );
     await input.fill("Keep this draft with its conversation");
+    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(panel.getByRole("alertdialog")).toBeVisible();
     await expect(panel.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
@@ -1336,6 +1373,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     if (!firstId) throw Error("Missing conversation ID");
     await page.evaluate((id) => window.computerCat.openConversation(id), firstId);
     await expect(input).toHaveValue("Keep this draft with its conversation");
+    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "New chat", exact: true }).click();
     await panel.getByRole("button", { name: "Start new chat", exact: true }).click();
     await expect(input).toHaveValue("");
@@ -1354,6 +1392,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
       path: testInfo.outputPath("cat-panel-new-chat.png"),
       omitBackground: true,
     });
+    await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "History…" }).click();
     await expect(page.getByRole("dialog", { name: "Conversation history" })).toBeVisible();
     expect(errors).toEqual([]);
@@ -1404,10 +1443,11 @@ test("cat panel shows tool progress and long replies without losing the reading 
         { channel: IPC.changed, id, text, busy },
       );
     await publish("", true);
-    await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Read window");
-    await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Running…");
+    await expect(panel.getByRole("list", { name: "Tool activity" })).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: /Read window… · 2 steps/ })).toBeVisible();
     await expect(panel.getByRole("button", { name: "Stop reply", exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: /Tool activity/ }).click();
+    await panel.getByRole("button", { name: /Read window… · 2 steps/ }).click();
+    await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Running…");
     await expect(panel.getByRole("list", { name: "Tool activity" })).toContainText("Read screen");
     await pet.screenshot({
       path: testInfo.outputPath("cat-panel-tools.png"),
