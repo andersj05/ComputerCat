@@ -49,22 +49,78 @@ globalThis.fetch = async (url, options) => {
         item.type === "function_call_output" &&
         JSON.stringify(item).includes("fixture-file-content"),
     );
-  const needsTool = needsRead || needsDesktop;
+  const utilityLines = userText.split("\n").filter((line) => line.startsWith("utility-fixture:"));
+  const utility = utilityLines.length
+    ? JSON.parse(utilityLines.at(-1).slice("utility-fixture:".length))
+    : undefined;
+  const utilityCallId = `offline-utility-${utilityLines.length}`;
+  const utilityResult = utility
+    ? body.input.find(
+        (item) => item.type === "function_call_output" && item.call_id === utilityCallId,
+      )
+    : undefined;
+  const needsUtility = utility && !utilityResult;
+  const webTurns = userText.split("\n").filter((line) => line.startsWith("web-fixture:"));
+  const webId = `offline-web-${webTurns.length}`;
+  const webResult = (stage) =>
+    body.input.find(
+      (entry) => entry.type === "function_call_output" && entry.call_id === `${webId}-${stage}`,
+    );
+  const outputText = (entry) =>
+    typeof entry.output === "string"
+      ? entry.output
+      : entry.output.find((part) => part.type === "input_text")?.text;
+  const webPage = webResult("read") ? JSON.parse(outputText(webResult("read"))) : undefined;
+  const webSteps = [
+    { stage: "search", name: "web_search", args: { query: "fixture research" } },
+    { stage: "read", name: "web_read", args: { url: "https://example.com/guide" } },
+    { stage: "find", name: "web_find", args: { pageId: webPage?.pageId, query: "needle" } },
+    {
+      stage: "more",
+      name: "web_read_more",
+      args: { pageId: webPage?.pageId, start: webPage?.nextStart },
+    },
+  ];
+  const webStep = webTurns.length ? webSteps.find((step) => !webResult(step.stage)) : undefined;
+  const needsTool = webStep || needsUtility || needsRead || needsDesktop;
   const desktopText = desktopResult
     ? typeof desktopResult.output === "string"
       ? desktopResult.output
       : JSON.stringify(desktopResult.output)
     : undefined;
-  const replyText = desktopText ? `Offline desktop result: ${desktopText}` : "Offline Codex reply.";
+  const replyText =
+    webTurns.length && !webStep
+      ? "Offline web research complete: [Fixture web guide](https://example.com/guide)."
+      : utilityResult
+        ? `Offline utility result: ${typeof utilityResult.output === "string" ? utilityResult.output : JSON.stringify(utilityResult.output)}`
+        : desktopText
+          ? `Offline desktop result: ${desktopText}`
+          : "Offline Codex reply.";
   const item = needsTool
     ? {
         id: "offline-tool-call",
         type: "function_call",
-        call_id: needsRead ? "offline-read" : desktopCallId,
-        name: needsRead ? "read" : "desktop_observe",
-        arguments: needsRead
-          ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
-          : "{}",
+        call_id: webStep
+          ? `${webId}-${webStep.stage}`
+          : needsUtility
+            ? utilityCallId
+            : needsRead
+              ? "offline-read"
+              : desktopCallId,
+        name: webStep
+          ? webStep.name
+          : needsUtility
+            ? utility.name
+            : needsRead
+              ? "read"
+              : "desktop_observe",
+        arguments: webStep
+          ? JSON.stringify(webStep.args)
+          : needsUtility
+            ? JSON.stringify(utility.args)
+            : needsRead
+              ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
+              : "{}",
         status: "completed",
       }
     : {

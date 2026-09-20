@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
-import type { DesktopExecutor, DesktopResult } from "../shared/desktop";
+import type { WebExecutor, WebResult } from "../shared/web";
 import type { WorkerEvent, WorkerRequest } from "./protocol";
 
-type DesktopReply = Extract<WorkerRequest, { type: "desktop-result" }>;
+type WebReply = Extract<WorkerRequest, { type: "web-result" }>;
 type Pending = {
   turnId: string;
-  finish: (result?: DesktopResult) => void;
+  finish: (result?: WebResult) => void;
 };
 
-/** Private worker-to-main desktop calls, scoped to the currently running turn. */
-export class DesktopWorkerClient {
+/** Private worker-to-main web calls, scoped to the currently running turn. */
+export class WebWorkerClient {
   private active: { id: string; signal: AbortSignal } | undefined;
   private readonly pending = new Map<string, Pending>();
 
@@ -28,27 +28,22 @@ export class DesktopWorkerClient {
     for (const call of this.pending.values()) call.finish();
   }
 
-  readonly execute: DesktopExecutor = (request, signal) => {
+  readonly execute: WebExecutor = (request, signal) => {
     const turn = this.active;
     signal.throwIfAborted();
     if (!turn || turn.signal.aborted)
-      return Promise.reject(new Error("There is no active desktop tool turn."));
+      return Promise.reject(new Error("There is no active web tool turn."));
     if (this.pending.size >= 4)
-      return Promise.reject(new Error("Too many desktop requests are pending."));
+      return Promise.reject(new Error("Too many web requests are pending."));
     const cancellation = AbortSignal.any([signal, turn.signal]);
     const callId = randomUUID();
-    return new Promise<DesktopResult>((resolve, reject) => {
-      const finish = (result?: DesktopResult) => {
+    return new Promise<WebResult>((resolve, reject) => {
+      const finish = (result?: WebResult) => {
         if (!this.pending.delete(callId)) return;
         clearTimeout(timeout);
         cancellation.removeEventListener("abort", abort);
         if (result && !cancellation.aborted) resolve(result);
-        else
-          reject(
-            new Error(
-              "The desktop request ended before a result arrived. An action may already have happened; inspect before retrying.",
-            ),
-          );
+        else reject(new Error("The web request ended before a result arrived."));
       };
       const abort = () => finish();
       const timeout = setTimeout(abort, this.timeoutMs);
@@ -56,14 +51,14 @@ export class DesktopWorkerClient {
       this.pending.set(callId, { turnId: turn.id, finish });
       cancellation.addEventListener("abort", abort, { once: true });
       try {
-        this.send({ type: "desktop-request", id: turn.id, callId, request });
+        this.send({ type: "web-request", id: turn.id, callId, request });
       } catch {
         finish();
       }
     });
   };
 
-  receive(reply: DesktopReply): boolean {
+  receive(reply: WebReply): boolean {
     const call = this.pending.get(reply.callId);
     if (!call || call.turnId !== reply.id || this.active?.id !== reply.id) return false;
     call.finish(reply.result);

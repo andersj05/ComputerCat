@@ -228,3 +228,43 @@ before resizing for small details. Keep these read-only and within the same sour
 Evidence: [capture boundary](../../src/main/desktop/source-capture.ts),
 [broker](../../src/main/desktop/controller.ts), [tool definitions](../../src/agent/desktop-tools.ts),
 and [native verification](../../tests/smoke/native-capture.spec.ts).
+
+## D014: Add narrow desktop utilities before general application control
+
+Status: adopted and implemented, reviewed 2026-09-20.
+
+Expose six named utilities through the existing turn-scoped desktop broker: current environment,
+clipboard text read/write, open web link/folder and reveal file. Fixed native APIs replace shell
+generation for these common jobs. No new dependencies or renderer OS access are needed.
+Keep strict requests, bounded output, serialized dispatch and lock/sleep/cancellation handling.
+Report OS dispatch separately from verified application state; after an uncertain outcome,
+observe before retrying. Stop cannot undo an already dispatched OS action.
+
+Clipboard task relevance is prompt policy; this does not create an enforced permission mode
+around the existing privileged shell tools. No implicit clipboard fallback from failed selection
+reading. Clipboard tool results follow existing local Pi retention and selected-model delivery.
+
+Evidence: [research](../harness-improvements.md), [contract](../../src/shared/desktop-utilities.ts),
+[service](../../src/main/desktop/utilities.ts), [tests](../../tests/unit/desktop-utilities.test.ts).
+Public web research followed in D015. Full browser/native control, connectors and selected-fact
+memory remain proposals.
+
+## D015: Keep public web research separate from browser sessions
+
+Status: adopted and implemented, reviewed 2026-09-20.
+
+Add explicit read, page, find and optional search tools through a private worker channel. Main
+owns bounded public HTTP, validated/pinned DNS destinations and per-turn page snapshots. This
+gives the cat source text and citations without depending on visible browser text or inheriting
+browser cookies. Search uses only the explicitly configured Brave key in main; the worker's
+environment excludes it. Reading known URLs needs no key. Browser interaction is a later adapter.
+
+Each source reports URL, retrieval time and truncation. Stop and turn completion invalidate
+cached references and suppress late results. Web work has a separate 20-call budget and does
+not depend on desktop lock/sleep state. Citations can open in the default browser only through
+an explicit click and validated HTTP/HTTPS dispatch; they never navigate the app renderer.
+These restrictions govern the new tools, not the previously enabled privileged shell tools.
+
+Evidence: [web design and sources](../web-research.md), [service](../../src/main/web/controller.ts),
+[transport](../../src/main/web/public-http.ts), [link boundary](../../src/main/open-link.ts),
+[unit checks](../../tests/unit/web-controller.test.ts) and [worker/UI checks](../../tests/smoke/codex.spec.ts).

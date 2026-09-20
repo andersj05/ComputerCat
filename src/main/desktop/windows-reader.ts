@@ -41,6 +41,7 @@ public static class CatWindowTarget {
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hwnd);
+  [DllImport("user32.dll", EntryPoint="GetWindowLongW")] public static extern int GetWindowLong(IntPtr hwnd, int index);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowTextLength(IntPtr hwnd);
   [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hwnd, uint attribute, out int value, int size);
 }
@@ -55,7 +56,12 @@ public static class CatWindowTarget {
       [void][CatWindowTarget]::GetWindowThreadProcessId($candidate, [ref]$windowProcess)
       [int]$cloaked = 0
       [void][CatWindowTarget]::DwmGetWindowAttribute($candidate, 14, [ref]$cloaked, 4)
+      # Floating tool windows and nonactivating overlays are poor inferred app targets.
+      # Keep them readable when actually foreground or explicitly selected by HWND.
+      $extendedStyle = [CatWindowTarget]::GetWindowLong($candidate, -20)
+      $skipInferred = $target -eq 'behind-assistant' -and ($extendedStyle -band 0x08000080) -ne 0
       if ($windowProcess -ne [uint32]$env:COMPUTERCAT_OWNER_PID -and
+          -not $skipInferred -and
           [CatWindowTarget]::IsWindowVisible($candidate) -and
           -not [CatWindowTarget]::IsIconic($candidate) -and $cloaked -eq 0 -and
           [CatWindowTarget]::GetWindowTextLength($candidate) -gt 0) {

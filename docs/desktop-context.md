@@ -1,6 +1,6 @@
 # Desktop context
 
-Reviewed: 2026-09-19. Implemented for Windows; application accessibility coverage varies.
+Reviewed: 2026-09-20. Implemented for Windows; application accessibility coverage varies.
 
 Ask a connected model “What is this page?”, “Explain this error” or “Summarize my selected
 text.” The agent chooses tools during the request, including messages sent through Talk.
@@ -22,7 +22,9 @@ desktop. Lock/sleep blocks observations; unlock/resume makes tools available aga
 
 Observe defaults to the foreground external app. If Computer Cat owns the foreground window,
 the helper walks down the window order to the first visible, nonminimized, uncloaked external
-window with a title. It returns foreground or behind-assistant as provenance. This is a
+window with a title, skipping floating tool windows and nonactivating overlays by their Windows
+extended styles. This filter only applies to inferred targets; foreground and explicitly chosen
+windows remain readable. It returns foreground or behind-assistant as provenance. This is a
 bounded inference, not a guarantee of the user's intent or a history of focused applications.
 The agent should check the app/title against the question, list alternatives when needed,
 and ask which app only when the available evidence does not resolve the ambiguity.
@@ -40,12 +42,19 @@ without sending another full-window image. Rectangles must fit entirely inside t
 
 ## Harness boundaries
 
+Reviewed 2026-09-20: six [everyday utilities](harness-improvements.md) now share this broker:
+current time/folder paths, clipboard text read/write, open URL/folder and reveal file. They are
+separate from the seven read-only observation tools above. The same cancellation, lock/sleep,
+deadline and request budget apply; the serial slot spans both families. Already dispatched
+OS actions cannot be undone by Stop. Clipboard access is request-driven prompt policy, with
+content retained in Pi context. No new renderer clipboard or opener API is exposed.
+
 Main owns source selection and native inspection. The chat/pet renderers have no desktop
 observation or permission API. A separate hidden, sandboxed media renderer captures one frame
 of the exact selected source and is destroyed afterward, including on cancellation or timeout.
 Its memory-only session permits only its fixed main frame's desktop request, blocks network
 access and rejects camera/microphone requests. Strict schemas validate private worker RPC;
-main allows twenty requests per turn and one OS observation at a time. Each observation has
+main allows twenty desktop requests per turn and one OS operation at a time. Each request has
 a fifteen-second deadline; frame capture has a separate six-second ceiling.
 Stop, worker failure/disposal, context changes and renderer restarts cancel pending work and
 drop late results. Independent lock and sleep blocks cannot accidentally unlock one another.

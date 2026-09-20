@@ -195,7 +195,9 @@ describe("desktop worker RPC", () => {
     await expect(client.execute({ operation: "list" }, abort.signal)).rejects.toThrow("Too many");
     client.endTurn();
     expect(await Promise.all(pending)).toEqual(
-      Array(4).fill("The desktop observation ended before a result arrived."),
+      Array(4).fill(
+        "The desktop request ended before a result arrived. An action may already have happened; inspect before retrying.",
+      ),
     );
     await expect(client.execute({ operation: "list" }, abort.signal)).rejects.toThrow("no active");
   });

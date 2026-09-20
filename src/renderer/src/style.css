@@ -336,6 +336,15 @@ label,
 .markdown-message p {
   margin: 6px 0;
 }
+.markdown-message a {
+  color: var(--blue);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.markdown-message a:focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: 2px;
+}
 .markdown-message ul,
 .markdown-message ol {
   margin: 6px 0;

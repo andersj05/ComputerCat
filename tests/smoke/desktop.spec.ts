@@ -192,6 +192,13 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
     await expect(guide.locator("#tool-desktop_read_selection")).toHaveAttribute("open", "");
     await expect(guide.locator("#tool-desktop_read_selection summary")).toBeFocused();
     await expect(guide.locator(".tool-entry")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.getByLabel("Tool family").selectOption("utilities");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(6);
+    await guide.locator("#tool-desktop_open_url summary").click();
+    await expect(guide.locator("#tool-desktop_open_url")).toContainText("not that the page loaded");
+    await guide.getByLabel("Tool family").selectOption("web");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(4);
+    await guide.getByLabel("Tool family").selectOption("all");
     await guide.screenshot({ path: testInfo.outputPath("harness-tools.png"), fullPage: true });
     await guide.getByLabel("Find a tool").fill("region");
     await expect(guide.locator(".tool-entry:visible")).toHaveCount(1);
@@ -212,6 +219,12 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
     await expect(guide.locator('[data-node="desktop"]')).not.toHaveClass(/on-path/);
     await guide.getByLabel("Follow an example").selectOption("voice");
     await expect(guide.locator("#trace-steps")).toContainText("Talk, review, send");
+    await guide.getByLabel("Follow an example").selectOption("research");
+    await expect(guide.locator('[data-node="web"]')).toHaveClass(/on-path/);
+    await expect(guide.locator('[data-node="desktop"]')).not.toHaveClass(/on-path/);
+    await expect(guide.locator("#trace-steps")).toContainText("web_read");
+    await guide.getByRole("button", { name: "Public web Page text + optional search" }).click();
+    await expect(guide.locator("#component-description")).toContainText("Optional Brave Search");
     await guide.getByLabel("Follow an example").selectOption("detail");
     await expect(guide.locator("#trace-steps")).toContainText("desktop_capture_region");
     await electron.evaluate(
