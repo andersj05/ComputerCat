@@ -8,17 +8,17 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 
 - One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,
   hero headings, or repeated brand introductions.
-- The toolbar contains New conversation, History, Options, and Desktop. A compact native
-  model/reasoning row below it changes the current chat without resetting its context.
+- In the full chat window, the toolbar contains New conversation, History, Options and Desktop.
+  A compact model/reasoning row below it changes the current chat without resetting its context.
 - Two plain starter links prepare editable drafts. They do not send anything automatically.
 - Speaker names and text form a plain chat log. Streaming appears in the status bar; Stop stays
   next to the message box and is also available from the cat.
-- One status bar reports activity and the current mode. Put details in Options instead of
+- The full chat window's status bar reports activity and the current mode. Put details in Options instead of
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
-- Talk, Chat, and Options remain visible beside the cat; Stop replaces Talk during active work.
-  Chat opens the desktop conversation panel without a microphone. Clicking the cat toggles its
-  silhouette glow and model shortcut; Escape and blur hide that secondary shortcut. Drag the body
+- With the panel closed, Talk, Chat and Options sit beside the cat; Stop replaces Talk during work.
+  Chat opens the desktop conversation panel without a microphone; the dock then hides.
+  Clicking the cat while the panel is closed toggles its model shortcut; Escape and blur hide it. Drag the body
   to move it, retaining an open panel and the artwork size. Reviewed 2026-09-19.
 - Animate the original artwork with planted boots, articulated paws, expressive head movement,
   blinks and an occasional wink. Use distinct poses and small pixel props for listening,
@@ -72,7 +72,7 @@ Reviewed 2026-09-19 against [Options](../src/renderer/src/OptionsDialog.tsx) and
 Keep all controls reachable by keyboard and respect the operating system's reduced-motion
 preference. Preserve transparent pixels around the desktop pet at every size.
 
-Voice controls (reviewed 2026-09-18) sit immediately above the composer. Talk changes to
+In the full chat window, voice controls sit immediately above the composer. Talk changes to
 Finish recording and Cancel recording; a persistent Listening label appears on both chat
 and the pet even when pet controls hide. Concurrent edits keep transcripts in an editable
 Insert/Discard panel. Voice settings use staged Apply/OK/Cancel. Speech-model selection and its

@@ -169,6 +169,12 @@ explicit Send, tool progress and expandable replies (reviewed 2026-09-19). This 
 before the agent acts. Each renderer retains its own unsent drafts; only sent text is shared.
 Previews serialize with final inference and never become an agent message automatically.
 
+Reviewed 2026-09-19: prioritize message space over persistent controls. The cat panel uses one
+contextual microphone/send/stop control, collapses tool details and puts secondary actions under
+⋯. Hide the dock while the panel is open. This addresses the crowded reading area without growing
+the default window. See [XP guidance](../windows-xp-design.md) and
+[layout and keyboard checks](../../tests/smoke/desktop.spec.ts).
+
 Installed, enabled weights preload on startup and after applying voice settings without a
 microphone grant. Reviewed 2026-09-19: enabled models now stay resident by default for fast
 repeat Talk; the Voice performance setting offers the former five-minute idle unload.
