@@ -69,7 +69,7 @@ See [link boundary](../src/main/open-link.ts) and [tests](../tests/unit/open-lin
 Reviewed 2026-09-20. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
+its explicit allowlist contains all eight built-in Pi tools plus ten app-owned desktop
 observation tools, six desktop utilities and four public web tools; native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
@@ -169,6 +169,15 @@ when the other fails. Named-window listing, reading and capture remain available
 models automatically omit the screenshot from observation. Screen content is untrusted data.
 Focused selection/tab tools skip full-page text collection and images. Region capture validates
 normalized bounds and crops before downsizing to preserve detail within the image budget.
+Reviewed 2026-09-20: page identity reads at most eight visible Document controls and optional
+HTTP/HTTPS ValuePattern URLs, omitting embedded credentials and invalid values. Control listing
+returns at most sixty visible named controls with role and enabled state, without reading their
+values. Literal phrase search returns five bounded excerpts from a fresh accessibility snapshot,
+with searched length, further-match and source-truncation indicators. These three tools reuse
+the private broker's validation, source lifetime, cancellation and lock/sleep gates; they add no
+renderer privilege or input control. App coverage varies; document URLs are candidates and
+search does not scroll. See [reader](../src/main/desktop/windows-reader.ts) and
+[boundary tests](../tests/unit/desktop-controller.test.ts).
 Native Pi session files persist observations, including images, under the existing per-chat
 retention policy. Renderer activity events contain only tool names/status, not observed content.
 Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.

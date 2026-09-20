@@ -46,6 +46,50 @@ function setup(platform: NodeJS.Platform = "win32") {
 afterEach(() => vi.useRealTimers());
 
 describe("read-only Windows accessibility supervisor", () => {
+  it("retains document titles while omitting invalid URLs and embedded credentials", async () => {
+    const { reader, launch, finish } = setup();
+    const pending = reader.inspectWindow("123", new AbortController().signal, "page");
+    expect(launch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Array),
+      expect.objectContaining({ env: expect.objectContaining({ COMPUTERCAT_READ_MODE: "page" }) }),
+    );
+    finish({
+      ...sample,
+      text: "",
+      selectedText: "",
+      tabs: [],
+      pages: [
+        { title: "Valid", url: "https://example.com/page" },
+        { title: "Credentials", url: "https://name:secret@example.com/" },
+        { title: "Local", url: "file:///private" },
+        { title: "No URL" },
+      ],
+    });
+    expect((await pending).pages).toEqual([
+      { title: "Valid", url: "https://example.com/page" },
+      { title: "Credentials" },
+      { title: "Local" },
+      { title: "No URL" },
+    ]);
+  });
+
+  it("bounds new control results and rejects unexpected control fields", async () => {
+    const { reader, finish } = setup();
+    const pending = reader.inspectWindow("123", new AbortController().signal, "controls");
+    finish({
+      ...sample,
+      controls: [{ role: "Edit", name: "Password", enabled: true, value: "private" }],
+    });
+    expect((await pending).unavailableReason).toContain("unreadable");
+    const large = setup();
+    const overflowing = large.reader.inspectWindow("123", new AbortController().signal, "controls");
+    large.finish({
+      ...sample,
+      controls: Array(61).fill({ role: "Button", name: "Save", enabled: true }),
+    });
+    expect((await overflowing).unavailableReason).toContain("unreadable");
+  });
   it.each(["foreground", "behind-assistant"] as const)(
     "returns the current app identity with %s provenance",
     async (target) => {

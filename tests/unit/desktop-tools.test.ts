@@ -27,6 +27,8 @@ describe("desktop tools", () => {
   it.each([
     ["desktop_read_selection", "selection"],
     ["desktop_list_tabs", "tabs"],
+    ["desktop_read_page", "page"],
+    ["desktop_list_controls", "controls"],
   ])("routes %s directly to a focused read without an image", async (name, operation) => {
     const execute = vi.fn().mockResolvedValue(textResult);
     const tool = createDesktopTools(execute, false).find((item) => item.name === name);
@@ -54,6 +56,22 @@ describe("desktop tools", () => {
     await expect(invoke(textOnly, { sourceId, ...region })).rejects.toThrow(
       "cannot view screenshots",
     );
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  it("validates a literal app search before dispatch and returns no private details", async () => {
+    const execute = vi.fn().mockResolvedValue(textResult);
+    const tool = createDesktopTools(execute, false).find(
+      (item) => item.name === "desktop_find_text",
+    );
+    const result = await invoke(tool, { sourceId, query: "  Error [42]  " });
+    expect(execute).toHaveBeenCalledWith(
+      { operation: "find-text", sourceId, query: "Error [42]" },
+      expect.any(AbortSignal),
+    );
+    expect(result.details).toEqual({ operation: "find-text" });
+    for (const query of ["   ", "x".repeat(201)])
+      await expect(invoke(tool, { query })).rejects.toThrow();
     expect(execute).toHaveBeenCalledOnce();
   });
   it.each([

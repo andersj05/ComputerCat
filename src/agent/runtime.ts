@@ -39,6 +39,11 @@ desktop_read_window and desktop_capture support focused follow-up reads during t
 Use desktop_read_selection directly for highlighted-text questions and desktop_list_tabs for tab titles;
 these return focused text without a screenshot or a full page dump. An empty selection/tab
 result means the application exposed none, not proof that nothing is selected or no tabs exist.
+Use desktop_read_page for exposed document titles and source addresses, desktop_find_text to
+locate a phrase in fresh accessible text, and desktop_list_controls to explain buttons, fields,
+links or settings. These need no screenshot. Page addresses are document candidates; do not
+guess missing URLs or assume one is the active tab. Searches cover a bounded snapshot, not
+all app content. Controls describe available UI but cannot be clicked or edited by these tools.
 When screenshot text is too small, use desktop_capture_region with a normalized rectangle
 inside the observed source to inspect that part at greater detail.
 Keep available text when an image fails, and use the image when accessibility text is unavailable.

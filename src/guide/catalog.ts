@@ -15,6 +15,28 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  desktop_read_page: {
+    title: "Read page identity",
+    purpose: "Identify the document or find its source address without a screenshot.",
+    returns: "Up to eight exposed document titles, with HTTP/HTTPS URLs where supported.",
+    limit:
+      "These are accessibility candidates, not verified active-tab navigation. Some apps expose no URL. No browser history, hidden tabs or page body is read.",
+  },
+  desktop_list_controls: {
+    title: "Read app controls",
+    purpose: "Explain available buttons, fields, links and settings in an app.",
+    returns: "Up to sixty visible named controls, their roles and enabled states.",
+    limit:
+      "No field values or actionable handles. Does not click, focus or change controls. Coverage depends on the app.",
+  },
+  desktop_find_text: {
+    title: "Find text in an app",
+    purpose: "Locate an error, phrase or heading in a fresh window observation.",
+    returns:
+      "Up to five short matching excerpts and snapshot offsets, with source truncation and further-match flags.",
+    limit:
+      "Literal case-insensitive search of at most 12,000 exposed characters. Does not use the app's Find command, scroll or search hidden content.",
+  },
   web_read: {
     title: "Read a public web page",
     purpose: "Read a known URL without opening the browser.",
