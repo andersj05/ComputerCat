@@ -36,6 +36,22 @@ const assets: Asset[] = ["base.en", "silero-v6.2.0"].map((id) => ({
   source: "https://example.test",
 }));
 describe("voice model storage and preferences", () => {
+  it("upgrades existing preferences to keep voice ready without changing the selected model", async () => {
+    const path = join(await directory(), "voice.json");
+    await writeFile(
+      path,
+      JSON.stringify({
+        version: 1,
+        enabled: true,
+        modelId: "base.en",
+        language: "en",
+        backend: "cpu",
+      }),
+    );
+    const store = new VoiceSettingsStore(path);
+    await store.load();
+    expect(store.snapshot()).toMatchObject({ enabled: true, keepReady: true, modelId: "base.en" });
+  });
   it("streams, verifies, atomically installs and removes only selected assets", async () => {
     const dir = await directory();
     const store = new VoiceModelStore(

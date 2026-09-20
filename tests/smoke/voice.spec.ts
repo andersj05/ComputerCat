@@ -2,6 +2,7 @@ import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
+import { IPC } from "../../src/shared/contracts";
 import { DEFAULT_VOICE } from "../../src/shared/voice";
 import { showCatControls } from "./chat";
 
@@ -10,7 +11,7 @@ test("local voice records synthetic audio, reviews text, and cancels without sen
   const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
   await writeFile(
     join(dir, "voice.json"),
-    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, keepReady: true, modelId: "base.en" }),
   );
   const env: Record<string, string> = {
     ...Object.fromEntries(
@@ -106,7 +107,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
   const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
   await writeFile(
     join(dir, "voice.json"),
-    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, keepReady: true, modelId: "base.en" }),
   );
   const env: Record<string, string> = {
     ...Object.fromEntries(
@@ -159,6 +160,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
           .voiceUpdateSettings({
             version: 1,
             enabled: true,
+            keepReady: true,
             modelId: "base.en",
             language: "en",
             backend: "cpu",
@@ -181,8 +183,14 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
       );
     expect(await chatVisible()).toBe(false);
     const catBounds = await pet.locator(".pet-button").boundingBox();
-    await showCatControls(pet);
-    await pet.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect
+      .poll(() => pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).availability))
+      .toBe("ready");
+    await app.evaluate(({ BrowserWindow }, channel) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().includes("view=pet"))
+        ?.webContents.send(channel);
+    }, IPC.petTalkRequested);
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
     await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "listening");
     await expect(page.getByRole("button", { name: "Finish recording" })).toBeDisabled();
@@ -248,10 +256,10 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
     await pet.locator("#pet-voice-draft").press("Enter");
     await expect(page.locator(".message.user")).toContainText("Keep the folder, please.");
     await expect(pet.locator(".pet-voice-reply")).not.toBeEmpty();
-    await expect(pet.getByRole("button", { name: "Talk again" })).toBeVisible();
+    await expect(pet.getByRole("button", { name: "Talk", exact: true })).toBeVisible();
     expect(await chatVisible()).toBe(false);
     await pet.screenshot({ path: testInfo.outputPath("pet-reply.png") });
-    await pet.getByRole("button", { name: "Talk again" }).click();
+    await pet.getByRole("button", { name: "Talk", exact: true }).click();
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
     await expect(pet.locator(".pet-voice")).toHaveCount(0);

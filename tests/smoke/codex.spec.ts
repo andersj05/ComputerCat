@@ -201,7 +201,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     );
     expect(requests).toHaveLength(3);
     await expect(page.getByRole("list", { name: "Tool activity" }).first()).toContainText(
-      "read · complete",
+      /Read file.*Done/,
     );
     expect(requests[0]).toMatchObject({
       model: "gpt-5.6-terra",
@@ -367,7 +367,7 @@ test("screen questions automatically observe through the real worker and recover
     await expect(allowed).toContainText("This help page explains saving a document.");
     await expect(allowed).toContainText("Save your changes");
     await expect(allowed.getByRole("list", { name: "Tool activity" })).toContainText(
-      "desktop_observe · complete",
+      /Read screen.*Done/,
     );
 
     const requests = await electron.evaluate(
@@ -396,7 +396,7 @@ test("screen questions automatically observe through the real worker and recover
     const locked = await sendAndWaitForReply(page, "What is this page? Check while locked.");
     await expect(locked).toContainText("locked");
     await expect(locked.getByRole("list", { name: "Tool activity" })).toContainText(
-      "desktop_observe · error",
+      /Read screen.*Failed/,
     );
     await electron.evaluate(({ powerMonitor }) => {
       powerMonitor.emit("unlock-screen");
@@ -404,7 +404,7 @@ test("screen questions automatically observe through the real worker and recover
     const resumed = await sendAndWaitForReply(page, "What is this page? Check again.");
     await expect(resumed).toContainText("This help page explains saving a document.");
     await expect(resumed.getByRole("list", { name: "Tool activity" })).toContainText(
-      "desktop_observe · complete",
+      /Read screen.*Done/,
     );
     expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
   } finally {

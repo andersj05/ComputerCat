@@ -18,6 +18,7 @@ export const voiceSettingsSchema = z
   .strictObject({
     version: z.literal(1),
     enabled: z.boolean(),
+    keepReady: z.boolean().default(true),
     modelId: z.enum(["large-v3-turbo", "base.en"]),
     language: z.enum(["en", "auto"]),
     backend: z.enum(["auto", "cpu", "cuda"]),
@@ -28,6 +29,7 @@ export type VoiceSettings = z.infer<typeof voiceSettingsSchema>;
 export const DEFAULT_VOICE: VoiceSettings = {
   version: 1,
   enabled: false,
+  keepReady: true,
   modelId: "large-v3-turbo",
   language: "en",
   backend: "auto",

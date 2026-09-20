@@ -34,6 +34,7 @@ export class WhisperRuntime implements SpeechRecognizer {
     | undefined;
   private readyModel: string | undefined;
   private idle: ReturnType<typeof setTimeout> | undefined;
+  private keepReady = true;
   private disposing: Promise<void> | undefined;
   private currentExecutable: string;
   constructor(
@@ -140,6 +141,7 @@ export class WhisperRuntime implements SpeechRecognizer {
   }
   async prepare(model: PreparedModel, settings: VoiceSettings, signal: AbortSignal): Promise<void> {
     clearTimeout(this.idle);
+    this.keepReady = settings.keepReady;
     if (settings.backend === "cuda") throw new VoiceError("backend-unavailable");
     try {
       try {
@@ -156,8 +158,7 @@ export class WhisperRuntime implements SpeechRecognizer {
         await this.start(signal);
       }
       if (this.readyModel === model.modelPath) {
-        this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
-        this.idle.unref();
+        this.scheduleIdle();
         return;
       }
       const requestId = randomUUID();
@@ -172,8 +173,7 @@ export class WhisperRuntime implements SpeechRecognizer {
       if (reply.kind !== "ready" || reply.modelId !== model.modelId)
         throw new VoiceError("protocol-error");
       this.readyModel = model.modelPath;
-      this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
-      this.idle.unref();
+      this.scheduleIdle();
     } catch (error) {
       await this.dispose();
       throw error;
@@ -213,9 +213,14 @@ export class WhisperRuntime implements SpeechRecognizer {
       if (!(error instanceof VoiceError && error.code === "no-speech")) await this.dispose();
       throw error;
     } finally {
-      this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
-      this.idle.unref();
+      this.scheduleIdle();
     }
+  }
+  private scheduleIdle(): void {
+    clearTimeout(this.idle);
+    if (this.keepReady || !this.readyModel) return;
+    this.idle = setTimeout(() => void this.dispose(), VOICE.idleMs);
+    this.idle.unref();
   }
   dispose(): Promise<void> {
     if (this.disposing) return this.disposing;

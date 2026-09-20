@@ -27,7 +27,7 @@ argument, process ID, or model-provider credential.
 | Stop cleanup | UI acknowledgment immediately; graph cleanup target 250 ms; helper deadline 2 seconds | Revoke session first; terminate hung inference |
 | Transcript | 6,000 UTF-16 code units, matching existing Send | Return text-too-long; never silently truncate or submit |
 | Native result envelope | At most 64 KiB; text field at most 24 KiB UTF-8 | Validate code-unit limit after decode too |
-| Idle warm helper | Five minutes | Unload without changing saved model selection |
+| Idle warm helper | Resident by default; optional five minutes | `keepReady` defaults to true for existing preferences; opt out to unload while idle |
 
 These are initial bounded product settings, not measured performance guarantees. The 120-second
 capture timer runs in main; renderer time/duration claims are not authority. Main also checks

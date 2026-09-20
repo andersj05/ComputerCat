@@ -156,6 +156,18 @@ export function VoiceOptions({
         <summary>Microphone &amp; performance</summary>
         <fieldset disabled={disabled}>
           <legend>Recording options</legend>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={draft.keepReady}
+              onChange={(event) => onChange({ ...draft, keepReady: event.target.checked })}
+            />
+            Keep voice ready for faster recording
+          </label>
+          <p className="field-help">
+            Preloads your installed model and keeps it in memory while voice is enabled. The
+            microphone stays off until Talk. Uncheck to free model memory after five idle minutes.
+          </p>
           <div className="voice-option">
             <label htmlFor="speech-microphone">Microphone</label>
             <select

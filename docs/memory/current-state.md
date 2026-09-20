@@ -7,8 +7,7 @@ Reviewed: 2026-09-19. Recheck checkout and tests.
 Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 [package.json](../../package.json) and [.node-version](../../.node-version).
 
-- The draggable cat has controls, glow and eleven [activity poses](../cat-motion.md).
-  Options previews poses; reduced motion uses stills. Find cat moves to the pointer display.
+- The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Seven [desktop tools](../desktop-context.md) observe apps, windows, screenshots and regions,
   accessible text, tabs and selection on demand. Capture targets one source; app coverage varies.
@@ -18,8 +17,10 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
 - Options → [Harness guide](../harness-guide.md) opens an offline browser map, examples,
   typed tool catalog and extension guidance.
-- Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
-  The cat's speech bubble shows transcript previews, editable Send and replies without opening chat.
+- Local Whisper uses explicit downloads, background preparation and Talk/Finish/Cancel.
+  Enabled models stay ready by default; Voice performance offers an idle-unload option.
+  The XP cat panel keeps New chat visible, with a compact input and secondary actions under ⋯.
+  Panel sizing and drafts survive reopening during this app run.
   Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
   See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).
 - [Developer memory](README.md) is shared across coding clients and checked by `npm run memory:check`.
