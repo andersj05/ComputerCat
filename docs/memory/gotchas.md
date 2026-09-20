@@ -28,6 +28,12 @@ based only on a sandboxed result. Do not print tokens while diagnosing this.
 Evidence: [project instructions](../../AGENTS.md); remote dev reference refreshed successfully
 from the host during the audit. No authentication change was necessary.
 
+## Machine-local editor settings
+
+Reviewed: 2026-09-19. `.vscode/settings.json` can contain absolute native-build paths.
+It is ignored by [Git](../../.gitignore) and the Git-aware formatter; existing local files
+are preserved. Suggested extensions can still be shared.
+
 ## PowerShell may select npm.ps1
 
 Reviewed: 2026-09-17. Scope: Windows command invocation.
