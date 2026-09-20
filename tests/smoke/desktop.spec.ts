@@ -588,7 +588,6 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await expect(input).toBeFocused();
     await input.press("Enter");
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeVisible();
-    await showCatControls(pet);
     await expect(pet.getByRole("status")).toContainText(/Thinking|Replying/);
     await expect(page.getByRole("button", { name: "New conversation" })).toBeDisabled();
     await expect(page.locator(".message.assistant")).toContainText("local demo");
@@ -599,7 +598,6 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await input.pressSequentially("Second line");
     await expect(input).toHaveValue("First line\nSecond line");
     await page.getByRole("button", { name: "Send message" }).click();
-    await showCatControls(pet);
     await pet.getByRole("button", { name: "Stop reply" }).click();
     await expect(page.locator('[data-state="stopped"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "Stop reply" })).toBeHidden();
@@ -674,7 +672,6 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
         ),
       )
       .toBe(true);
-    await showCatControls(pet);
     await pet.getByRole("button", { name: "Chat", exact: true }).click();
     await pet.getByRole("button", { name: "Open chat window" }).click();
     await pet.getByRole("button", { name: "Close voice bubble" }).click();
@@ -698,7 +695,6 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
           ),
         )
         .toBe(false);
-      await showCatControls(pet);
       await pet.getByRole("button", { name: "Chat", exact: true }).click();
       await pet.getByRole("button", { name: "Open chat window" }).click();
       await pet.getByRole("button", { name: "Close voice bubble" }).click();
@@ -1306,6 +1302,22 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     await input.press("Enter");
     await expect(panel.locator(".pet-message.assistant")).toHaveAttribute("data-state", "complete");
     await expect(input).toHaveValue("");
+    await electron.evaluate(({ clipboard }) => {
+      clipboard.writeText = async (value) => {
+        Reflect.set(globalThis, "copiedReply", value);
+      };
+    });
+    await panel.getByRole("button", { name: "Copy reply", exact: true }).click();
+    await expect(panel.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "copiedReply"))).toBe(
+      await pet.evaluate(async () => (await window.computerCat.snapshot()).messages.at(-1)?.text),
+    );
+    expect(await pet.evaluate(() => window.computerCat.copyReply("unknown"))).toMatchObject({
+      ok: false,
+    });
+    expect(
+      await pet.evaluate(() => window.computerCat.copyReply({ path: "anything" } as never)),
+    ).toMatchObject({ ok: false });
     const firstId = await pet.evaluate(
       async () => (await window.computerCat.snapshot()).conversationId,
     );
@@ -1426,18 +1438,6 @@ test("cat panel shows tool progress and long replies without losing the reading 
     });
     await panel.getByRole("button", { name: "Latest reply ↓" }).click();
     await expect(content.getByText("A new ending.", { exact: true })).toBeInViewport();
-    await pet.evaluate(() =>
-      Object.defineProperty(navigator, "clipboard", {
-        value: {
-          writeText: async (text: string) => {
-            Reflect.set(window, "copiedReply", text);
-          },
-        },
-      }),
-    );
-    await panel.getByRole("button", { name: "Copy reply", exact: true }).click();
-    expect(await pet.evaluate(() => Reflect.get(window, "copiedReply"))).toContain("A new ending.");
-    await expect(panel.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
     // Exercise the drag bridge with a deterministic cursor, without moving another app.
     await electron.evaluate(({ screen }) => {
       Reflect.set(globalThis, "originalCursor", screen.getCursorScreenPoint);
@@ -1455,6 +1455,16 @@ test("cat panel shows tool progress and long replies without losing the reading 
     await expect(panel.getByRole("button", { name: "Compact cat panel" })).toBeInViewport();
     await panel.getByRole("button", { name: "Compact cat panel" }).click();
     expect(await pet.evaluate(() => innerWidth)).toBe(400);
+    await panel.getByRole("button", { name: "Close voice bubble" }).click();
+    await publish("Another answer is arriving", true);
+    await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "working");
+    await publish("The reply is ready to read.", false);
+    await expect(pet.getByRole("button", { name: "Reply ready", exact: true })).toBeVisible();
+    await pet.getByRole("button", { name: "Reply ready", exact: true }).click();
+    await expect(panel).toContainText("The reply is ready to read.");
+    await panel.getByRole("button", { name: "Close voice bubble" }).click();
+    await expect(pet.getByRole("button", { name: "Reply ready", exact: true })).toHaveCount(0);
+
     expect(
       await page.evaluate(() =>
         window.computerCat.setPetExpanded(true).then(

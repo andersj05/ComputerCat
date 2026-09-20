@@ -166,7 +166,8 @@ chat window. Only the chat renderer can request those controls or change compani
 The companion can open chat, History or Options, create a conversation, stop a reply, and request
 a drag phase. Validated pet-only sizing expands its conversation panel within the work area.
 Each renderer indexes its drafts by conversation ID, including switches initiated by the other
-window. Reviewed 2026-09-19 against [desktop checks](../tests/smoke/desktop.spec.ts). Only the pet
+window. Copy accepts only a visible assistant-message ID; main selects its text and writes the
+clipboard. Renderers cannot read the clipboard or supply arbitrary clipboard content. Reviewed 2026-09-19 against [desktop checks](../tests/smoke/desktop.spec.ts). Only the pet
 renderer can initiate dragging; main validates the phase, reads desktop cursor coordinates,
 uses a five-DIP movement threshold, and clamps its own window to a display work area. Cancellation,
 hide, blur, reload, and a thirty-second gesture limit prevent stale drags from revealing controls.

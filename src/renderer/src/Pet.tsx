@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ChatSnapshot, PetPreferences } from "../../shared/contracts";
 import { type VoiceSnapshot, voiceMessages } from "../../shared/voice";
 import { PetArtwork } from "./PetArtwork";
-import { PET_ACTIVITIES } from "./pet-activity";
+import { newlyCompletedReply, PET_ACTIVITIES } from "./pet-activity";
 import { usePetActivity } from "./usePetActivity";
 
 export function Pet({
@@ -13,6 +13,7 @@ export function Pet({
   openOptions,
   openModels,
   modelLabel,
+  talkShortcut,
   stop,
   talk,
   voice,
@@ -27,6 +28,7 @@ export function Pet({
   openOptions: () => void;
   openModels: () => void;
   modelLabel: string;
+  talkShortcut: string | undefined;
   stop: () => void;
   talk: () => void;
   voice: VoiceSnapshot;
@@ -64,7 +66,17 @@ export function Pet({
   }
   const lastReply = snapshot.messages.findLast((message) => message.role === "assistant");
   const activity = usePetActivity(snapshot, voice, error || dragError, hasDraft);
-  const status = activity === "idle" ? "" : PET_ACTIVITIES[activity].label;
+  const [replyReady, setReplyReady] = useState(false);
+  const previous = useRef(snapshot);
+  const panelOpen = Boolean(voicePanel);
+  useEffect(() => {
+    if (panelOpen || snapshot.busy || previous.current.conversationId !== snapshot.conversationId)
+      setReplyReady(false);
+    else if (newlyCompletedReply(previous.current, snapshot)) setReplyReady(true);
+    previous.current = snapshot;
+  }, [panelOpen, snapshot]);
+  const status =
+    activity === "idle" ? (replyReady ? "Reply ready" : "") : PET_ACTIVITIES[activity].label;
   const detail =
     error ||
     dragError ||
@@ -93,13 +105,16 @@ export function Pet({
       {voicePanel}
       <div className="pet-status-slot" id="pet-activity-status" role="status" aria-atomic="true">
         {status && (
-          <span
+          <button
+            type="button"
+            onClick={openChat}
+            tabIndex={panelOpen ? -1 : 0}
             className={voicePanel ? "sr-only" : "pet-bubble"}
             title={detail || PET_ACTIVITIES[activity].description}
           >
             {status}
             {activity === "error" && detail && <span className="sr-only">. {detail}</span>}
-          </span>
+          </button>
         )}
       </div>
       <button
@@ -107,7 +122,7 @@ export function Pet({
         className="pet-button"
         ref={catButton}
         aria-expanded={controlsVisible}
-        aria-controls="pet-controls"
+        aria-controls="pet-model-controls"
         aria-describedby="pet-activity-status"
         onClick={(event) => {
           if (event.detail === 0) setControlsVisible((visible) => !visible);
@@ -164,7 +179,7 @@ export function Pet({
           title={
             voice.availability === "preparing"
               ? "Voice is preparing in the background"
-              : "Talk to your cat"
+              : `Talk to your cat${talkShortcut ? ` · ${talkShortcut}` : ""}`
           }
         >
           <svg width="11" height="13" viewBox="0 0 12 16" aria-hidden="true" className="mic-icon">
@@ -192,6 +207,7 @@ export function Pet({
       <button
         type="button"
         className="xp-button pet-model"
+        id="pet-model-controls"
         style={{ visibility: controlsVisible ? "visible" : "hidden" }}
         onClick={() => act(openModels)}
         aria-label="Choose model"

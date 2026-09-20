@@ -49,6 +49,7 @@ const api: ComputerCatAPI = {
   info: () => ipcRenderer.invoke(IPC.info),
   snapshot: () => ipcRenderer.invoke(IPC.snapshot),
   send: (request) => ipcRenderer.invoke(IPC.send, request),
+  copyReply: (id) => ipcRenderer.invoke(IPC.copyReply, id),
   stop: () => ipcRenderer.invoke(IPC.stop),
   clear: () => ipcRenderer.invoke(IPC.clear),
   conversations: () => ipcRenderer.invoke(IPC.conversations),
@@ -67,6 +68,11 @@ const api: ComputerCatAPI = {
     const receive = () => listener();
     ipcRenderer.on(IPC.historyRequested, receive);
     return () => ipcRenderer.removeListener(IPC.historyRequested, receive);
+  },
+  onPetTalkRequested: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(IPC.petTalkRequested, receive);
+    return () => ipcRenderer.removeListener(IPC.petTalkRequested, receive);
   },
   setPetExpanded: (expanded) => ipcRenderer.invoke(IPC.petExpanded, expanded),
   openOptions: (tab) => ipcRenderer.invoke(IPC.openOptions, tab),

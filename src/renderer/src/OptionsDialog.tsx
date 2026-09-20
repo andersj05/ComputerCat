@@ -537,6 +537,8 @@ export function OptionsDialog({
               <dl className="property-list shortcuts">
                 <dt>Open chat:</dt>
                 <dd>{info?.shortcut ?? "Loading…"}</dd>
+                <dt>Talk / Finish:</dt>
+                <dd>{info?.talkShortcut ?? "Use the Talk button"}</dd>
                 <dt>Stop reply:</dt>
                 <dd>{info?.stopShortcut ?? "Loading…"}</dd>
               </dl>

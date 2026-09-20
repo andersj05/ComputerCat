@@ -239,8 +239,11 @@ export function PetVoice({
                           type="button"
                           className="text-button"
                           onClick={() => {
-                            void navigator.clipboard.writeText(message.text).then(
-                              () => setCopied(message.id),
+                            void window.computerCat.copyReply(message.id).then(
+                              (result) => {
+                                if (result.ok) setCopied(message.id);
+                                else setLocalError(result.message);
+                              },
                               () =>
                                 setLocalError("Couldn't copy. Select the reply and press Ctrl+C."),
                             );

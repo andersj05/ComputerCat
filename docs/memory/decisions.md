@@ -164,8 +164,8 @@ No automatic paid fallback or reuse of Codex OAuth for a speech API. See the
 Status: adopted 2026-09-18. Supersedes the pet-to-chat routing in the initial Whisper plan.
 
 The user's Talk gesture chooses the trusted capture window. Cat-origin voice stays in a
-compact balloon with provisional text, Finish/Cancel, an editable draft, explicit Send and
-the assistant's reply. This avoids the context switch into chat while preserving review
+desktop conversation panel with provisional text, Finish/Cancel, a typed or dictated draft,
+explicit Send, tool progress and expandable replies (reviewed 2026-09-19). This avoids the context switch into chat while preserving review
 before the agent acts. Each renderer retains its own unsent drafts; only sent text is shared.
 Previews serialize with final inference and never become an agent message automatically.
 

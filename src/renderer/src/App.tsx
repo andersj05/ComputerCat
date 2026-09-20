@@ -47,6 +47,11 @@ export function App() {
   const [sending, setSending] = useState(false);
   const [petVoiceOpen, setPetVoiceOpen] = useState(false);
   const [petExpanded, setPetExpanded] = useState(false);
+  const petVoiceStarting = useRef(false);
+  const petTalkHandler = useRef<() => void>(() => {});
+  petTalkHandler.current = () => {
+    void startPetVoice();
+  };
   async function openPetPanel() {
     await window.computerCat.setPetVoiceOpen(true);
     setPetVoiceOpen(true);
@@ -56,15 +61,19 @@ export function App() {
     setPetExpanded(!petExpanded);
   }
   async function startPetVoice(resumeDraft = true) {
+    if (petVoiceStarting.current) return;
+    petVoiceStarting.current = true;
     setError("");
     try {
       await openPetPanel();
-      if ((resumeDraft && (text || voice.review)) || voice.busy) return;
+      if ((resumeDraft && (text || voice.review)) || voice.busy || snapshot.busy) return;
       if (["disabled", "model-missing"].includes(voice.snapshot.availability)) return;
       const result = await window.computerCat.voiceStart();
       if (!result.ok) setError(voiceMessages[result.code]);
     } catch {
       setError("Couldn't start voice input. Try again.");
+    } finally {
+      petVoiceStarting.current = false;
     }
   }
   async function closePetVoice() {
@@ -104,6 +113,9 @@ export function App() {
         setHistoryOpen(false);
         setOptionsOpen(true);
       }
+    });
+    const unsubscribeTalk = window.computerCat.onPetTalkRequested(() => {
+      if (isPet) petTalkHandler.current();
     });
     const unsubscribeHistory = window.computerCat.onHistoryRequested(() => {
       if (!isPet) {
@@ -161,6 +173,7 @@ export function App() {
       unsubscribeOptions();
       unsubscribeModelPicker();
       unsubscribeHistory();
+      unsubscribeTalk();
     };
   }, [isPet]);
 
@@ -277,6 +290,7 @@ export function App() {
         openModels={() =>
           void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
         }
+        talkShortcut={info?.talkShortcut}
         voice={voice.snapshot}
         hasDraft={!!(text.trim() || voice.review.trim())}
         voiceBusy={voice.busy}

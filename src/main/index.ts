@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   app,
   BrowserWindow,
+  clipboard,
   globalShortcut,
   type IpcMainInvokeEvent,
   ipcMain,
@@ -83,6 +84,7 @@ let codex: CodexAuth;
 let disconnecting = false;
 let shortcutRegistered = false;
 let stopShortcutRegistered = false;
+let talkShortcutRegistered = false;
 const petDrag = new PetDrag();
 let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
@@ -180,6 +182,23 @@ function findPet(): void {
   pet.showInactive();
   pet.moveTop();
   raisePet();
+}
+
+function talkToPet(): void {
+  if (!pet || pet.isDestroyed()) return;
+  const state = voice.snapshot();
+  if (voice.busy) {
+    if (state.phase === "recording" && state.sessionId)
+      void voice.action(() => voice.requestFinish({ sessionId: state.sessionId }));
+    const owner = captureWindow();
+    owner?.show();
+    owner?.focus();
+    return;
+  }
+  if (!pet.isVisible()) findPet();
+  pet.show();
+  pet.focus();
+  pet.webContents.send(IPC.petTalkRequested);
 }
 
 function showChat(): void {
@@ -523,6 +542,7 @@ else {
           models: modelState,
           shortcut: shortcutRegistered ? "Ctrl+Shift+Space" : "Use the cat or tray icon",
           stopShortcut: stopShortcutRegistered ? "Ctrl+Shift+Escape" : "Use the Stop reply button",
+          talkShortcut: talkShortcutRegistered ? "Ctrl+Alt+Space" : "Use the Talk button",
           preferences: preferences.snapshot(),
           maximized: chat?.isMaximized() ?? false,
         };
@@ -530,6 +550,22 @@ else {
       ipcMain.handle(IPC.snapshot, (event) => {
         assertSender(event);
         return controller.snapshot();
+      });
+      ipcMain.handle(IPC.copyReply, async (event, id: unknown) => {
+        assertSender(event);
+        if (typeof id !== "string" || !id || id.length > 128)
+          return { ok: false, message: "Choose a completed reply to copy." };
+        const message = controller
+          .snapshot()
+          .messages.find((item) => item.id === id && item.role === "assistant");
+        if (!message?.text || message.state === "streaming")
+          return { ok: false, message: "This reply is no longer available to copy." };
+        try {
+          await clipboard.writeText(message.text);
+          return { ok: true };
+        } catch {
+          return { ok: false, message: "Couldn't copy. Select the reply and press Ctrl+C." };
+        }
       });
       ipcMain.handle(IPC.send, (event, request: unknown) => {
         assertSender(event);
@@ -694,6 +730,8 @@ else {
         !smoke && globalShortcut.register("CommandOrControl+Shift+Space", showChat);
       stopShortcutRegistered =
         !smoke && globalShortcut.register("CommandOrControl+Shift+Escape", stopAll);
+      talkShortcutRegistered =
+        !smoke && globalShortcut.register("CommandOrControl+Alt+Space", talkToPet);
       chat = await createWindow("chat");
       pet = await createWindow("pet");
       for (const win of [chat, pet]) {
@@ -764,6 +802,7 @@ else {
         tray.setToolTip("Computer Cat");
         tray.setContextMenu(
           Menu.buildFromTemplate([
+            { label: "Talk / Finish recording", click: talkToPet },
             { label: "Open chat", click: showChat },
             { label: "Find cat", click: findPet },
             { label: "Stop current reply", click: stopAll },

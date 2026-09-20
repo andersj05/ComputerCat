@@ -2,6 +2,7 @@ import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
+import { IPC } from "../../src/shared/contracts";
 import { DEFAULT_VOICE } from "../../src/shared/voice";
 import { showCatControls } from "./chat";
 
@@ -182,8 +183,14 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
       );
     expect(await chatVisible()).toBe(false);
     const catBounds = await pet.locator(".pet-button").boundingBox();
-    await showCatControls(pet);
-    await pet.getByRole("button", { name: "Talk", exact: true }).click();
+    await expect
+      .poll(() => pet.evaluate(async () => (await window.computerCat.voiceSnapshot()).availability))
+      .toBe("ready");
+    await app.evaluate(({ BrowserWindow }, channel) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().includes("view=pet"))
+        ?.webContents.send(channel);
+    }, IPC.petTalkRequested);
     await expect(pet.locator(".pet-voice")).toContainText("Listening");
     await expect(pet.locator(".pet-art")).toHaveAttribute("data-activity", "listening");
     await expect(page.getByRole("button", { name: "Finish recording" })).toBeDisabled();

@@ -95,6 +95,9 @@ up pauses following streamed text; Latest reply returns to the end. Copy reply c
 text. Close cancels capture but keeps an already reviewed draft
 in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.
+Ctrl+Alt+Space and the tray Talk action start or finish a recording. Existing drafts reopen for
+review. The cat retains a clickable Reply ready indicator for unseen completions. Reviewed
+2026-09-19 against [the panel](../src/renderer/src/voice/PetVoice.tsx) and desktop smoke coverage.
 
 ## References
 

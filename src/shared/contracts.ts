@@ -20,6 +20,7 @@ export const IPC = {
   info: "cat:info",
   snapshot: "cat:snapshot",
   send: "cat:send",
+  copyReply: "cat:copy-reply",
   stop: "cat:stop",
   clear: "cat:clear",
   conversations: "cat:conversations",
@@ -32,6 +33,7 @@ export const IPC = {
   openHistory: "cat:open-history",
   historyRequested: "cat:history-requested",
   petExpanded: "cat:pet-expanded",
+  petTalkRequested: "cat:pet-talk-requested",
   openOptions: "cat:open-options",
   openHarnessGuide: "cat:open-harness-guide",
   optionsRequested: "cat:options-requested",
@@ -93,6 +95,7 @@ export interface AppInfo {
   configured: boolean;
   shortcut: string;
   stopShortcut: string;
+  talkShortcut?: string;
   preferences: PetPreferences;
   maximized: boolean;
   models: ModelState;
@@ -116,6 +119,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   info(): Promise<AppInfo>;
   snapshot(): Promise<ChatSnapshot>;
   send(request: SendRequest): Promise<ActionResult>;
+  copyReply(messageId: string): Promise<ActionResult>;
   stop(): Promise<void>;
   clear(): Promise<ActionResult>;
   conversations(): Promise<ConversationSummary[]>;
@@ -127,6 +131,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   openChat(): Promise<void>;
   openHistory(): Promise<void>;
   onHistoryRequested(listener: () => void): () => void;
+  onPetTalkRequested(listener: () => void): () => void;
   setPetExpanded(expanded: boolean): Promise<void>;
   openOptions(tab?: "voice"): Promise<void>;
   openHarnessGuide(): Promise<ActionResult>;

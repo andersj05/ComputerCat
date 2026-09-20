@@ -40,6 +40,8 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   tool catalog and [guidance for extending the harness](docs/harness-guide.md).
 - Desktop and the close button hide chat; the cat stays with you.
 - `Ctrl+Shift+Space` brings chat back; `Ctrl+Shift+Escape` stops the current reply.
+  `Ctrl+Alt+Space` opens Talk at the cat; press it again to finish recording.
+  The tray has the same Talk / Finish action. A Reply ready button reopens a completed answer.
 - Closing chat leaves the cat and tray running. Quit through Options → General or the tray menu.
 - Conversations save automatically on this computer. **History** lets you find, reopen, or delete them.
 - **New conversation** keeps the old chat in History; it only asks before discarding an unsent draft.
