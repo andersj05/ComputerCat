@@ -16,10 +16,10 @@ Luna caption, Tahoma text, cream controls, inset white panes, and small colored 
 - One status bar reports activity and the current mode. Put details in Options instead of
   repeating them around the workspace.
 - Use labels that identify an action or setting. Avoid slogans and descriptions of obvious UI.
-- The desktop shows only the cat until clicked. Clicking toggles a silhouette glow and reveals
-  Chat, Talk, Options, Stop during replies or recording, and the model selector. Escape, window blur, or choosing
-  an action hides the controls. Drag the body to move it; there is no separate grip.
-  Keep the artwork size and position stable when controls appear.
+- Talk, Chat, and Options remain visible beside the cat; Stop replaces Talk during active work.
+  Chat opens the desktop conversation panel without a microphone. Clicking the cat toggles its
+  silhouette glow and model shortcut; Escape and blur hide that secondary shortcut. Drag the body
+  to move it, retaining an open panel and the artwork size. Reviewed 2026-09-19.
 - Animate the original artwork with planted boots, articulated paws, expressive head movement,
   blinks and an occasional wink. Use distinct poses and small pixel props for listening,
   transcription, thinking, tool work, text replies, review and completion; see [cat motion](cat-motion.md).
@@ -88,7 +88,11 @@ chat hidden and the cat's size/foot position stable except when fitting the disp
 Finish and Cancel stay visible throughout capture; focus loss does not hide the balloon.
 Periodic, provisional transcript previews replace the waiting copy as recognition finishes.
 Finish releases the microphone and produces an editable message; only Send submits it.
-The reply stays in the balloon. Close cancels capture but keeps an already reviewed draft
+The whole conversation stays in the balloon alongside the composer. New chat and History are
+reachable from its toolbar. Expand enlarges the reading pane; the caption arrow opens full chat.
+Tool activity shows readable names, current state, failures and an expandable step list. Scrolling
+up pauses following streamed text; Latest reply returns to the end. Copy reply copies the complete
+text. Close cancels capture but keeps an already reviewed draft
 in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.
 

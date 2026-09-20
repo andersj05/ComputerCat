@@ -14,6 +14,7 @@ import { MarkdownMessage } from "./MarkdownMessage";
 import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
+import { ToolActivity } from "./ToolActivity";
 import { PetVoice } from "./voice/PetVoice";
 import { useVoice } from "./voice/useVoice";
 import { VoiceControls } from "./voice/VoiceControls";
@@ -29,11 +30,12 @@ export function App() {
   const [info, setInfo] = useState<AppInfo>();
   const [snapshot, setSnapshot] = useState<ChatSnapshot>({ messages: [], busy: false });
   const [preferences, setPreferences] = useState<PetPreferences>(DEFAULT_PREFERENCES);
-  const [text, setTextState] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const text = drafts[snapshot.conversationId ?? ""] ?? "";
   const draftRevision = useRef(0);
   function setText(value: string) {
     draftRevision.current++;
-    setTextState(value);
+    setDrafts((previous) => ({ ...previous, [snapshot.conversationId ?? ""]: value }));
   }
   const voice = useVoice(isPet, {
     conversationId: snapshot.conversationId,
@@ -44,12 +46,21 @@ export function App() {
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [petVoiceOpen, setPetVoiceOpen] = useState(false);
-  async function startPetVoice() {
+  const [petExpanded, setPetExpanded] = useState(false);
+  async function openPetPanel() {
+    await window.computerCat.setPetVoiceOpen(true);
+    setPetVoiceOpen(true);
+  }
+  async function expandPetPanel() {
+    await window.computerCat.setPetExpanded(!petExpanded);
+    setPetExpanded(!petExpanded);
+  }
+  async function startPetVoice(resumeDraft = true) {
     setError("");
     try {
-      await window.computerCat.setPetVoiceOpen(true);
-      setPetVoiceOpen(true);
-      if (text || voice.review || voice.busy) return;
+      await openPetPanel();
+      if ((resumeDraft && (text || voice.review)) || voice.busy) return;
+      if (["disabled", "model-missing"].includes(voice.snapshot.availability)) return;
       const result = await window.computerCat.voiceStart();
       if (!result.ok) setError(voiceMessages[result.code]);
     } catch {
@@ -61,13 +72,14 @@ export function App() {
       await window.computerCat.voiceCancel({ sessionId: voice.snapshot.sessionId });
     await window.computerCat.setPetVoiceOpen(false);
     setPetVoiceOpen(false);
+    setPetExpanded(false);
+    setConfirmClear(false);
   }
   const [maximized, setMaximized] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [optionsTab, setOptionsTab] = useState<"cat" | "models" | "voice">("cat");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
-  const drafts = useRef(new Map<string, string>());
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -91,6 +103,13 @@ export function App() {
         setModelsOpen(false);
         setHistoryOpen(false);
         setOptionsOpen(true);
+      }
+    });
+    const unsubscribeHistory = window.computerCat.onHistoryRequested(() => {
+      if (!isPet) {
+        setOptionsOpen(false);
+        setModelsOpen(false);
+        setHistoryOpen(true);
       }
     });
     const unsubscribeModelPicker = window.computerCat.onModelsRequested(() => {
@@ -141,6 +160,7 @@ export function App() {
       unsubscribeModels();
       unsubscribeOptions();
       unsubscribeModelPicker();
+      unsubscribeHistory();
     };
   }, [isPet]);
 
@@ -221,7 +241,7 @@ export function App() {
   }
 
   function newChat() {
-    if (snapshot.busy || sending || clearing || !info) return;
+    if (snapshot.busy || voice.busy || sending || clearing || !info) return;
     if (text.trim() || voice.review.trim()) setConfirmClear(true);
     else {
       setError("");
@@ -249,7 +269,7 @@ export function App() {
         snapshot={snapshot}
         preferences={preferences}
         error={error}
-        openChat={() => void action(() => window.computerCat.openChat(), "Couldn't open chat.")}
+        openChat={() => void action(openPetPanel, "Couldn't open the cat panel.")}
         openOptions={() =>
           void action(() => window.computerCat.openOptions(), "Couldn't open Options.")
         }
@@ -258,7 +278,7 @@ export function App() {
           void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
         }
         voice={voice.snapshot}
-        hasDraft={petVoiceOpen && !!(text.trim() || voice.review.trim())}
+        hasDraft={!!(text.trim() || voice.review.trim())}
         voiceBusy={voice.busy}
         talk={() => void startPetVoice()}
         voicePanel={
@@ -272,9 +292,27 @@ export function App() {
               setReview={voice.setReview}
               send={() => void send()}
               sending={sending}
-              error={error}
-              close={() => void closePetVoice()}
-              start={() => void startPetVoice()}
+              error={error || snapshot.persistenceError || ""}
+              close={() => void action(closePetVoice, "Couldn't close the cat panel.")}
+              start={() => void startPetVoice(false)}
+              expanded={petExpanded}
+              expand={() => void action(expandPetPanel, "Couldn't resize the cat panel.")}
+              openChat={() =>
+                void action(() => window.computerCat.openChat(), "Couldn't open chat.")
+              }
+              newChat={newChat}
+              history={() =>
+                void action(() => window.computerCat.openHistory(), "Couldn't open History.")
+              }
+              clearing={clearing}
+              ready={ready}
+              confirmClear={confirmClear}
+              cancelClear={() => setConfirmClear(false)}
+              clear={() => void clear()}
+              modelLabel={info?.mode === "demo" ? "Local demo" : (info?.model ?? "Choose model")}
+              openModels={() =>
+                void action(() => window.computerCat.openModels(), "Couldn't open model selection.")
+              }
               options={() => void window.computerCat.openOptions("voice")}
             />
           ) : undefined
@@ -426,15 +464,7 @@ export function App() {
                             : "No reply received. Try again.")}
                     </p>
                   )}
-                  {message.tools?.length ? (
-                    <ul className="tool-activity" aria-label="Tool activity">
-                      {message.tools.map((tool) => (
-                        <li key={tool.id}>
-                          {tool.name} · {tool.state}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  {message.tools?.length ? <ToolActivity tools={message.tools} /> : null}
                   {message.state === "stopped" && message.text && (
                     <small className="message-note">Reply stopped</small>
                   )}
@@ -553,17 +583,18 @@ export function App() {
           onOpen={async (id) => {
             const result = await window.computerCat.openConversation(id);
             if (result.ok) {
-              if (snapshot.conversationId) drafts.current.set(snapshot.conversationId, text);
-              setText(drafts.current.get(id) ?? "");
               setError("");
               followReply.current = true;
             }
             return result;
           }}
           onDeleted={(id) => {
-            drafts.current.delete(id);
+            setDrafts((previous) => {
+              const next = { ...previous };
+              delete next[id];
+              return next;
+            });
             voice.dropReview(id);
-            if (id === snapshot.conversationId) setText("");
           }}
         />
       )}

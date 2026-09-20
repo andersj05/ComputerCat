@@ -143,11 +143,7 @@ export function Pet({
       >
         <PetArtwork activity={activity} />
       </button>
-      <div
-        id="pet-controls"
-        className="pet-dock"
-        style={{ visibility: controlsVisible ? "visible" : "hidden" }}
-      >
+      <div id="pet-controls" className="pet-dock">
         <button type="button" className="xp-button pet-chat" onClick={() => act(openChat)}>
           Chat
         </button>
@@ -165,6 +161,11 @@ export function Pet({
           className="xp-button pet-talk"
           onClick={() => act(talk)}
           disabled={snapshot.busy || voiceBusy}
+          title={
+            voice.availability === "preparing"
+              ? "Voice is preparing in the background"
+              : "Talk to your cat"
+          }
         >
           <svg width="11" height="13" viewBox="0 0 12 16" aria-hidden="true" className="mic-icon">
             <rect x="4" y="1" width="4" height="8" rx="2" fill="currentColor" />

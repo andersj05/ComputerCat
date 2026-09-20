@@ -114,13 +114,23 @@ const petSizes = {
   large: { width: 228, height: 352 },
 };
 let petVoiceOpen = false;
+let petExpanded = false;
 function petWindowSize() {
   const size = petSizes[preferences.snapshot().size];
-  return petVoiceOpen ? { width: 340, height: size.height + 210 } : size;
+  return petVoiceOpen
+    ? { width: petExpanded ? 580 : 400, height: size.height + (petExpanded ? 470 : 340) }
+    : size;
 }
 
 function placePet(bounds: Rectangle, area: Rectangle): void {
-  const target = keepInWorkArea(bounds, area);
+  const target = keepInWorkArea(
+    {
+      ...bounds,
+      width: Math.min(bounds.width, area.width),
+      height: Math.min(bounds.height, area.height),
+    },
+    area,
+  );
   // Move first so Windows resolves the destination DPI before applying the DIP size.
   pet.setPosition(target.x, target.y);
   pet.setBounds(target);
@@ -592,9 +602,15 @@ else {
         stopAll();
       });
       ipcMain.handle(IPC.clear, (event) => {
-        assertSender(event, true);
+        assertSender(event);
         desktop.cancel();
         return voice.transition(() => controller.clear());
+      });
+      ipcMain.handle(IPC.openHistory, (event, ...args: unknown[]) => {
+        assertSender(event);
+        if (args.length) throw new Error("History accepts no arguments.");
+        showChat();
+        return voice.transition(() => chat.webContents.send(IPC.historyRequested));
       });
       ipcMain.handle(IPC.openChat, (event) => {
         assertSender(event);
@@ -620,10 +636,7 @@ else {
         if (phase === "move" || phase === "end") {
           const next = petDrag.move(screen.getCursorScreenPoint());
           if (next) {
-            placePet(
-              { ...next, ...petSizes[preferences.snapshot().size] },
-              screen.getDisplayMatching(next).workArea,
-            );
+            placePet({ ...next, ...petWindowSize() }, screen.getDisplayMatching(next).workArea);
           }
         }
         if (phase === "cancel") petDrag.cancel();
@@ -634,6 +647,14 @@ else {
         if (trusted.get(event.sender.id)?.role !== "pet" || typeof open !== "boolean")
           throw new Error("Invalid cat voice panel request.");
         petVoiceOpen = open;
+        if (!open) petExpanded = false;
+        applyPetPreferences();
+      });
+      ipcMain.handle(IPC.petExpanded, (event, expanded: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet" || typeof expanded !== "boolean")
+          throw new Error("Invalid cat panel size request.");
+        petExpanded = expanded;
         applyPetPreferences();
       });
       ipcMain.handle(IPC.hideChat, (event) => {
