@@ -40,6 +40,18 @@ based only on a sandboxed result. Do not print tokens while diagnosing this.
 Evidence: [project instructions](../../AGENTS.md); remote dev reference refreshed successfully
 from the host during the audit. No authentication change was necessary.
 
+## Remove shared dependency junctions before deleting temporary worktrees
+
+Reviewed: 2026-09-20. Scope: Git worktree cleanup on Windows.
+
+A temporary verification worktree linked node_modules to the main checkout with a directory
+junction. Removing that worktree with Git traversed the junction, removed shared packages,
+and then reported an invalid-argument error. Check for junctions before worktree removal and
+unlink each shared dependency junction itself without recursion before deleting the checkout.
+If dependencies were affected, restore them with `npm ci` and rerun verification and smoke tests.
+Evidence: the promotion cleanup reproduced missing @playwright/test packages during desktop
+smoke testing; dependencies are reproducible from [the lockfile](../../package-lock.json).
+
 ## Machine-local editor settings
 
 Reviewed: 2026-09-19. `.vscode/settings.json` can contain absolute native-build paths.
