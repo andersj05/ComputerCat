@@ -21,6 +21,15 @@ answers, then pin the validated address to the actual connection. Limit response
 redirects, extracted text, saved pages and turn calls. Report source URL, title, retrieval time,
 truncation and exact offsets. External content is task data, not authority.
 
+The six expanded source tools report configuration without keys, read up to three sources with
+independent results (4,000 characters and five links each), page/filter cached links using stable
+indexes, follow an observed link through the same public transport, inspect source metadata,
+and parse RSS/Atom. Metadata includes up to 40 visible headings and five feed links; dates and
+authors remain source claims. Feeds return up to 20 entries with 1,500-character descriptions.
+Batch requests retain serialization until every child settles, including after cancellation.
+The renderer displays a named pixel icon for each tool; tool arguments/results remain in Pi
+context rather than activity labels.
+
 Limits: 2 MB per uncompressed response, four redirects, 100,000 retained UTF-16 characters,
 8,000 characters per page result, five find excerpts, 200 retained links (20 per result) and five search results.
 HTML extraction skips scripts, form contents and directly marked hidden elements; it does not
@@ -50,16 +59,20 @@ Foundation tests: [web-reading.test.ts](../tests/unit/web-reading.test.ts) cover
 addresses, encoded loopback URLs, mixed DNS answers, redirects, cancellation and static extraction.
 [Controller tests](../tests/unit/web-controller.test.ts),
 [transport tests](../tests/unit/web-transport.test.ts),
-[tool tests](../tests/unit/web-tools.test.ts) and
+[tool tests](../tests/unit/web-tools.test.ts), [search recovery tests](../tests/unit/web-search.test.ts),
+[source research tests](../tests/unit/web-research.test.ts) and
 [worker tests](../tests/unit/worker-runtime.test.ts) cover pagination, Unicode offsets, expiry,
 provider errors, deadlines, pinned connections, bounded bodies, private keys and late replies.
 
 Verified 2026-09-20 on Node 24.12.0: `npm run verify` passed memory checks, lint, type checking,
-332 unit/integration tests and the production build. `npm run test:smoke` passed all 24 Electron
-checks. The research case drives all four tools through the actual Pi worker with inert search
-and page fixtures, checks snapshot consistency, renders a citation and exercises browser-launch
-failure plus keyboard retry. No public network or paid provider is called by those fixtures.
-The guide was visually inspected at desktop and narrow widths, and the research reply inspected
-in chat. After the final link-color-only adjustment, the build and focused research smoke test
-were rerun. These tests establish integration, not live-model tool choice, Brave account validity
-or compatibility with every public site.
+358 unit/integration tests and the production build. `npm run test:smoke` passed all 29 Electron
+checks. The research case drives all ten web tools through the actual Pi worker with a keyless
+search fixture, compares sources with a partial failure, follows a discovered link, reads metadata
+and a feed, and checks cached pagination. It also exercises a search challenge, browser dispatch
+and a subsequent desktop observation. Browser/clipboard adapters and model responses are inert;
+these fixtures make no public or paid requests. Citation failure and keyboard retry remain covered.
+The guide was visually inspected at narrow width and expanded tool activity inspected in chat.
+
+A separate credential-free public probe reached the browser-recovery callback (intercepted so no
+browser opened) and read ten entries from a public RSS feed. This establishes transport/parser
+behavior, not live-model tool choice, Brave account validity or universal search/site availability.

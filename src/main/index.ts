@@ -352,7 +352,7 @@ else {
             (request, signal) => desktop.execute(request, signal),
             new WebController(
               smoke ? webFixture : undefined,
-              smoke ? "fixture-search-key" : readSearchKey(process.env),
+              smoke ? "" : readSearchKey(process.env),
               Date.now,
               (query, signal) =>
                 desktop.execute(

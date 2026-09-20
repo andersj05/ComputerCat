@@ -36,13 +36,11 @@ export function extractFeed(body: string, url: string) {
     updated: date(feed.updated),
     totalItems: feed.items.length,
     truncated: feed.items.length > 20,
-    items: feed.items
-      .slice(0, 20)
-      .map((item) => ({
-        title: text(item.title, 300),
-        url: link(item.link),
-        description: text(item.description, 1500),
-        publishedTime: date(item.pubDate),
-      })),
+    items: feed.items.slice(0, 20).map((item) => ({
+      title: text(item.title, 300),
+      url: link(item.link),
+      description: text(item.description, 1500),
+      publishedTime: date(item.pubDate),
+    })),
   };
 }

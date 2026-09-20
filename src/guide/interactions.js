@@ -27,9 +27,9 @@
     ],
     web: [
       "Public web research",
-      "Read static pages, find literal text and continue reading the same snapshot. Optional Brave Search returns source links when a separate key is configured. Retrieved text reaches the selected model and saved conversation context.",
+      "Search without an API key, compare sources, explore links and read metadata or feeds. Direct search uses optional Brave or keyless DuckDuckGo; a blocked search opens the default browser for the cat to observe. Retrieved text reaches the selected model and saved conversation context.",
       "src/agent/web-tools.ts\nsrc/main/web/controller.ts\nsrc/main/web/public-http.ts\nsrc/main/web/extract.ts",
-      "Page reading needs no search key. Browser sessions, JavaScript pages, PDFs and private networks are outside this reader.",
+      "Static reading needs no key and does not use cookies or JavaScript. Browser recovery changes focus; challenges require your interaction. PDFs and private networks are outside the reader.",
     ],
     files: [
       "Another branch: files and commands",
@@ -104,7 +104,7 @@
       steps: [
         [
           "Find relevant sources",
-          "Use configured search, or start with a URL you supplied.",
+          "Search without setup; if direct search is blocked, observe the browser fallback.",
           "web_search",
         ],
         [
@@ -118,7 +118,7 @@
           "web_find",
         ],
       ],
-      note: "Search needs a separately configured Brave key. Page references last five minutes within this reply. The cat should cite retrieved URLs and say when content is missing.",
+      note: "No search key is required. Browser dispatch is not evidence: the cat must observe actual results. Page references last five minutes within this reply. Cite retrieved URLs and say when content is missing.",
     },
     voice: {
       nodes: ["ask", "agent", "broker", "desktop"],
