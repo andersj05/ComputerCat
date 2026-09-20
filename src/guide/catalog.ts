@@ -15,6 +15,48 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  web_get_status: {
+    title: "Check web capabilities",
+    purpose: "See which search routes and reading formats are available.",
+    returns: "Configured providers, browser fallback availability and tool limits.",
+    limit: "Configuration only; it does not test connectivity or reveal credentials.",
+  },
+  web_read_many: {
+    title: "Read several sources",
+    purpose: "Compare or corroborate up to three public sources together.",
+    returns:
+      "A separate page reference and 4,000-character excerpt per source, or its specific error.",
+    limit:
+      "The public-reader rules apply to every URL. Each read uses one of eight cached page slots.",
+  },
+  web_list_links: {
+    title: "Explore page links",
+    purpose: "Find a profile, related article, documentation or other relevant source link.",
+    returns: "20 links per page, optional title/URL filtering, stable indexes and pagination.",
+    limit:
+      "Up to 200 links retained from the cached static page. Links are not automatically visited.",
+  },
+  web_follow_link: {
+    title: "Follow a source link",
+    purpose: "Read a link already discovered on a relevant page.",
+    returns: "A fresh page reference, verified final URL and readable text.",
+    limit:
+      "Uses the public reader and validates redirects again. Does not click browser controls or submit forms.",
+  },
+  web_read_metadata: {
+    title: "Inspect source details",
+    purpose: "Check a page's description, author, dates, structure and available feeds.",
+    returns: "Available metadata, up to 40 headings and five RSS/Atom feed links.",
+    limit:
+      "These are claims by the source; missing values remain missing and do not prove identity or publication date.",
+  },
+  web_read_feed: {
+    title: "Read a news feed",
+    purpose: "Review recent articles from a known public RSS or Atom feed.",
+    returns: "Up to 20 entries with source links, dates and short descriptions.",
+    limit:
+      "Read the linked article for details. No subscription, background polling or attachment downloads.",
+  },
   desktop_search_browser: {
     title: "Search in your browser",
     purpose: "Continue research without an API key when direct search is unavailable.",

@@ -21,6 +21,24 @@ describe("web tools and private RPC", () => {
       ["web_read_more", { pageId, start: 8000 }, { operation: "page", pageId, start: 8000 }],
       ["web_find", { pageId, query: "needle" }, { operation: "find", pageId, query: "needle" }],
       ["web_search", { query: "news" }, { operation: "search", query: "news" }],
+      ["web_get_status", {}, { operation: "status" }],
+      [
+        "web_read_many",
+        { urls: ["https://example.com"] },
+        { operation: "read-many", urls: ["https://example.com"] },
+      ],
+      [
+        "web_list_links",
+        { pageId, query: "profile" },
+        { operation: "links", pageId, start: 0, query: "profile" },
+      ],
+      ["web_follow_link", { pageId, index: 2 }, { operation: "follow", pageId, index: 2 }],
+      ["web_read_metadata", { pageId }, { operation: "metadata", pageId }],
+      [
+        "web_read_feed",
+        { url: "https://example.com/feed" },
+        { operation: "feed", url: "https://example.com/feed" },
+      ],
     ] as const;
     for (const [name, params, request] of cases) {
       const tool = tools.find((tool) => tool.name === name);

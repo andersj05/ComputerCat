@@ -32,7 +32,18 @@ export const DESKTOP_UTILITY_TOOL_NAMES = [
   "desktop_reveal_file",
 ] as const;
 
-export const WEB_TOOL_NAMES = ["web_read", "web_read_more", "web_find", "web_search"] as const;
+export const WEB_TOOL_NAMES = [
+  "web_read",
+  "web_read_more",
+  "web_find",
+  "web_search",
+  "web_get_status",
+  "web_read_many",
+  "web_list_links",
+  "web_follow_link",
+  "web_read_metadata",
+  "web_read_feed",
+] as const;
 
 export const ALL_TOOL_NAMES = [
   ...PI_TOOL_NAMES,

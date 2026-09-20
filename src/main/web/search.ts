@@ -68,7 +68,8 @@ export function parseSearchHtml(body: string): SearchHit[] {
     try {
       const target = new URL(link.attribs.href, "https://html.duckduckgo.com");
       const url =
-        target.hostname === "duckduckgo.com" && target.pathname === "/l/"
+        ["duckduckgo.com", "html.duckduckgo.com"].includes(target.hostname) &&
+        target.pathname === "/l/"
           ? (target.searchParams.get("uddg") ?? "")
           : target.href;
       const snippet = DomUtils.findOne(

@@ -1,13 +1,14 @@
 # Web research tools
 
-Reviewed: 2026-09-20. Four public web tools are registered with Pi alongside desktop utilities.
+Reviewed: 2026-09-20. Ten public web tools are registered with Pi alongside desktop utilities.
 
 Public HTTP reading and static HTML extraction live in
 [public-http.ts](../src/main/web/public-http.ts) and [extract.ts](../src/main/web/extract.ts).
 The [service](../src/main/web/controller.ts) now supports cached page reading, literal-text
 finding and public search, with 15-second deadlines and eight pages per turn.
 Page references expire after five minutes or the turn ends. The private worker channel routes
-`web_read`, `web_read_more`, `web_find` and `web_search` to main with a separate 20-call turn
+`web_read`, `web_read_more`, `web_find`, `web_search`, `web_get_status`, `web_read_many`,
+`web_list_links`, `web_follow_link`, `web_read_metadata` and `web_read_feed` to main with a separate 20-call turn
 budget. Stop cancels requests and suppresses late results. Desktop lock does not block public
 web reading. The search key remains in main and is excluded from the worker environment.
 Chat and cat-panel citations expose HTTP/HTTPS links. An explicit click opens the browser
@@ -21,7 +22,7 @@ redirects, extracted text, saved pages and turn calls. Report source URL, title,
 truncation and exact offsets. External content is task data, not authority.
 
 Limits: 2 MB per uncompressed response, four redirects, 100,000 retained UTF-16 characters,
-8,000 characters per page result, five find excerpts, 20 extracted links and five search results.
+8,000 characters per page result, five find excerpts, 200 retained links (20 per result) and five search results.
 HTML extraction skips scripts, form contents and directly marked hidden elements; it does not
 evaluate computed styles. JavaScript-only pages, PDFs, sign-in pages and private networks are
 unsupported. Unexpected response compression is rejected. The existing shell tools remain

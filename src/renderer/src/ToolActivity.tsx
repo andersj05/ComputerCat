@@ -3,6 +3,12 @@ import type { ToolActivity as Activity } from "../../shared/tools";
 import { Icon, type IconName } from "./Icon";
 
 const TOOL_ICONS: Record<Activity["name"], IconName> = {
+  web_get_status: "options",
+  web_read_many: "web",
+  web_list_links: "tabs",
+  web_follow_link: "web",
+  web_read_metadata: "file",
+  web_read_feed: "web",
   desktop_search_browser: "search",
   read: "file",
   write: "file",
@@ -35,6 +41,12 @@ const TOOL_ICONS: Record<Activity["name"], IconName> = {
 };
 
 export const TOOL_LABELS: Record<Activity["name"], string> = {
+  web_get_status: "Check web capabilities",
+  web_read_many: "Read several sources",
+  web_list_links: "Explore page links",
+  web_follow_link: "Follow source link",
+  web_read_metadata: "Inspect source details",
+  web_read_feed: "Read news feed",
   desktop_search_browser: "Search in browser",
   read: "Read file",
   write: "Write file",
