@@ -18,6 +18,7 @@ does not establish that a different revision passes.
 | Why a lasting choice was made | [Decisions](decisions.md) | A consequential tradeoff is adopted or superseded |
 | A recurring failure and its remedy | [Known pitfalls](gotchas.md) | A remedy is verified or becomes obsolete |
 | Resume unfinished work | [Handoffs](handoffs/README.md) | A task pauses or transfers ownership |
+| Agent task reliability | [Evaluation workflow](../task-evaluations.md) | Tasks, grading or release evidence change |
 | Research and tool expansion | [Original plan](../research-and-build-plan.md), [harness improvements](../harness-improvements.md) | Research priorities or tool scope change |
 | Speech and desktop work | [Research](../voice-and-desktop-research.md), [Whisper plan](../implementation/whisper/README.md) | Approach changes |
 | Findings from the setup audit | [Memory audit](../audits/2026-09-17-agent-memory.md) | The audit's validation results are recorded |
@@ -64,7 +65,7 @@ required team knowledge belongs here. No global agent settings are needed for th
 | GitHub Copilot | [Copilot instructions](../../.github/copilot-instructions.md) direct it to shared context |
 | Other agents or delegated tasks | Explicitly pass AGENTS.md and the task's relevant memory paths |
 
-Keep the adapters as pointers. Automatic loading depends on the client, workspace, and settings;
+Keep the adapters as pointers. Automatic loading depends on client settings;
 these files cannot force every agent to read them. Start clients in this repository. After
 instruction changes, start a fresh session or use the client's context reload facility.
 For a delegated task, pass the objective, worktree/branch, file ownership, and specific handoff;
@@ -80,13 +81,11 @@ Official loading guidance checked 2026-09-17:
 
 ## Verify and maintain
 
-Run `npm run memory:check` from the repository. It is offline and needs only Node: no model,
-credentials, Git login, or installed npm dependencies. It checks required entry points, adapter
+Run `npm run memory:check` from the repository. It runs offline with Node alone. It checks required entry points, adapter
 routing, context size budgets, local inline Markdown link/import targets, and referenced npm
 scripts across root Markdown, `docs/`, and `.github/`. Use inline links with relative paths
 (URI-encode spaces, or use angle brackets); reference-style links are outside this check.
-It checks target existence, not heading fragments, external URLs, factual truth, or model
-compliance. Keep source links accurate during review. It skips CLAUDE.local.md and hidden
+It checks local targets, not external links, heading fragments, truth or model compliance. Keep source links accurate during review. It skips CLAUDE.local.md and hidden
 scratch directories and does not scan private memory stores.
 
 `npm run verify` includes this check, so the existing CI quality job enforces it. Before merging,
