@@ -56,6 +56,8 @@ export class VoiceController {
   private queue: Promise<unknown> = Promise.resolve();
   private download: { id: string; abort: AbortController; task: Promise<void> } | undefined;
   private warming: { abort: AbortController; task: Promise<void> } | undefined;
+  private blocked = new Set<"suspended" | "locked">();
+  private disposed = false;
   constructor(
     readonly settings: VoiceSettingsStore,
     private readonly store: Pick<VoiceModelStore, "installed" | "prepare" | "install" | "remove">,
@@ -98,6 +100,8 @@ export class VoiceController {
     const settings = this.settings.snapshot();
     if (
       !settings.enabled ||
+      this.disposed ||
+      this.blocked.size ||
       this.busy ||
       this.transitions ||
       this.download ||
@@ -141,7 +145,6 @@ export class VoiceController {
   transition<T>(run: () => Promise<T> | T): Promise<T> {
     this.transitions++;
     const task = this.queue.then(async () => {
-      await this.stopWarm();
       await this.cancel();
       return run();
     });
@@ -163,7 +166,14 @@ export class VoiceController {
     }
   }
   async start(owner: "chat" | "pet" = "chat"): Promise<void> {
-    if (this.busy || this.transitions || this.download || this.hooks.agentBusy())
+    if (
+      this.disposed ||
+      this.blocked.size ||
+      this.busy ||
+      this.transitions ||
+      this.download ||
+      this.hooks.agentBusy()
+    )
       throw new VoiceError("busy");
     const settings = this.settings.snapshot();
     if (!settings.enabled) throw new VoiceError("disabled");
@@ -392,6 +402,9 @@ export class VoiceController {
       await this.queueCleanup;
       return;
     }
+    // A cancelled recording with no inference can reuse the already loaded model.
+    const releaseModel =
+      this.state.phase === "starting" || this.state.phase === "transcribing" || !!s.preview;
     s.grant = false;
     s.abort.abort();
     s.chunks = [];
@@ -415,7 +428,7 @@ export class VoiceController {
             };
             this.hooks.stop({ sessionId: s.id, reason: "cancel" });
           });
-      await Promise.all([cleanup, this.runtime.dispose()]);
+      await Promise.all([cleanup, releaseModel ? this.runtime.dispose() : Promise.resolve()]);
       if (this.session === s) {
         this.session = undefined;
         this.state.phase = "idle";
@@ -432,6 +445,7 @@ export class VoiceController {
     const value = voiceSettingsSchema.parse(input);
     if (this.busy && value.enabled) throw new VoiceError("busy");
     await this.transition(async () => {
+      await this.stopWarm();
       await this.settings.update(value);
       await this.runtime.dispose();
       await this.refresh();
@@ -462,6 +476,7 @@ export class VoiceController {
         this.download = undefined;
         delete this.state.download;
         await this.refresh();
+        void this.warm();
       });
     this.download = { id, abort, task };
   }
@@ -473,16 +488,29 @@ export class VoiceController {
     const { modelId } = modelIdSchema.parse(input);
     if (this.busy || this.download || this.transitions) throw new VoiceError("busy");
     await this.transition(async () => {
+      await this.stopWarm();
       await this.runtime.dispose();
       await this.store.remove(modelId);
       await this.refresh();
     });
   }
   async dispose(): Promise<void> {
+    this.disposed = true;
     await this.stopWarm();
     this.download?.abort.abort();
     await this.cancel();
     await this.download?.task;
     await this.runtime.dispose();
+  }
+  async setBlocked(reason: "suspended" | "locked", blocked: boolean): Promise<void> {
+    if (blocked) this.blocked.add(reason);
+    else this.blocked.delete(reason);
+    await this.transition(async () => {
+      if (this.blocked.size) {
+        await this.stopWarm();
+        await this.runtime.dispose();
+      }
+    });
+    if (!this.blocked.size) void this.warm();
   }
 }

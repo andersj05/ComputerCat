@@ -26,7 +26,10 @@ provisional pass at a time, after four seconds of new audio. Finish waits for th
 final recognition; cancellation suppresses both results. It has no microphone, credentials or network
 service. stdin EOF triggers cooperative abort and a hard exit deadline. Main also enforces
 load/inference timeouts and waits for exit before replacement. Enabled, installed models preload
-at startup and after voice settings are applied without opening a microphone. Idle models unload after five minutes.
+at startup and after voice settings are applied without opening a microphone. Enabled models stay loaded by default; the optional memory-saving setting unloads them after five
+idle minutes. Chat/Options transitions preserve preload and cancelling capture without inference
+retains the model. Lock/sleep releases it; preparation resumes only after both blocks clear.
+Reviewed 2026-09-19 against [voice boundary tests](../tests/unit/voice-controller.test.ts).
 
 [Model storage](../src/main/voice/model-store.ts) streams explicit, bounded HTTPS downloads,
 checks fixed catalogue lengths and SHA-256, then renames a same-volume partial. Installed

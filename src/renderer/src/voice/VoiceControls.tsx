@@ -7,7 +7,10 @@ export function voiceStatus(state: VoiceSnapshot): string {
   if (state.phase === "finalizing") return "Finishing recording…";
   if (state.phase === "transcribing") return "Transcribing on this computer…";
   if (state.phase === "cancelling") return "Stopping microphone…";
-  return state.error ? voiceMessages[state.error] : "";
+  if (state.error) return voiceMessages[state.error];
+  if (state.availability === "preparing") return "Preparing voice in the background…";
+  if (state.availability === "unavailable") return "Voice needs to reload · click Talk to retry";
+  return "";
 }
 export function VoiceControls({
   state,

@@ -18,7 +18,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
 - Options → [Harness guide](../harness-guide.md) opens an offline browser map, examples,
   typed tool catalog and extension guidance.
-- Local Whisper uses explicit downloads, background model preparation and Talk/Finish/Cancel.
+- Local Whisper uses explicit downloads, background preparation and Talk/Finish/Cancel.
+  Enabled models stay ready by default; Voice performance offers an idle-unload option.
   The cat's speech bubble shows transcript previews, editable Send and replies without opening chat.
   Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
   See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).

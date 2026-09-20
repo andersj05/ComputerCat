@@ -10,7 +10,7 @@ test("local voice records synthetic audio, reviews text, and cancels without sen
   const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
   await writeFile(
     join(dir, "voice.json"),
-    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, keepReady: true, modelId: "base.en" }),
   );
   const env: Record<string, string> = {
     ...Object.fromEntries(
@@ -106,7 +106,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
   const dir = await mkdtemp(join(tmpdir(), "computercat-voice-smoke-"));
   await writeFile(
     join(dir, "voice.json"),
-    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, modelId: "base.en" }),
+    JSON.stringify({ ...DEFAULT_VOICE, enabled: true, keepReady: true, modelId: "base.en" }),
   );
   const env: Record<string, string> = {
     ...Object.fromEntries(
@@ -159,6 +159,7 @@ test("desktop voice stays beside the cat with preview, review, reply and scoped 
           .voiceUpdateSettings({
             version: 1,
             enabled: true,
+            keepReady: true,
             modelId: "base.en",
             language: "en",
             backend: "cpu",

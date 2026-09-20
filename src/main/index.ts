@@ -380,6 +380,7 @@ else {
         },
       );
       await voice.refresh();
+      void voice.warm();
       const permissionOwner = (contents: Electron.WebContents | null) =>
         contents
           ? {
@@ -702,9 +703,10 @@ else {
           });
         });
       }
-      void voice.warm();
-      powerMonitor.on("suspend", () => void voice.dispose());
-      powerMonitor.on("lock-screen", () => void voice.dispose());
+      powerMonitor.on("suspend", () => void voice.setBlocked("suspended", true));
+      powerMonitor.on("lock-screen", () => void voice.setBlocked("locked", true));
+      powerMonitor.on("resume", () => void voice.setBlocked("suspended", false));
+      powerMonitor.on("unlock-screen", () => void voice.setBlocked("locked", false));
       powerMonitor.on("suspend", () => desktop.setBlocked("suspended", true));
       powerMonitor.on("lock-screen", () => desktop.setBlocked("locked", true));
       powerMonitor.on("resume", () => desktop.setBlocked("suspended", false));

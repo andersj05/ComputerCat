@@ -81,7 +81,8 @@ through these tools. See [desktop context](docs/desktop-context.md) for limits a
    Remove take effect immediately; downloads can be cancelled and restarted.
 2. Check **Enable voice input**, choose English or automatic detection for Turbo, and Apply.
    Voice starts disabled. Installed weights prepare in the background when enabled and on startup;
-   this never opens the microphone. The model unloads after five minutes idle.
+   this never opens the microphone. Models stay ready while voice is enabled, including after
+   cancelling a short recording. Microphone & performance can opt into unloading after five idle minutes.
 3. Click **Talk** on the cat to open its speech bubble without opening chat. Wait for **Listening**,
    speak, then choose **Finish recording**. Provisional text updates during recording as local
    recognition completes. Recordings are limited to two minutes.

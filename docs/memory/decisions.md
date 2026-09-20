@@ -170,8 +170,10 @@ before the agent acts. Each renderer retains its own unsent drafts; only sent te
 Previews serialize with final inference and never become an agent message automatically.
 
 Installed, enabled weights preload on startup and after applying voice settings without a
-microphone grant. Keep the five-minute idle unload to bound memory use, so Talk after a long
-idle can still require preparation. No automatic download, model replacement, cloud fallback
+microphone grant. Reviewed 2026-09-19: enabled models now stay resident by default for fast
+repeat Talk; the Voice performance setting offers the former five-minute idle unload.
+Cancelling capture without inference retains prepared weights, and chat transitions preserve
+an in-flight preload. Lock/sleep frees weights and unlock/resume prepares them again. No automatic download, model replacement, cloud fallback
 or always-listening mode is introduced. CPU recognition latency remains model-dependent.
 
 Evidence: [controller](../../src/main/voice/controller.ts), [bubble](../../src/renderer/src/voice/PetVoice.tsx),
