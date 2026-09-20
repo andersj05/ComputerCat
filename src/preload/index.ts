@@ -50,6 +50,7 @@ const api: ComputerCatAPI = {
   snapshot: () => ipcRenderer.invoke(IPC.snapshot),
   send: (request) => ipcRenderer.invoke(IPC.send, request),
   copyReply: (id) => ipcRenderer.invoke(IPC.copyReply, id),
+  openLink: (url) => ipcRenderer.invoke(IPC.openLink, url),
   stop: () => ipcRenderer.invoke(IPC.stop),
   clear: () => ipcRenderer.invoke(IPC.clear),
   conversations: () => ipcRenderer.invoke(IPC.conversations),

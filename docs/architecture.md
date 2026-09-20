@@ -62,7 +62,11 @@ The renderer is sandboxed with context isolation and no Node integration. It can
 only named application operations. Main validates both sender identity and arguments. Remote
 navigation and new windows are denied. Browser permissions are denied except the narrow
 session-owner microphone grant described above. Model output is rendered as Markdown through React elements, with raw HTML skipped,
-images reduced to alt text, and links displayed without navigation. The app never imports extensions or instructions discovered in arbitrary folders.
+images reduced to alt text, and HTTP/HTTPS links opened only on explicit clicks through a
+sender-checked, validated preload method. Custom protocols, credentials and file URLs remain
+inactive; opening failures offer retry. The app window never navigates to model-provided URLs.
+See [link boundary](../src/main/open-link.ts) and [tests](../tests/unit/open-link.test.ts).
+Reviewed 2026-09-20. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
@@ -122,7 +126,8 @@ The [web tools](../src/agent/web-tools.ts) use a separate typed private worker c
 [Main](../src/main/web/controller.ts) owns public network access, the optional Brave key,
 eight cached pages per turn, five-minute page references and 15-second request deadlines.
 The worker enforces a separate 20-call budget and suppresses late results on Stop, turn end,
-chat change or disposal. No renderer/preload web method is added. Desktop lock/sleep gates
+chat change or disposal. Fetching remains worker-only; the renderer can only dispatch a clicked
+HTTP/HTTPS link through its typed bridge. Desktop lock/sleep gates
 desktop operations independently; public web tools remain usable.
 
 [Public HTTP](../src/main/web/public-http.ts) checks public-only URLs, every DNS answer and

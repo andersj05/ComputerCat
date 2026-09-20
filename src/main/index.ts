@@ -39,6 +39,7 @@ import { desktopFixture } from "./desktop/fixture-provider";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
+import { openWebLink } from "./open-link";
 import { keepInWorkArea, PetDrag, PetResize, resizeFromAnchor } from "./pet-window";
 import { PreferencesStore } from "./preferences";
 import { EncryptedSecretStore } from "./secret-store";
@@ -586,6 +587,11 @@ else {
       ipcMain.handle(IPC.snapshot, (event) => {
         assertSender(event);
         return controller.snapshot();
+      });
+      ipcMain.handle(IPC.openLink, (event, ...args: unknown[]) => {
+        assertSender(event);
+        if (args.length !== 1) return { ok: false, message: "Invalid link request." };
+        return openWebLink(args[0], (url) => shell.openExternal(url));
       });
       ipcMain.handle(IPC.copyReply, async (event, id: unknown) => {
         assertSender(event);

@@ -10,6 +10,9 @@ Page references expire after five minutes or the turn ends. The private worker c
 `web_read`, `web_read_more`, `web_find` and `web_search` to main with a separate 20-call turn
 budget. Stop cancels requests and suppresses late results. Desktop lock does not block public
 web reading. The search key remains in main and is excluded from the worker environment.
+Chat and cat-panel citations expose HTTP/HTTPS links. An explicit click opens the browser
+through [validated main dispatch](../src/main/open-link.ts); a failed open offers retry.
+Other protocols, credentials and files remain inactive. Links do not navigate the app.
 
 Design: public HTTP/HTTPS on standard ports; no browser cookies, JavaScript, proxy environment,
 arbitrary headers, downloaded files or authenticated sessions. Check every redirect and all DNS

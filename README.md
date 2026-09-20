@@ -75,7 +75,8 @@ This is a separate Brave Search credential, with the provider's own account and 
 it is not included in a model subscription. No settings screen for this key exists yet.
 The key stays in the main process. Retrieved page text and search results reach your selected
 model and saved chat context. The cat should cite returned URLs and report missing or truncated
-content. See [web scope and limits](docs/web-research.md).
+content. Click a citation to open it in your browser; a failed launch offers retry without leaving
+chat. See [web scope and limits](docs/web-research.md).
 
 ## Everyday desktop help
 
