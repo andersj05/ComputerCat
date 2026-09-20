@@ -55,12 +55,41 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
   enabled voice keeps a **Voice options** link beside Talk.
 
-The companion includes on-demand screen context for connected models. **Computer control,
+The companion includes on-demand screen context, everyday desktop utilities and public web reading for connected models. **Mouse/keyboard control,
 external MCP connections, and long-term user memory are not implemented yet.**
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Public web research
+
+Give the cat a public URL and ask it to read or summarize the page with sources. It can search
+within the extracted text and continue reading longer pages from the same snapshot. Reading
+needs no search key. These tools support static HTML, plain text, Markdown and JSON; they do
+not use browser sign-ins, run page scripts, read PDFs or access private networks.
+
+For general web search, optionally set `COMPUTERCAT_BRAVE_SEARCH_API_KEY` in `.env.local`
+and restart `npm run dev`. For a packaged build, supply it in the app's launch environment.
+This is a separate Brave Search credential, with the provider's own account and usage terms;
+it is not included in a model subscription. No settings screen for this key exists yet.
+The key stays in the main process. Retrieved page text and search results reach your selected
+model and saved chat context. The cat should cite returned URLs and report missing or truncated
+content. Click a citation to open it in your browser; a failed launch offers retry without leaving
+chat. See [web scope and limits](docs/web-research.md).
+
+## Everyday desktop help
+
+Ask the cat to open Downloads, show a file it found in its folder, open a web link, summarize
+text you copied, or copy an answer for pasting. Six dedicated tools handle current time and
+standard folders, plain-text clipboard reads/writes, and browser/file-manager launches.
+Clipboard text is limited to 8,000 characters; a read reports truncation. Clipboard content
+reaches your selected model and saved chat context. Copying replaces the clipboard; it does
+not paste into another app. Opening a link does not search the web or read the page.
+
+These tools run during your request. Stop, lock and sleep block pending work, but cannot undo
+an action already sent to the OS. The cat must inspect the resulting window before claiming
+the page or folder appeared. See the [harness research and next steps](docs/harness-improvements.md).
 
 ## Help with your screen
 

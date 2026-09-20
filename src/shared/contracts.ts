@@ -21,6 +21,7 @@ export const IPC = {
   snapshot: "cat:snapshot",
   send: "cat:send",
   copyReply: "cat:copy-reply",
+  openLink: "cat:open-link",
   stop: "cat:stop",
   clear: "cat:clear",
   conversations: "cat:conversations",
@@ -127,6 +128,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   snapshot(): Promise<ChatSnapshot>;
   send(request: SendRequest): Promise<ActionResult>;
   copyReply(messageId: string): Promise<ActionResult>;
+  openLink(url: string): Promise<ActionResult>;
   stop(): Promise<void>;
   clear(): Promise<ActionResult>;
   conversations(): Promise<ConversationSummary[]>;

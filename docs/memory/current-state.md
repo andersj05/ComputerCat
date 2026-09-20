@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-19. Recheck checkout and tests.
+Reviewed: 2026-09-20. Recheck checkout and tests.
 
 ## What exists
 
@@ -11,21 +11,19 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Seven [desktop tools](../desktop-context.md) observe apps, windows, screenshots and regions,
   accessible text, tabs and selection on demand. Capture targets one source; app coverage varies.
-- Default demo mode produces deterministic local replies without credentials or API calls.
-  Models & sign-in supports app-owned Codex login; chat and cat expose direct model selection.
-  History resumes/deletes saved conversations. Options → Models stores new-chat defaults.
+- Six [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
+  clipboard text, open links/folders and reveal files. Launch results confirm dispatch, not UI success.
+- Four [web tools](../web-research.md) read, page and find public static text, plus optional Brave
+  search using a separate main-process key. Page references expire after five minutes or turn end.
+- Demo replies are deterministic and offline. App-owned Codex login and direct model selection
+  work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
 - Options → [Harness guide](../harness-guide.md) opens an offline browser map, examples,
   typed tool catalog and extension guidance.
 - Local Whisper uses explicit downloads, background preparation and Talk/Finish/Cancel.
-  Enabled models stay ready by default; Voice performance offers an idle-unload option.
-  The XP cat panel keeps New chat visible, with a compact input and secondary actions under ⋯.
-  Panel sizing and drafts survive reopening during this app run.
-  Portable/AVX2 CPU helpers are supported; CUDA is not. Audio is not saved.
-  See the [release-check handoff](handoffs/2026-09-17-local-whisper.md).
-- [Developer memory](README.md) is shared across coding clients and checked by `npm run memory:check`.
-
-[Codex smoke tests](../../tests/smoke/codex.spec.ts) use offline OAuth/model fixtures.
+  Enabled models stay ready unless idle unload is selected. CPU portable/AVX2 only; no saved audio.
+  Cat panel size/drafts persist during this run; New chat stays visible and secondary actions use ⋯.
+  See the [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md).
 
 ## Persistence boundaries
 
@@ -38,10 +36,9 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
 | Model defaults | Atomic models.json defaults; direct model changes persist per chat | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |
 
-Pi discovers no agent files, extensions, skills or prompts. Its eight built-in file/search/shell
- tools run with OS user permissions from Desktop and report tool activity. The worker is not
-an OS sandbox. Developer memory is never loaded into the in-app agent. See
-[architecture](../architecture.md) and [Pi tests](../../tests/unit/pi-runtime.test.ts).
+Pi discovers no agent files, extensions, skills or prompts, including developer memory.
+Its eight file/search/shell tools run from Desktop with OS user permissions and report activity.
+The worker is not an OS sandbox; see [architecture](../architecture.md).
 
 ## Find the implementation
 
@@ -58,7 +55,7 @@ an OS sandbox. Developer memory is never loaded into the in-app agent. See
 
 ## Not implemented
 
-Computer control, external MCP, selected-fact user memory, speech output, other-provider
+Mouse/keyboard control, full browser integration, external MCP, selected-fact user memory, speech output, other-provider
 credential settings, signing and app updates remain future work. The
 [research plan](../research-and-build-plan.md) proposes these; it is not a completion checklist.
 

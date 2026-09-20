@@ -29,15 +29,28 @@ describe("assistant Markdown", () => {
     expect(html).toContain("disabled");
   });
 
-  it("keeps HTML, navigation, and remote images inactive", () => {
+  it("keeps HTML and remote images inactive and only exposes HTTP links", () => {
     const html = render(
       '<script>alert(1)</script>\n\n<img src="https://example.com/tracker" onerror="alert(1)">\n\n![Picture](https://example.com/image)\n\n[Unsafe](javascript:alert%281%29) and [Website](https://example.com)',
     );
-    expect(html).not.toMatch(/<(script|img|a)\b/);
+    expect(html).not.toMatch(/<(script|img)\b/);
+    expect(html.match(/<a\b/g)).toHaveLength(1);
+    expect(html).toContain('href="https://example.com"');
     expect(html).not.toContain("javascript:");
     expect(html).not.toContain("onerror");
     expect(html).toContain("Picture");
     expect(html).toContain("Website");
+  });
+
+  it("keeps custom protocols, credentialed and relative links inactive", () => {
+    for (const href of [
+      "file:///C:/secret",
+      "mailto:cat@example.com",
+      "https://user:pass@example.com",
+      "/relative",
+      `https://example.com/${"a".repeat(2082)}`,
+    ])
+      expect(render(`[Link](${href})`)).not.toContain("<a ");
   });
 
   it("accepts partial streaming Markdown and preserves code literally", () => {

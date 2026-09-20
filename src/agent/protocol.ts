@@ -2,6 +2,7 @@ import { z } from "zod";
 import { desktopRequestSchema, desktopResultSchema } from "../shared/desktop";
 import { ALL_TOOL_NAMES } from "../shared/tools";
 import { reasoningSchema } from "../shared/validation";
+import { webRequestSchema, webResultSchema } from "../shared/web";
 
 export const toolActivitySchema = z.strictObject({
   id: z.string().min(1).max(256),
@@ -18,6 +19,12 @@ export const workerConfigSchema = z.strictObject({
 });
 
 export const workerRequestSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("web-result"),
+    id: z.uuid(),
+    callId: z.uuid(),
+    result: webResultSchema,
+  }),
   z.strictObject({
     type: z.literal("run"),
     id: z.uuid(),
@@ -48,6 +55,12 @@ export const workerRequestSchema = z.discriminatedUnion("type", [
   }),
 ]);
 export const workerEventSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("web-request"),
+    id: z.uuid(),
+    callId: z.uuid(),
+    request: webRequestSchema,
+  }),
   z.strictObject({
     type: z.literal("desktop-request"),
     id: z.uuid(),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { desktopUtilitySchema } from "./desktop-utilities";
 
 export const desktopRegionSchema = z
   .strictObject({
@@ -16,6 +17,7 @@ export type DesktopReadMode = "all" | "selection" | "tabs";
 
 // Native IDs are kept behind expiring, opaque source IDs issued by the broker.
 export const desktopRequestSchema = z.discriminatedUnion("operation", [
+  z.strictObject({ operation: z.literal("utility"), request: desktopUtilitySchema }),
   z.strictObject({
     operation: z.literal("observe"),
     sourceId: z.uuid().optional(),

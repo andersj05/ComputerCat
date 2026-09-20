@@ -746,7 +746,7 @@ main:focus {
     content: none;
   }
   .lane:nth-child(3)::before {
-    content: "↓ Desktop requests continue below";
+    content: "↓ Tool requests continue below";
     position: absolute;
     top: -22px;
     left: 0;

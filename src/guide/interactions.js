@@ -14,16 +14,22 @@
       "Improve the prompt or tool descriptions when the cat chooses an unhelpful path.",
     ],
     broker: [
-      "A scoped route to the desktop",
-      "Desktop tool requests cross a private worker channel into main. The broker validates the request, checks the active turn and source, and supervises one OS observation at a time.",
-      "src/agent/desktop-rpc.ts\nsrc/main/worker-runtime.ts\nsrc/main/desktop/controller.ts",
-      "Add validation, cancellation and error handling here when extending desktop capabilities.",
+      "Scoped routes to desktop and web tools",
+      "Private worker channels validate requests and the active turn. The desktop broker supervises one OS operation at a time. The separate web service bounds public requests, validates network destinations and retains page snapshots for this reply.",
+      "src/agent/desktop-rpc.ts\nsrc/agent/web-rpc.ts\nsrc/main/worker-runtime.ts\nsrc/main/desktop/controller.ts",
+      "Add validation, cancellation and error handling here when extending capabilities.",
     ],
     desktop: [
-      "Fresh evidence from one source",
-      "The provider identifies a window, reads text through Windows accessibility and captures an exact source in a temporary media renderer. Text and image results can survive independently when one fails.",
-      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/windows-reader.ts\nsrc/main/desktop/source-capture.ts",
+      "Desktop evidence and everyday actions",
+      "Observation reads one window through accessibility and scoped capture. Utilities get time/folder paths, read or write requested clipboard text, and open links or file locations. Actions report OS dispatch; a fresh observation checks the visible result.",
+      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/windows-reader.ts\nsrc/main/desktop/source-capture.ts\nsrc/main/desktop/utilities.ts",
       "Improve this layer for clearer text, better app targeting or more reliable screenshots.",
+    ],
+    web: [
+      "Public web research",
+      "Read static pages, find literal text and continue reading the same snapshot. Optional Brave Search returns source links when a separate key is configured. Retrieved text reaches the selected model and saved conversation context.",
+      "src/agent/web-tools.ts\nsrc/main/web/controller.ts\nsrc/main/web/public-http.ts\nsrc/main/web/extract.ts",
+      "Page reading needs no search key. Browser sessions, JavaScript pages, PDFs and private networks are outside this reader.",
     ],
     files: [
       "Another branch: files and commands",
@@ -92,6 +98,27 @@
         ["Reply with what it found", "Summarize the file or ask which match you meant."],
       ],
       note: "This path uses file tools, not screen capture. Relative file paths begin at Desktop; OS permissions still apply.",
+    },
+    research: {
+      nodes: ["ask", "agent", "broker", "web"],
+      steps: [
+        [
+          "Find relevant sources",
+          "Use configured search, or start with a URL you supplied.",
+          "web_search",
+        ],
+        [
+          "Read the source",
+          "Retrieve bounded static page text with its URL and retrieval time.",
+          "web_read",
+        ],
+        [
+          "Check details and cite",
+          "Find relevant excerpts; continue reading if the page is longer than the first result.",
+          "web_find",
+        ],
+      ],
+      note: "Search needs a separately configured Brave key. Page references last five minutes within this reply. The cat should cite retrieved URLs and say when content is missing.",
     },
     voice: {
       nodes: ["ask", "agent", "broker", "desktop"],
@@ -176,7 +203,14 @@
     const summary = document.createElement("summary");
     const family = document.createElement("span");
     family.className = `tool-family ${tool.group}`;
-    family.textContent = tool.group === "desktop" ? "Desktop" : "Files & shell";
+    family.textContent =
+      tool.group === "desktop"
+        ? "Desktop observation"
+        : tool.group === "utilities"
+          ? "Everyday utilities"
+          : tool.group === "web"
+            ? "Public web"
+            : "Files & shell";
     const title = document.createElement("strong");
     title.textContent = tool.title;
     const name = document.createElement("code");

@@ -2,6 +2,7 @@ import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { DesktopWorkerClient } from "./desktop-rpc";
 import { type WorkerEvent, workerRequestSchema } from "./protocol";
 import { type AgentRuntime, UserFacingError } from "./runtime";
+import { WebWorkerClient } from "./web-rpc";
 
 const port = process.parentPort;
 if (!port) throw new Error("The agent must run as an Electron utility process.");
@@ -11,11 +12,16 @@ let sessionKey: string | undefined;
 let active: { id: string; abort: AbortController } | undefined;
 const send = (event: WorkerEvent) => port.postMessage(event);
 const desktop = new DesktopWorkerClient(send);
+const web = new WebWorkerClient(send);
 
 port.on("message", async ({ data }) => {
   const parsed = workerRequestSchema.safeParse(data);
   if (!parsed.success) return;
   const request = parsed.data;
+  if (request.type === "web-result") {
+    web.receive(request);
+    return;
+  }
   if (request.type === "desktop-result") {
     desktop.receive(request);
     return;
@@ -31,6 +37,7 @@ port.on("message", async ({ data }) => {
   const current = { id: request.id, abort: new AbortController() };
   active = current;
   desktop.beginTurn(current.id, current.abort.signal);
+  web.beginTurn(current.id, current.abort.signal);
   try {
     const config = request.config;
     const key = JSON.stringify([config.provider, config.model, config.reasoning]);
@@ -46,6 +53,7 @@ port.on("message", async ({ data }) => {
       models,
       request.context,
       desktop.execute,
+      web.execute,
     );
     sessionKey = key;
     current.abort.signal.throwIfAborted();
@@ -73,6 +81,7 @@ port.on("message", async ({ data }) => {
       });
   } finally {
     desktop.endTurn();
+    web.endTurn();
     active = undefined;
   }
 });

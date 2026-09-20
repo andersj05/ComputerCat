@@ -34,10 +34,12 @@ import { ChatController } from "./chat-controller";
 import { ConversationStore } from "./conversation-store";
 import { DesktopController } from "./desktop/controller";
 import { ElectronDesktopProvider } from "./desktop/electron-provider";
+import { createDesktopUtilities } from "./desktop/electron-utilities";
 import { desktopFixture } from "./desktop/fixture-provider";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
+import { openWebLink } from "./open-link";
 import { keepInWorkArea, PetDrag, PetResize, resizeFromAnchor } from "./pet-window";
 import { PreferencesStore } from "./preferences";
 import { EncryptedSecretStore } from "./secret-store";
@@ -46,6 +48,8 @@ import { VoiceModelStore } from "./voice/model-store";
 import { allowMicrophone } from "./voice/permissions";
 import { VoiceSettingsStore } from "./voice/settings";
 import { WhisperRuntime } from "./voice/whisper-runtime";
+import { readSearchKey, WebController } from "./web/controller";
+import { webFixture } from "./web/fixture";
 import { WorkerRuntime } from "./worker-runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -65,6 +69,8 @@ const desktop = new DesktopController(
   smoke
     ? desktopFixture(process.env.COMPUTERCAT_DESKTOP_FIXTURE === "1")
     : new ElectronDesktopProvider(),
+  Date.now,
+  createDesktopUtilities(smoke),
 );
 function captureWindow(): BrowserWindow | undefined {
   return voice?.snapshot().owner === "pet" ? pet : chat;
@@ -337,6 +343,10 @@ else {
             context,
             { directory: join(app.getPath("userData"), "pi-runtime"), allowDownloads: !smoke },
             (request, signal) => desktop.execute(request, signal),
+            new WebController(
+              smoke ? webFixture : undefined,
+              smoke ? "fixture-search-key" : readSearchKey(process.env),
+            ).execute,
           ),
         publishModels,
       );
@@ -577,6 +587,11 @@ else {
       ipcMain.handle(IPC.snapshot, (event) => {
         assertSender(event);
         return controller.snapshot();
+      });
+      ipcMain.handle(IPC.openLink, (event, ...args: unknown[]) => {
+        assertSender(event);
+        if (args.length !== 1) return { ok: false, message: "Invalid link request." };
+        return openWebLink(args[0], (url) => shell.openExternal(url));
       });
       ipcMain.handle(IPC.copyReply, async (event, id: unknown) => {
         assertSender(event);

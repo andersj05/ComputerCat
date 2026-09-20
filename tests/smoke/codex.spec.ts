@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
+import { ALL_TOOL_NAMES } from "../../src/shared/tools";
 import { sendAndWaitForReply, showCatControls } from "./chat";
 
 async function launch(userData: string, desktopFixture = false) {
@@ -208,23 +209,9 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
       reasoning: "high",
       authenticated: true,
     });
-    expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
-      "bash",
-      "desktop_capture",
-      "desktop_capture_region",
-      "desktop_list_tabs",
-      "desktop_list_windows",
-      "desktop_observe",
-      "desktop_read_selection",
-      "desktop_read_window",
-      "edit",
-      "find",
-      "grep",
-      "ls",
-      "powershell",
-      "read",
-      "write",
-    ]);
+    expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual(
+      [...ALL_TOOL_NAMES].sort(),
+    );
     expect(requests[2].model).toBe("gpt-5.6-terra");
     expect(JSON.stringify(requests[2].input)).toContain("first-context-canary");
     await page.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-sol");
@@ -296,6 +283,101 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
     await expect(page.locator(".statusbar")).toContainText("Demo — no API calls");
   } finally {
     await app.electron.close();
+    await cleanup(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("public web research crosses the real worker with offline sources and citations", async ({}, testInfo) => {
+  test.setTimeout(60_000);
+  const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
+  const { electron, page } = await launch(userData);
+  try {
+    await interceptCodex(electron);
+    await page.getByRole("button", { name: "Options…" }).click();
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: "Use a device code" }).click();
+    await expect(page.getByRole("textbox", { name: "Sign-in code" })).toHaveValue("TEST-CODE");
+    await electron.evaluate(() => {
+      Reflect.get(globalThis, "offlineCodex").allowLogin = true;
+    });
+    await expect(page.getByText("Connected to ChatGPT", { exact: true })).toBeVisible();
+    await page.getByLabel("Connection:", { exact: true }).selectOption("codex");
+    await page.getByLabel("Model:", { exact: true }).selectOption("gpt-5.6-sol");
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+    await electron.evaluate(({ powerMonitor }) => {
+      powerMonitor.emit("lock-screen");
+    });
+    const reply = await sendAndWaitForReply(page, "web-fixture:research the fixture guide");
+    await expect(reply).toContainText("Offline web research complete");
+    await expect(reply.getByRole("link", { name: "Fixture web guide" })).toHaveAttribute(
+      "href",
+      "https://example.com/guide",
+    );
+    await electron.evaluate(({ shell }) => {
+      const clicks: string[] = [];
+      Reflect.set(globalThis, "sourceLinkClicks", clicks);
+      shell.openExternal = async (url) => {
+        clicks.push(url);
+        if (clicks.length === 1) throw new Error("private launch failure");
+      };
+    });
+    expect(
+      await page.evaluate(() => window.computerCat.openLink("file:///C:/Windows/app.exe")),
+    ).toMatchObject({ ok: false });
+    expect(
+      await page.evaluate(() =>
+        window.computerCat.openLink({ url: "https://example.com" } as never),
+      ),
+    ).toMatchObject({ ok: false });
+    expect(await electron.evaluate(() => Reflect.get(globalThis, "sourceLinkClicks"))).toEqual([]);
+    const chatUrl = page.url();
+    const citation = reply.getByRole("link", { name: "Fixture web guide" });
+    await citation.click();
+    await expect(reply.getByRole("alert")).toContainText("Couldn't open this link. Try again.");
+    await citation.focus();
+    await citation.press("Enter");
+    await expect(reply.getByRole("alert")).toHaveCount(0);
+    await expect
+      .poll(() => electron.evaluate(() => Reflect.get(globalThis, "sourceLinkClicks")))
+      .toEqual(["https://example.com/guide", "https://example.com/guide"]);
+    expect(page.url()).toBe(chatUrl);
+    expect(electron.windows()).toHaveLength(2);
+    await reply.getByRole("button", { name: /Tool activity/ }).click();
+    const activity = reply.getByRole("list", { name: "Tool activity" });
+    for (const label of ["Search web", "Read web page", "Find text on page", "Read more of page"])
+      await expect(activity).toContainText(new RegExp(`${label}.*Done`));
+    await page.screenshot({ path: testInfo.outputPath("web-research.png") });
+    const requests = await electron.evaluate(
+      () => Reflect.get(globalThis, "offlineCodex").requests,
+    );
+    expect(requests).toHaveLength(5);
+    const outputs = requests
+      .at(-1)
+      .input.filter((entry: { type: string }) => entry.type === "function_call_output");
+    const data = outputs.map((entry: { output: string | { type: string; text: string }[] }) =>
+      JSON.parse(
+        typeof entry.output === "string"
+          ? entry.output
+          : (entry.output.find((part) => part.type === "input_text")?.text ?? "{}"),
+      ),
+    );
+    expect(data[0].results[0].url).toBe("https://example.com/guide");
+    expect(data[1]).toMatchObject({ title: "Fixture web guide", start: 0, nextStart: 8000 });
+    expect(data[1].text).toContain("Offline page evidence.");
+    expect(data[2].matches[0].text).toContain("needle for web_find");
+    expect(data[3]).toMatchObject({
+      pageId: data[1].pageId,
+      start: 8000,
+      nextStart: null,
+      retrievedAt: data[1].retrievedAt,
+    });
+    expect(JSON.stringify(requests)).not.toContain("fixture-search-key");
+    expect(
+      await page.evaluate(() => Object.keys(window.computerCat).filter((key) => /^web/i.test(key))),
+    ).toEqual([]);
+  } finally {
+    await electron.close();
     await cleanup(userData);
   }
 });
@@ -407,6 +489,38 @@ test("screen questions automatically observe through the real worker and recover
       /Read screen.*Done/,
     );
     expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+
+    // Exercise every utility through the real Pi worker and main broker, with smoke-only
+    // hosts. Any accidental real clipboard access or external app launch fails immediately.
+    await electron.evaluate(({ clipboard, shell }) => {
+      const forbidden = () => {
+        throw new Error("Real utility side effect forbidden in smoke tests");
+      };
+      clipboard.readText = forbidden;
+      clipboard.writeText = forbidden;
+      shell.openExternal = forbidden;
+      shell.openPath = forbidden;
+      shell.showItemInFolder = forbidden;
+    });
+    const file = join(userData, "utility-fixture.txt");
+    await writeFile(file, "utility fixture");
+    const utilities = [
+      { name: "desktop_get_environment", args: {}, expected: "fixture-time" },
+      { name: "desktop_read_clipboard", args: {}, expected: "Fixture clipboard text" },
+      { name: "desktop_write_clipboard", args: { text: "copied by fixture" }, expected: "written" },
+      { name: "desktop_read_clipboard", args: {}, expected: "copied by fixture" },
+      { name: "desktop_open_url", args: { url: "https://example.com" }, expected: "dispatched" },
+      { name: "desktop_open_folder", args: { path: userData }, expected: "dispatched" },
+      { name: "desktop_reveal_file", args: { path: file }, expected: "dispatched" },
+    ];
+    for (const { name, args, expected } of utilities) {
+      const reply = await sendAndWaitForReply(
+        page,
+        `utility-fixture:${JSON.stringify({ name, args })}`,
+      );
+      await expect(reply).toContainText(expected);
+      await expect(reply.getByRole("list", { name: "Tool activity" })).toContainText("Done");
+    }
   } finally {
     await electron.close();
     await cleanup(userData);

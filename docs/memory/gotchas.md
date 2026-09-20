@@ -3,6 +3,18 @@
 Keep reproducible lessons here. Each entry states its scope, evidence, and review date.
 Remove obsolete remedies; keep transient environment failures in the relevant handoff.
 
+## Overlays can win inferred current-window selection
+
+Reviewed: 2026-09-20. When Computer Cat has focus, window z-order is only a guess at the
+intended app. The [reader](../../src/main/desktop/windows-reader.ts) skips WS_EX_TOOLWINDOW
+and WS_EX_NOACTIVATE windows during that inference, preserving foreground and explicit reads.
+These [Windows styles](https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles)
+identify floating tools and nonactivating windows; they do not identify every overlay.
+The [selection fixtures](../../tests/smoke/window-target.spec.ts) cover both styles and ordinary
+topmost apps. The [agent prompt](../../src/agent/runtime.ts) directs recovery through window
+listing and a fresh read of a named app. Prompt instructions do not guarantee model compliance;
+the reported NVIDIA case has not been reproduced against the actual overlay.
+
 ## Windows sandbox identity and Git ownership
 
 Reviewed: 2026-09-17. Scope: this Windows checkout under a separate sandbox account.

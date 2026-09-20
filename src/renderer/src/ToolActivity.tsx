@@ -17,6 +17,16 @@ export const TOOL_LABELS: Record<Activity["name"], string> = {
   desktop_read_selection: "Read selected text",
   desktop_list_tabs: "Read browser tabs",
   desktop_capture_region: "Inspect screen region",
+  desktop_get_environment: "Get time and folders",
+  desktop_read_clipboard: "Read clipboard text",
+  desktop_write_clipboard: "Copy text",
+  desktop_open_url: "Open web link",
+  desktop_open_folder: "Open folder",
+  desktop_reveal_file: "Show file in folder",
+  web_read: "Read web page",
+  web_read_more: "Read more of page",
+  web_find: "Find text on page",
+  web_search: "Search web",
 };
 const states = { running: "Running…", complete: "Done", error: "Failed", stopped: "Stopped" };
 
