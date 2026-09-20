@@ -60,7 +60,7 @@ export const runSchema = z
   .strictObject({
     schemaVersion: z.literal(1),
     id: identifier,
-    mode: z.enum(["manual-live", "scoring-example"]),
+    mode: z.enum(["manual-live", "scoring-example", "live-fixture"]),
     createdAt: z.iso.datetime(),
     connection: z.string().trim().min(1).max(100),
     model: z.string().trim().min(1).max(160),

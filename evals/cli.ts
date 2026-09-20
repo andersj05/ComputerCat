@@ -163,6 +163,10 @@ async function main() {
   });
   if (command === "check") {
     const suite = await loadSuite();
+    const live = await loadSuite(undefined, "live-fixture");
+    console.log(
+      `Live-fixture definitions valid: ${live.catalog.tasks.length} tasks. No model was run.`,
+    );
     console.log(
       `Evaluation definitions valid: ${suite.catalog.tasks.length} tasks, ${suite.catalog.tasks.reduce((sum, task) => sum + task.checks.length, 0)} criteria, ${suite.fixtureFiles.length} fixtures. No agent was run.`,
     );
@@ -207,6 +211,10 @@ async function main() {
   if (command === "score") {
     const id = required(values, "run");
     const { run, hash } = await readRun(id);
+    if (run.mode === "live-fixture")
+      throw new Error(
+        "Live-fixture grades come from the runner. Use a fresh run; do not replace measured outcomes with manual scores.",
+      );
     const suite = await loadSuite();
     if (run.suiteHash !== suite.suiteHash)
       throw new Error(

@@ -32,6 +32,10 @@ in [Anthropic's agent evaluation guidance](https://www.anthropic.com/engineering
 The rubric is our product definition, not a claim of benchmarked agent quality. No live-model
 reliability baseline has been measured yet.
 
+For an automated local run using Luna/Medium and controlled tools, use the separate
+[live evaluation workflow](live-evaluations.md). The manual workflow below measures actual app/OS
+outcomes; its grades and environment cannot be mixed with controlled-fixture measurements.
+
 ## Start a real baseline
 
 From a terminal in this repository, run:
@@ -142,7 +146,6 @@ scripted Pi tool sequence must never be presented as real-model task success. Th
 ship without that evidence stays explicit. CI validates the evaluation definitions and tests
 the scorer offline; it does not launch real model trials or use account credentials.
 
-Next automation should reuse these tasks/outcomes and the production Pi prompt/tool definitions,
-with controlled tool adapters and separate bounded model calls. We have not implemented an
-automated live-model runner, automatic transcript collection, token/cost measurement, or a model
-judge. The current workflow intentionally starts with inspectable app outcomes and human grading.
+The [Luna live runner](live-evaluations.md) now reuses the production prompt/tools with controlled
+fixtures, automatic outcome checks and token counts. Automated control/grading of real desktop
+apps, production transcript collection, currency cost measurement and a model judge remain future work.

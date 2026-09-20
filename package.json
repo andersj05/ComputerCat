@@ -37,7 +37,8 @@
     "eval:init": "node evals/cli.ts init",
     "eval:score": "node evals/cli.ts score",
     "eval:report": "node evals/cli.ts report",
-    "eval:compare": "node evals/cli.ts compare"
+    "eval:compare": "node evals/cli.ts compare",
+    "eval:live": "node scripts/run-live-evals.mjs"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "0.85.1",

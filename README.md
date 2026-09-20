@@ -224,6 +224,7 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run verify` | Memory/evaluation checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
 | `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
+| `npm run eval:live -- --run luna-baseline` | Explicit live Luna/Medium evaluation against controlled tool fixtures |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
 | `npm run voice:test-native` | Offline native protocol and cancellation tests |
@@ -240,8 +241,10 @@ in and send a message yourself.
 Task reliability is measured separately with [twelve repeatable app tasks](docs/task-evaluations.md):
 context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
 worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
-It makes no model calls; actual trials happen in the app. Start with four tasks repeated three
-times. No live-model reliability baseline has been measured yet.
+The manual scorer makes no model calls; actual trials happen in the app. An opt-in
+[Luna/Medium runner](docs/live-evaluations.md) automatically evaluates adapted tasks against
+controlled tool fixtures. Start with four tasks repeated three times. Live-model results are
+kept separate from offline tests and from actual Windows/public-web reliability.
 
 ## Project layout
 

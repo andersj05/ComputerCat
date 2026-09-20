@@ -74,9 +74,14 @@ export async function sourceHash(root = repository) {
     "electron-builder.yml",
   ]);
 }
-export async function loadSuite(root = repository) {
+export async function loadSuite(root = repository, mode: Run["mode"] = "manual-live") {
   const catalog = catalogSchema.parse(
-    JSON.parse(await readFile(join(root, "evals/catalog.json"), "utf8")),
+    JSON.parse(
+      await readFile(
+        join(root, mode === "live-fixture" ? "evals/live-catalog.json" : "evals/catalog.json"),
+        "utf8",
+      ),
+    ),
   );
   const fixtureFiles = await files(root, join(root, "evals/fixtures"));
   for (const file of ["work-note.html", "revised-note.html", "untrusted-note.html", "todo.txt"]) {
@@ -94,6 +99,13 @@ export async function loadSuite(root = repository) {
     "evals/report.ts",
     "evals/storage.ts",
     ...fixtureFiles,
+    ...(mode === "live-fixture"
+      ? [
+          "evals/live-main.ts",
+          "scripts/run-live-evals.mjs",
+          ...(await files(root, join(root, "src/agent/evaluation"))),
+        ]
+      : []),
   ];
   const fixtureHash = await hashFiles(root, paths);
   return { catalog, fixtureFiles, suiteHash: digest(JSON.stringify(catalog) + fixtureHash) };
@@ -113,7 +125,7 @@ export async function initializeRun(
   root = repository,
 ) {
   assertRunId(options.id);
-  const suite = await loadSuite(root);
+  const suite = await loadSuite(root, options.mode);
   const git = (args: string[]) =>
     execFileSync("git", ["-c", `safe.directory=${root.replaceAll("\\", "/")}`, ...args], {
       cwd: root,

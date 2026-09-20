@@ -13,7 +13,9 @@ export function renderReport(run: Run) {
     "",
     run.mode === "scoring-example"
       ? "**SCORING EXAMPLE — synthetic records, not evidence of agent reliability.**"
-      : "Human-reviewed attempts in the actual app. The scoring command does not run an agent.",
+      : run.mode === "live-fixture"
+        ? "**LIVE MODEL / CONTROLLED TOOL FIXTURES.** Automated outcome checks, not a measurement of real Windows/browser or public-network reliability."
+        : "Human-reviewed attempts in the actual app. The scoring command does not run an agent.",
     "",
     `Model: ${cell(run.connection)} / ${cell(run.model)}; reasoning: ${cell(run.reasoning)}.`,
     `Environment: ${cell(run.environment)}.`,
@@ -75,7 +77,9 @@ export function renderComparison(baseline: Run, candidate: Run, allowModelChange
     "",
     baseline.mode === "scoring-example"
       ? "**SCORING EXAMPLE — not agent performance.**"
-      : "Observed results from human-reviewed app attempts; no statistical significance is implied.",
+      : baseline.mode === "live-fixture"
+        ? "Live-model attempts against controlled tool fixtures, graded automatically. This is not real-desktop reliability or statistical proof."
+        : "Observed results from human-reviewed app attempts; no statistical significance is implied.",
     "",
     `Baseline model: ${cell(baseline.connection)} / ${cell(baseline.model)} (${cell(baseline.reasoning)}).`,
     `Candidate model: ${cell(candidate.connection)} / ${cell(candidate.model)} (${cell(candidate.reasoning)}).`,

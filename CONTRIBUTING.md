@@ -57,7 +57,9 @@ The generated worksheet provides setup, prompts and scoring commands. The scorer
 observations; it never invokes models. Generated runs stay in ignored `.local/evals/`.
 An unmeasured change must say `Live task reliability: not measured` and explain the gap; passing
 scripted Pi tests is not a live-model success rate. Pure visual changes need visual/smoke evidence,
-not unrelated model trials. Normal CI validates the task catalog and scorer offline.
+not unrelated model trials. Normal CI validates both task catalogs and scorers offline.
+Use the [Luna/Medium live runner](docs/live-evaluations.md) for automated local harness comparisons;
+label its controlled-tool scope and retain actual-app spot checks for OS/browser behavior.
 
 ## Dependencies and releases
 
