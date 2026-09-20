@@ -27,6 +27,7 @@ import {
   loginRequestSchema,
   modelSettingsSchema,
   petDragSchema,
+  petResizeSchema,
 } from "../shared/validation";
 import { sessionSchema, VoiceError } from "../shared/voice";
 import { ChatController } from "./chat-controller";
@@ -37,7 +38,7 @@ import { desktopFixture } from "./desktop/fixture-provider";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
-import { keepInWorkArea, PetDrag } from "./pet-window";
+import { keepInWorkArea, PetDrag, PetResize, resizeFromAnchor } from "./pet-window";
 import { PreferencesStore } from "./preferences";
 import { EncryptedSecretStore } from "./secret-store";
 import { VoiceController } from "./voice/controller";
@@ -86,6 +87,11 @@ let shortcutRegistered = false;
 let stopShortcutRegistered = false;
 let talkShortcutRegistered = false;
 const petDrag = new PetDrag();
+const petResize = new PetResize();
+function cancelPetGestures(): void {
+  petDrag.cancel();
+  petResize.cancel();
+}
 let presenceTimer: ReturnType<typeof setInterval> | undefined;
 const preferences = new PreferencesStore(join(app.getPath("userData"), "preferences.json"));
 const harnessGuide = new HarnessGuide(
@@ -116,12 +122,25 @@ const petSizes = {
   large: { width: 228, height: 352 },
 };
 let petVoiceOpen = false;
-let petExpanded = false;
+// Panel dimensions survive closing/reopening during this app run, independently of cat size.
+let petPanelSize = { width: 400, height: 340 };
+let placedPetBounds: Rectangle | undefined;
 function petWindowSize() {
   const size = petSizes[preferences.snapshot().size];
   return petVoiceOpen
-    ? { width: petExpanded ? 580 : 400, height: size.height + (petExpanded ? 470 : 340) }
+    ? { width: petPanelSize.width, height: size.height + petPanelSize.height }
     : size;
+}
+function petResizeLimits() {
+  const height = petSizes[preferences.snapshot().size].height;
+  return { minWidth: 360, minHeight: height + 240, maxWidth: 1200, maxHeight: height + 800 };
+}
+function applyPanelResize(bounds: Rectangle, area: Rectangle): void {
+  placePet(bounds, area);
+  petPanelSize = {
+    width: bounds.width,
+    height: bounds.height - petSizes[preferences.snapshot().size].height,
+  };
 }
 
 function placePet(bounds: Rectangle, area: Rectangle): void {
@@ -139,12 +158,19 @@ function placePet(bounds: Rectangle, area: Rectangle): void {
   const actual = pet.getBounds();
   const fitted = keepInWorkArea(actual, area);
   if (fitted.x !== actual.x || fitted.y !== actual.y) pet.setPosition(fitted.x, fitted.y);
+  // Native bounds may round up at fractional DPI. Never feed that size into the next gesture.
+  placedPetBounds = {
+    ...target,
+    x: target.x + fitted.x - actual.x,
+    y: target.y + fitted.y - actual.y,
+  };
 }
 
 function applyPetPreferences(): void {
   if (!pet || pet.isDestroyed()) return;
+  cancelPetGestures();
   const settings = preferences.snapshot();
-  const bounds = pet.getBounds();
+  const bounds = placedPetBounds ?? pet.getBounds();
   const size = petWindowSize();
   const area = screen.getDisplayMatching(bounds).workArea;
   placePet(
@@ -168,6 +194,7 @@ function raisePet(): void {
 
 function findPet(): void {
   if (!pet || pet.isDestroyed()) return;
+  cancelPetGestures();
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   // Off-screen Windows bounds can report a different size after a DPI transition.
   const size = petWindowSize();
@@ -668,7 +695,10 @@ else {
         if (trusted.get(event.sender.id)?.role !== "pet")
           throw new Error("Only the companion can move itself.");
         const phase = petDragSchema.parse(request);
-        if (phase === "start") petDrag.start(screen.getCursorScreenPoint(), pet.getBounds());
+        if (phase === "start") {
+          petResize.cancel();
+          petDrag.start(screen.getCursorScreenPoint(), placedPetBounds ?? pet.getBounds());
+        }
         if (phase === "move" || phase === "end") {
           const next = petDrag.move(screen.getCursorScreenPoint());
           if (next) {
@@ -678,19 +708,57 @@ else {
         if (phase === "cancel") petDrag.cancel();
         return { moved: phase === "end" ? petDrag.end() : false };
       });
+      ipcMain.handle(IPC.resizePetPanel, (event, request: unknown) => {
+        assertSender(event);
+        if (trusted.get(event.sender.id)?.role !== "pet")
+          throw new Error("Only the companion can resize its panel.");
+        const value = petResizeSchema.parse(request);
+        if (value.phase === "cancel") {
+          petResize.cancel();
+          return;
+        }
+        if (!petVoiceOpen || !pet.isVisible()) throw new Error("The cat panel is not open.");
+        const bounds = placedPetBounds ?? pet.getBounds();
+        const area = screen.getDisplayMatching(bounds).workArea;
+        if (value.phase === "start") {
+          petDrag.cancel();
+          petResize.start(
+            screen.getCursorScreenPoint(),
+            bounds,
+            value.edge,
+            area,
+            petResizeLimits(),
+          );
+        } else if (value.phase === "step") {
+          cancelPetGestures();
+          const next = resizeFromAnchor(
+            bounds,
+            {
+              width: bounds.width + (value.axis === "width" ? value.delta : 0),
+              height: bounds.height + (value.axis === "height" ? value.delta : 0),
+            },
+            area,
+            petResizeLimits(),
+          );
+          applyPanelResize(next, area);
+        } else {
+          const next = petResize.move(screen.getCursorScreenPoint());
+          if (next) applyPanelResize(next, area);
+          if (value.phase === "end") petResize.cancel();
+        }
+      });
       ipcMain.handle(IPC.petVoiceOpen, (event, open: unknown) => {
         assertSender(event);
         if (trusted.get(event.sender.id)?.role !== "pet" || typeof open !== "boolean")
           throw new Error("Invalid cat voice panel request.");
         petVoiceOpen = open;
-        if (!open) petExpanded = false;
         applyPetPreferences();
       });
       ipcMain.handle(IPC.petExpanded, (event, expanded: unknown) => {
         assertSender(event);
         if (trusted.get(event.sender.id)?.role !== "pet" || typeof expanded !== "boolean")
           throw new Error("Invalid cat panel size request.");
-        petExpanded = expanded;
+        petPanelSize = expanded ? { width: 580, height: 470 } : { width: 400, height: 340 };
         applyPetPreferences();
       });
       ipcMain.handle(IPC.hideChat, (event) => {
@@ -771,11 +839,13 @@ else {
       powerMonitor.on("resume", () => desktop.setBlocked("suspended", false));
       powerMonitor.on("unlock-screen", () => desktop.setBlocked("locked", false));
       pet.on("blur", () => {
-        petDrag.cancel();
+        cancelPetGestures();
         raisePet();
       });
-      pet.on("hide", () => petDrag.cancel());
-      pet.webContents.on("did-start-loading", () => petDrag.cancel());
+      pet.on("hide", cancelPetGestures);
+      pet.webContents.on("did-start-loading", cancelPetGestures);
+      powerMonitor.on("suspend", cancelPetGestures);
+      powerMonitor.on("lock-screen", cancelPetGestures);
       pet.on("show", raisePet);
       powerMonitor.on("resume", raisePet);
       powerMonitor.on("unlock-screen", raisePet);
@@ -832,7 +902,7 @@ app.on("before-quit", (event) => {
   }
   quitting = true;
   clearInterval(presenceTimer);
-  petDrag.cancel();
+  cancelPetGestures();
   codex?.dispose();
   globalShortcut.unregisterAll();
   tray?.destroy();

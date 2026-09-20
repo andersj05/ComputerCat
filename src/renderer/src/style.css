@@ -1066,17 +1066,73 @@ input:disabled {
   user-select: text;
   font-size: 12px;
 }
+.pet-voice::before,
 .pet-voice::after {
   content: "";
   position: absolute;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
+}
+.pet-voice::before {
+  right: 61px;
+  bottom: -13px;
+  width: 22px;
+  height: 13px;
+  background: #0753c5;
+}
+.pet-voice::after {
   right: 64px;
-  bottom: -9px;
+  bottom: -10px;
   width: 16px;
-  height: 16px;
+  height: 10px;
   background: var(--face);
-  border-right: 2px solid #0753c5;
-  border-bottom: 2px solid #0753c5;
-  transform: rotate(45deg);
+}
+.pet-panel-resize {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pet-resize-edge,
+.pet-panel-grip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: auto;
+  touch-action: none;
+}
+.pet-resize-edge.top {
+  top: -3px;
+  left: 18px;
+  right: 6px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.pet-resize-edge.left {
+  top: 18px;
+  bottom: 6px;
+  left: -3px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.pet-panel-grip {
+  left: 0;
+  top: 0;
+  width: 17px;
+  height: 17px;
+  padding: 1px;
+  border: 0;
+  border-radius: 5px 0 4px 0;
+  background: transparent;
+  color: #b9d5ff;
+  cursor: nwse-resize;
+}
+.pet-panel-grip:hover,
+.pet-panel-grip:focus-visible {
+  color: #fff;
+  background: #ffffff26;
+  outline-color: #fff;
+}
+.pet-voice:has([data-resizing="true"]) {
+  user-select: none;
 }
 .pet-voice-heading,
 .pet-voice-actions,
@@ -1090,7 +1146,7 @@ input:disabled {
   justify-content: space-between;
   min-height: 34px;
   margin: -8px -8px 0;
-  padding: 4px 5px 4px 9px;
+  padding: 4px 5px 4px 18px;
   border-radius: 5px 5px 0 0;
   background: var(--xp-caption);
   box-shadow:

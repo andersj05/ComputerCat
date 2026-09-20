@@ -47,6 +47,15 @@ export function App() {
   const [sending, setSending] = useState(false);
   const [petVoiceOpen, setPetVoiceOpen] = useState(false);
   const [petExpanded, setPetExpanded] = useState(false);
+  useEffect(() => {
+    if (!isPet) return;
+    const update = () => {
+      const catHeight = { small: 244, medium: 298, large: 352 }[preferences.size];
+      setPetExpanded(window.innerWidth >= 580 || window.innerHeight - catHeight >= 470);
+    };
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [isPet, preferences.size]);
   const petVoiceStarting = useRef(false);
   const petTalkHandler = useRef<() => void>(() => {});
   petTalkHandler.current = () => {

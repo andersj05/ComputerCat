@@ -1,4 +1,5 @@
 import type { Point, Rectangle } from "electron";
+import type { PetResizeEdge } from "../shared/contracts";
 
 export function keepInWorkArea(bounds: Rectangle, area: Rectangle): Rectangle {
   return {
@@ -36,6 +37,80 @@ export class PetDrag {
     const moved = this.gesture?.moved ?? true;
     this.cancel();
     return moved;
+  }
+
+  cancel(): void {
+    this.gesture = null;
+  }
+}
+
+export interface ResizeLimits {
+  minWidth: number;
+  minHeight: number;
+  maxWidth: number;
+  maxHeight: number;
+}
+
+/** Resize toward the top/left, keeping the cat's bottom-right anchor in place. */
+export function resizeFromAnchor(
+  bounds: Rectangle,
+  requested: { width: number; height: number },
+  area: Rectangle,
+  limits: ResizeLimits,
+): Rectangle {
+  const minWidth = Math.min(limits.minWidth, area.width);
+  const minHeight = Math.min(limits.minHeight, area.height);
+  const right = Math.min(area.x + area.width, Math.max(area.x + minWidth, bounds.x + bounds.width));
+  const bottom = Math.min(
+    area.y + area.height,
+    Math.max(area.y + minHeight, bounds.y + bounds.height),
+  );
+  const width = Math.round(
+    Math.max(minWidth, Math.min(requested.width, limits.maxWidth, right - area.x)),
+  );
+  const height = Math.round(
+    Math.max(minHeight, Math.min(requested.height, limits.maxHeight, bottom - area.y)),
+  );
+  return { x: Math.round(right - width), y: Math.round(bottom - height), width, height };
+}
+
+export class PetResize {
+  private gesture: {
+    cursor: Point;
+    bounds: Rectangle;
+    edge: PetResizeEdge;
+    area: Rectangle;
+    limits: ResizeLimits;
+    started: number;
+  } | null = null;
+
+  start(
+    cursor: Point,
+    bounds: Rectangle,
+    edge: PetResizeEdge,
+    area: Rectangle,
+    limits: ResizeLimits,
+  ): void {
+    this.gesture = { cursor, bounds, edge, area, limits, started: Date.now() };
+  }
+
+  move(cursor: Point): Rectangle | null {
+    const gesture = this.gesture;
+    if (!gesture) return null;
+    if (Date.now() - gesture.started > 30_000) {
+      this.cancel();
+      return null;
+    }
+    const { bounds, edge, area, limits } = gesture;
+    return resizeFromAnchor(
+      bounds,
+      {
+        width: bounds.width - (edge === "top" ? 0 : cursor.x - gesture.cursor.x),
+        height: bounds.height - (edge === "left" ? 0 : cursor.y - gesture.cursor.y),
+      },
+      area,
+      limits,
+    );
   }
 
   cancel(): void {

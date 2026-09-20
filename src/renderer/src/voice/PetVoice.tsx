@@ -4,6 +4,7 @@ import type { ChatSnapshot } from "../../../shared/contracts";
 import { type VoiceSnapshot, voiceMessages } from "../../../shared/voice";
 import { Icon } from "../Icon";
 import { MarkdownMessage } from "../MarkdownMessage";
+import { PetPanelResize } from "../PetPanelResize";
 import { ToolActivity } from "../ToolActivity";
 import { voiceStatus } from "./VoiceControls";
 
@@ -103,9 +104,14 @@ export function PetVoice({
   useLayoutEffect(() => {
     const element = input.current;
     if (!element || busy || confirmClear) return;
-    // Reset before measuring so deleting lines also shrinks the composer.
-    element.style.height = "32px";
-    element.style.height = `${Math.min(84, Math.max(32, element.scrollHeight + 2))}px`;
+    // Reset before measuring so deleting lines and widening the panel both shrink it.
+    const measure = () => {
+      element.style.height = "32px";
+      element.style.height = `${Math.min(84, Math.max(32, element.scrollHeight + 2))}px`;
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, [draft, expanded, busy, confirmClear]);
   useEffect(() => {
     if (!menuOpen) return;
@@ -166,6 +172,7 @@ export function PetVoice({
         }
       }}
     >
+      <PetPanelResize onError={setLocalError} />
       <div className="pet-voice-heading">
         <strong title={chat.title}>{chat.title || "Computer Cat"}</strong>
         <div className="pet-caption-actions">

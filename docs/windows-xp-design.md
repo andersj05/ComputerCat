@@ -96,7 +96,12 @@ is open. History, Copy reply, full chat, model selection and voice settings live
 Tool activity collapses to one named status line with failures; expand it to inspect the steps.
 During capture, the live preview lives in the reading pane, with only status and finish/cancel
 icons below it. Scrolling up pauses following streamed text; a floating Latest reply returns to
-the end. Expand enlarges the reading pane. Copy reply copies the complete latest answer.
+the end. The top-left corner grip and top/left edges resize the panel toward the available desktop,
+keeping the cat's feet fixed. The grip is keyboard-focusable: arrows resize by 10 DIP, Shift+arrows
+by 40 DIP. Bound resizing to a useful minimum and the current display work area. Escape, focus loss,
+closing, hiding and display changes end a gesture; late movement must not resize anything.
+Keep the selected panel size across close/reopen during the app run, independently of pet size.
+Expand/compact remains a quick preset. Copy reply copies the complete latest answer.
 Close cancels capture but keeps an already reviewed draft
 in that renderer until the app exits. Chat and cat retain separate drafts for each conversation.
 Installed weights prepare in the background when enabled; first-run downloads remain explicit.

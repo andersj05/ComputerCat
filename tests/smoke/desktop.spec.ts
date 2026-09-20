@@ -1304,7 +1304,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     const actions = panel.getByRole("button", { name: "Conversation actions" });
     const content = panel.getByRole("region", { name: "Cat conversation" });
     await expect(pet.locator(".pet-dock")).toBeHidden();
-    await expect(panel.getByRole("button")).toHaveCount(5);
+    await expect(panel.locator(".pet-voice-heading button, .pet-composer button")).toHaveCount(5);
     expect(
       await content.evaluate(
         (el) => el.clientHeight / (el.closest(".pet-voice")?.clientHeight || 1),
@@ -1330,7 +1330,7 @@ test("cat panel supports typing, new chats, retained drafts, and history without
     await input.fill("A message from the desktop cat");
     expect(await input.evaluate((el) => el.clientHeight)).toBeLessThanOrEqual(32);
     await expect(panel.getByRole("button", { name: "Send message" })).toBeVisible();
-    await expect(panel.getByRole("button")).toHaveCount(5);
+    await expect(panel.locator(".pet-voice-heading button, .pet-composer button")).toHaveCount(5);
     await input.press("Enter");
     await expect(panel.locator(".pet-message.assistant")).toHaveAttribute("data-state", "complete");
     await expect(input).toHaveValue("");
@@ -1520,6 +1520,190 @@ test("cat panel shows tool progress and long replies without losing the reading 
         ),
       ),
     ).toBe("denied");
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("cat panel resizes with a grip and keyboard, retains its size, and clamps to the screen", async ({}, testInfo) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page, pet } = await windows(electron);
+    const errors: string[] = [];
+    pet.on("pageerror", (error) => errors.push(error.message));
+    await page.getByRole("button", { name: "Desktop", exact: true }).click();
+    await pet.getByRole("button", { name: "Chat", exact: true }).click();
+    const panel = pet.locator(".pet-voice");
+    const grip = pet.getByRole("button", { name: "Resize conversation", exact: true });
+    const input = panel.getByRole("textbox", { name: "Message Computer Cat" });
+    await input.fill("Keep my draft while resizing");
+    const bounds = () =>
+      electron.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((win) => win.webContents.getURL().includes("view=pet"))
+          ?.getBounds(),
+      );
+    const before = await bounds();
+    if (!before) throw Error("Missing cat window");
+    const cat = await pet.locator(".pet-button").boundingBox();
+    const dimensions = () => pet.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+    const initialSize = await dimensions();
+    await grip.focus();
+    await grip.press("Shift+ArrowLeft");
+    await expect
+      .poll(async () => Math.abs((await dimensions()).width - initialSize.width - 40))
+      .toBeLessThanOrEqual(1);
+    await grip.press("ArrowUp");
+    await expect
+      .poll(async () => Math.abs((await dimensions()).height - initialSize.height - 10))
+      .toBeLessThanOrEqual(1);
+    const keyboardDimensions = await dimensions();
+    const keyboardSize = await bounds();
+    if (!keyboardSize) throw Error("Missing resized window");
+    expect(
+      Math.abs(keyboardSize.x + keyboardSize.width - before.x - before.width),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(keyboardSize.y + keyboardSize.height - before.y - before.height),
+    ).toBeLessThanOrEqual(1);
+    for (let i = 0; i < 6; i++) {
+      await grip.press("ArrowLeft");
+      await grip.press("ArrowRight");
+    }
+    await expect.poll(dimensions).toEqual(keyboardDimensions);
+    // Exercise real pointer capture while the privileged cursor stays deterministic.
+    await electron.evaluate(({ screen }) => {
+      Reflect.set(globalThis, "resizeOriginalCursor", screen.getCursorScreenPoint);
+      screen.getCursorScreenPoint = () => ({ x: 400, y: 400 });
+    });
+    await grip.hover();
+    await pet.mouse.down();
+    await pet.evaluate(() => window.computerCat.info());
+    await electron.evaluate(({ screen }) => {
+      screen.getCursorScreenPoint = () => ({ x: 300, y: 370 });
+    });
+    await pet.mouse.move(25, 25);
+    await expect
+      .poll(async () => Math.abs((await dimensions()).width - keyboardDimensions.width - 100))
+      .toBeLessThanOrEqual(1);
+    await pet.mouse.up();
+    const custom = await bounds();
+    if (!custom) throw Error("Missing custom panel bounds");
+    const customDimensions = await dimensions();
+    // Both endpoint measurements can round by one DIP at fractional display scaling.
+    expect(Math.abs(customDimensions.height - keyboardDimensions.height - 30)).toBeLessThanOrEqual(
+      2,
+    );
+    expect(Math.abs(custom.x + custom.width - before.x - before.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(custom.y + custom.height - before.y - before.height)).toBeLessThanOrEqual(1);
+    const resizedCat = await pet.locator(".pet-button").boundingBox();
+    expect(resizedCat?.width).toBe(cat?.width);
+    expect(resizedCat?.height).toBe(cat?.height);
+    await expect(input).toHaveValue("Keep my draft while resizing");
+    await pet.screenshot({
+      path: testInfo.outputPath("cat-panel-custom-size.png"),
+      omitBackground: true,
+    });
+    await panel.getByRole("button", { name: "Close voice bubble" }).click();
+    await pet.getByRole("button", { name: "Chat", exact: true }).click();
+    await expect.poll(dimensions).toEqual(customDimensions);
+    await expect(input).toHaveValue("Keep my draft while resizing");
+
+    await grip.hover();
+    await pet.mouse.down();
+    await pet.evaluate(() => window.computerCat.info());
+    await pet.keyboard.press("Escape");
+    await pet.mouse.up();
+    await expect(panel).toBeVisible();
+    await electron.evaluate(({ screen }) => {
+      screen.getCursorScreenPoint = () => ({ x: 10, y: 10 });
+    });
+    await pet.evaluate(() => window.computerCat.resizePetPanel({ phase: "move" }));
+    expect(await bounds()).toEqual(custom);
+
+    await pet.evaluate(() =>
+      window.computerCat.resizePetPanel({ phase: "start", edge: "top-left" }),
+    );
+    await electron.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().includes("view=pet"))
+        ?.emit("blur"),
+    );
+    await electron.evaluate(({ screen }) => {
+      screen.getCursorScreenPoint = () => ({ x: 800, y: 800 });
+    });
+    await pet.evaluate(() => window.computerCat.resizePetPanel({ phase: "end" }));
+    expect(await bounds()).toEqual(custom);
+
+    for (const cursor of [
+      { x: -10000, y: -10000 },
+      { x: 10000, y: 10000 },
+    ]) {
+      await pet.evaluate(() =>
+        window.computerCat.resizePetPanel({ phase: "start", edge: "top-left" }),
+      );
+      await electron.evaluate(({ screen }, point) => {
+        screen.getCursorScreenPoint = () => point;
+      }, cursor);
+      await pet.evaluate(() => window.computerCat.resizePetPanel({ phase: "end" }));
+      const geometry = await electron.evaluate(({ BrowserWindow, screen }) => {
+        const win = BrowserWindow.getAllWindows().find((win) =>
+          win.webContents.getURL().includes("view=pet"),
+        );
+        if (!win) throw Error("Missing cat");
+        const rect = win.getBounds();
+        return { rect, area: screen.getDisplayMatching(rect).workArea };
+      });
+      expect(geometry.rect.x).toBeGreaterThanOrEqual(geometry.area.x);
+      expect(geometry.rect.y).toBeGreaterThanOrEqual(geometry.area.y);
+      expect(geometry.rect.x + geometry.rect.width).toBeLessThanOrEqual(
+        geometry.area.x + geometry.area.width,
+      );
+      expect(geometry.rect.y + geometry.rect.height).toBeLessThanOrEqual(
+        geometry.area.y + geometry.area.height,
+      );
+      await expect(panel.getByRole("button", { name: "New chat", exact: true })).toBeInViewport();
+      await expect(input).toBeInViewport();
+    }
+    expect(Math.abs((await dimensions()).width - 360)).toBeLessThanOrEqual(1);
+    expect(Math.abs((await dimensions()).height - 538)).toBeLessThanOrEqual(1);
+    expect(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await pet.screenshot({
+      path: testInfo.outputPath("cat-panel-minimum-size.png"),
+      omitBackground: true,
+    });
+    expect(
+      await page.evaluate(() =>
+        window.computerCat.resizePetPanel({ phase: "step", axis: "width", delta: 10 }).then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    expect(
+      await pet.evaluate(() =>
+        window.computerCat.resizePetPanel({ phase: "move", x: 20 } as never).then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    await panel.getByRole("button", { name: "Close voice bubble" }).click();
+    expect(
+      await pet.evaluate(() =>
+        window.computerCat.resizePetPanel({ phase: "start", edge: "top" }).then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    await electron.evaluate(({ screen }) => {
+      screen.getCursorScreenPoint = Reflect.get(globalThis, "resizeOriginalCursor");
+    });
+    expect(errors).toEqual([]);
   } finally {
     await electron.close();
     await removeTestData(userData);

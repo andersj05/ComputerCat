@@ -75,6 +75,7 @@ const api: ComputerCatAPI = {
     return () => ipcRenderer.removeListener(IPC.petTalkRequested, receive);
   },
   setPetExpanded: (expanded) => ipcRenderer.invoke(IPC.petExpanded, expanded),
+  resizePetPanel: (request) => ipcRenderer.invoke(IPC.resizePetPanel, request),
   openOptions: (tab) => ipcRenderer.invoke(IPC.openOptions, tab),
   openHarnessGuide: () => ipcRenderer.invoke(IPC.openHarnessGuide),
   dragPet: (phase) => ipcRenderer.invoke(IPC.dragPet, phase),

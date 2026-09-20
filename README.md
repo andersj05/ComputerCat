@@ -22,8 +22,11 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   microphone, send or stop icon as needed. Enter sends; Shift+Enter adds a line. The ⋯ menu holds
   History, Copy reply, model selection, voice settings and Open chat window. New chat stays in the caption.
   Controls below the cat hide while the panel is open. Drag the cat's body to move it.
+- Drag the panel's top-left grip, top edge or left edge to resize it while the cat stays anchored.
+  Focus the grip and use arrow keys (Shift for larger steps) to resize with the keyboard.
+  The panel remembers its size when reopened during the same app run; Expand toggles preset sizes.
 - The panel prioritizes conversation text, with tool activity collapsed into an expandable status
-  line. Expand gives long replies more room; scrolling up holds your place and Latest reply returns
+  line. Scrolling up holds your place and Latest reply returns
   to new output. Click the cat for its model shortcut when the panel is closed.
 - Assistant replies display Markdown, including bold text, lists, code blocks, and tables.
 - The cat listens, thinks, takes notes, taps a tiny keyboard, and animates its face while

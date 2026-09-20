@@ -33,6 +33,7 @@ export const IPC = {
   openHistory: "cat:open-history",
   historyRequested: "cat:history-requested",
   petExpanded: "cat:pet-expanded",
+  resizePetPanel: "cat:resize-pet-panel",
   petTalkRequested: "cat:pet-talk-requested",
   openOptions: "cat:open-options",
   openHarnessGuide: "cat:open-harness-guide",
@@ -56,6 +57,12 @@ export const IPC = {
   codexCode: "cat:codex-code",
   codexDisconnect: "cat:codex-disconnect",
 } as const;
+
+export type PetResizeEdge = "top" | "left" | "top-left";
+export type PetResizeRequest =
+  | { phase: "start"; edge: PetResizeEdge }
+  | { phase: "move" | "end" | "cancel" }
+  | { phase: "step"; axis: "width" | "height"; delta: -40 | -10 | 10 | 40 };
 
 export interface SendRequest {
   id: string;
@@ -133,6 +140,7 @@ export interface ComputerCatAPI extends importVoiceAPI {
   onHistoryRequested(listener: () => void): () => void;
   onPetTalkRequested(listener: () => void): () => void;
   setPetExpanded(expanded: boolean): Promise<void>;
+  resizePetPanel(request: PetResizeRequest): Promise<void>;
   openOptions(tab?: "voice"): Promise<void>;
   openHarnessGuide(): Promise<ActionResult>;
   onOptionsRequested(listener: (tab?: "voice") => void): () => void;

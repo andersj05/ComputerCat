@@ -189,3 +189,16 @@ deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader
 uses the same initialization and supplies TEMP/TMP for its C# compilation.
 The native fixture passes locally; hosted timing is still an environment-dependent check.
 See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).
+
+## Preserve requested window dimensions at fractional DPI
+
+Reviewed: 2026-09-19. Scope: the transparent desktop cat on Windows.
+
+Electron's native bounds and renderer viewport can round by one DIP at fractional display
+scales. Feeding the native size into every resize step accumulates growth and moves the cat
+anchor. Keep the last requested bounds in main, apply screen-edge corrections there, and use
+those bounds for subsequent drag/resize gestures and panel reopening. Allow for endpoint
+rounding when comparing native/renderer observations in tests, while requiring repeated
+opposite steps to return to the same size.
+Evidence: [window placement](../../src/main/index.ts), [resize geometry](../../src/main/pet-window.ts)
+and [pointer/keyboard resize checks](../../tests/smoke/desktop.spec.ts).
