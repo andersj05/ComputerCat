@@ -27,11 +27,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "npm run build && playwright test",
-    "verify": "npm run memory:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "verify": "npm run memory:check && npm run eval:check && npm run lint && npm run typecheck && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
     "package:win": "npm run build && electron-builder --win nsis --publish never",
     "voice:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-whisper-helper.ps1 && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-whisper-helper.ps1 -Avx2",
-    "voice:test-native": "node native/whisper-helper/tests/check.mjs && node native/whisper-helper/tests/lifecycle.mjs"
+    "voice:test-native": "node native/whisper-helper/tests/check.mjs && node native/whisper-helper/tests/lifecycle.mjs",
+    "eval:help": "node evals/cli.ts help",
+    "eval:check": "node evals/cli.ts check",
+    "eval:init": "node evals/cli.ts init",
+    "eval:score": "node evals/cli.ts score",
+    "eval:report": "node evals/cli.ts report",
+    "eval:compare": "node evals/cli.ts compare"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "0.85.1",
