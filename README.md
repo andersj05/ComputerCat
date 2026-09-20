@@ -221,8 +221,9 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | --- | --- |
 | `npm run dev` | Development app with hot reload |
 | `npm run memory:check` | Offline checks for shared agent context and documentation links |
-| `npm run verify` | Memory checks, lint, TypeScript, offline unit/integration tests, production build |
+| `npm run verify` | Memory/evaluation checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
+| `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
 | `npm run voice:test-native` | Offline native protocol and cancellation tests |
@@ -236,6 +237,12 @@ refresh, model selection, streaming, and provider errors without live credential
 They never control other applications. Live account entitlement is verified only when you sign
 in and send a message yourself.
 
+Task reliability is measured separately with [twelve repeatable app tasks](docs/task-evaluations.md):
+context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
+worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
+It makes no model calls; actual trials happen in the app. Start with four tasks repeated three
+times. No live-model reliability baseline has been measured yet.
+
 ## Project layout
 
 ```text
@@ -245,6 +252,7 @@ src/main/         Electron lifecycle, IPC boundary, conversation controller
 src/preload/      Small typed bridge exposed to the renderer
 src/renderer/     Cat, chat, preferences, and visual tokens
 src/shared/       Serializable contracts and input validation
+evals/            Task definitions, synthetic fixtures, offline scorecards and reports
 tests/unit/       Offline behavioral tests and real Pi SDK integration
 tests/smoke/      Electron desktop and packaged-worker checks
 scripts/          Repository automation

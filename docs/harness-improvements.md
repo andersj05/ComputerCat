@@ -26,7 +26,7 @@ based on the inspected gaps, not measured comparative performance.
 | Native app interaction | Observation has source IDs but no actionable element identities | Evaluate a supervised driver with fresh window/element references |
 | Connections | Static tool-name union and intentionally empty Pi resource loader | Add configured, namespaced tools through a registry before general MCP support |
 | Personal continuity | Per-chat Pi history exists; no cross-chat selected-fact memory | Explicit save/list/update/delete of user-approved facts; no automatic screen history |
-| Reliability | Good cancellation/isolated fixtures, but no task-level model success measurements | Establish the evaluation set below before comparing drivers or prompts |
+| Reliability | Automated boundary coverage does not establish live-model task success | Implemented twelve repeated app tasks, scorecards and comparisons; live baseline still unmeasured |
 
 ## Implemented first increment
 
@@ -122,6 +122,12 @@ No background collection, new credentials, package upgrade or paid API is introd
    notification behavior; they must not be implemented as a sleeping model turn.
 
 ## Evaluation and completion criteria
+
+The [task evaluation workflow](task-evaluations.md) now implements twelve versioned cases with
+fresh per-attempt fixtures, outcome criteria, review history and before/after reports. Start with
+the four-case subset repeated three times in the actual app. The CLI only plans and scores human
+observations; it does not execute model trials. The table below also includes broader and future
+acceptance scenarios, not a claim that every row is in the initial twelve-case suite.
 
 Use owned synthetic apps/files/clipboard data. Record completion, incorrect side effects,
 tool-call count, elapsed time, retries and whether the answer matches the observed outcome.
