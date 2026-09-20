@@ -202,3 +202,16 @@ rounding when comparing native/renderer observations in tests, while requiring r
 opposite steps to return to the same size.
 Evidence: [window placement](../../src/main/index.ts), [resize geometry](../../src/main/pet-window.ts)
 and [pointer/keyboard resize checks](../../tests/smoke/desktop.spec.ts).
+
+## Protected branch promotion
+
+Reviewed: 2026-09-19 against the GitHub branch protections and
+[ancestry sync PR](https://github.com/andersj05/ComputerCat/pull/27).
+
+Both dev and main require pull requests plus the Quality and Windows desktop checks.
+Main also requires the source branch to be up to date. A previous main promotion creates
+a merge commit that dev may not contain, even when their files previously matched.
+Before promotion, fetch origin and check whether origin/main is an ancestor of origin/dev.
+If not, start a feat/ sync branch from origin/dev, merge origin/main, and merge that PR into
+dev first. Direct pushes and GitHub's Update branch operation cannot update protected dev.
+Then merge the dev-to-main PR after its checks pass. Keep branch protections enabled.
