@@ -31,7 +31,7 @@
           <div class="side-note">
             <strong>A guide to this build</strong>
             <p>Explore what exists, how a request travels, and where the next improvement belongs.</p>
-            <span>Version __VERSION__<br />Reviewed September 19, 2026</span>
+            <span>Version __VERSION__<br />Reviewed September 20, 2026</span>
           </div>
           <p class="offline-note">This is an offline reference. Examples do not run tools or read your screen.</p>
         </aside>
@@ -80,9 +80,9 @@
                 </li>
                 <li class="lane"><span class="lane-label">Your computer</span>
                   <button type="button" class="map-node" data-node="desktop" aria-pressed="false">
-                    <span class="node-symbol" aria-hidden="true">▣</span><strong>Observe one source</strong><span>Screenshot + accessible text</span>
+                    <span class="node-symbol" aria-hidden="true">▣</span><strong>Observe or act</strong><span>Screen context + everyday utilities</span>
                   </button>
-                  <div class="lane-foot">Window, selection, tabs<br />or a closer image region.</div>
+                  <div class="lane-foot">Windows, clipboard, links<br />and file locations.</div>
                 </li>
               </ol>
               <div class="return-path"><span aria-hidden="true">↶</span> Evidence returns to the agent. It can use another tool, then answer you.</div>
@@ -103,12 +103,12 @@
             <div class="section-heading"><span class="section-number">02</span><div><h1 id="tools-title">The tool catalog</h1><p>What the agent can reach, when it helps, and what comes back.</p></div></div>
             <div class="catalog-controls">
               <label>Find a tool<input id="tool-search" type="search" placeholder="Try selection, screenshot, files…" /></label>
-              <label>Tool family<select id="tool-family"><option value="all">All tools</option><option value="desktop">Desktop observation</option><option value="files">Files &amp; shell</option></select></label>
+              <label>Tool family<select id="tool-family"><option value="all">All tools</option><option value="desktop">Desktop observation</option><option value="utilities">Everyday utilities</option><option value="files">Files &amp; shell</option></select></label>
             </div>
             <p id="tool-count" class="note" role="status"></p>
             <div id="tool-list"></div>
             <p id="no-tools" class="empty-state" hidden>No matching tools. Try a broader word or choose All tools.</p>
-            <p class="note">Desktop tools observe. File and shell tools can also make changes. Local demo uses neither family.</p>
+            <p class="note">Observation tools read the screen. Utilities can replace clipboard contents and open browser or file-manager windows. File and shell tools can make broader changes. Local demo runs no tools.</p>
           </section>
 
           <section id="extend" class="guide-section" aria-labelledby="extend-title" hidden>
@@ -135,8 +135,9 @@
             <dl class="boundary-list">
               <div><dt>On demand</dt><dd>Desktop tools run during a relevant user request. No startup scan or background screenshot feed runs. General conversation needs no desktop observation.</dd></div>
               <div><dt>Source &amp; time</dt><dd>A screenshot is a snapshot. Source IDs belong to one reply and expire after 60 seconds or a new listing. When the cat has focus, the app behind it is an inference that the agent should check.</dd></div>
-              <div><dt>Stop &amp; recovery</dt><dd>Stop cancels pending work and discards late results. Lock and sleep block desktop reads. The broker permits one OS observation at a time and up to 20 requests per reply. A failed source is not captured repeatedly in that reply.</dd></div>
-              <div><dt>Read-only desktop tools</dt><dd>They do not click, type, focus, select or copy. Selection and tab titles depend on what the app exposes. Protected or minimized windows can be unavailable.</dd></div>
+              <div><dt>Stop &amp; recovery</dt><dd>Stop cancels pending work and discards late results. Lock and sleep block desktop tools. The broker permits one OS operation at a time and up to 20 requests per reply. An action already handed to the OS may still complete; inspect before retrying. A failed source is not captured repeatedly in that reply.</dd></div>
+              <div><dt>Desktop observation</dt><dd>Observation tools do not click, type, focus, select or copy. Selection and tab titles depend on what the app exposes. Protected or minimized windows can be unavailable.</dd></div>
+              <div><dt>Everyday utilities</dt><dd>Ask to copy text, read copied text, open a web link or folder, or reveal a file. Clipboard text reaches the selected model and saved context. Opening windows may change focus; dispatch is not proof the intended page or folder is visible. No clicking, typing or full browser control is implemented.</dd></div>
               <div><dt>Files &amp; shell</dt><dd>These Pi tools run with your OS user permissions. They can change files and run commands. The worker isolates crashes; it is not an OS sandbox or a per-command approval system.</dd></div>
               <div><dt>What reaches the model</dt><dd>Relevant text, screenshots and other tool results are provided to your selected connection. Screenshots can contain anything visible on the selected surface; there is no automatic secret redaction. Screen and file content are treated as task data, not new instructions.</dd></div>
               <div><dt>What stays on disk</dt><dd>The transcript and native Pi context, including observations and images, are local plaintext until you delete the conversation in History. Deletion does not undo file edits. Sign-in credentials live separately in encrypted storage.</dd></div>

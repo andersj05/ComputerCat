@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect, test } from "@playwright/test";
+import { ALL_TOOL_NAMES } from "../../src/shared/tools";
 import { sendAndWaitForReply, showCatControls } from "./chat";
 
 async function launch(userData: string, desktopFixture = false) {
@@ -208,23 +209,9 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
       reasoning: "high",
       authenticated: true,
     });
-    expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
-      "bash",
-      "desktop_capture",
-      "desktop_capture_region",
-      "desktop_list_tabs",
-      "desktop_list_windows",
-      "desktop_observe",
-      "desktop_read_selection",
-      "desktop_read_window",
-      "edit",
-      "find",
-      "grep",
-      "ls",
-      "powershell",
-      "read",
-      "write",
-    ]);
+    expect(requests[0].tools.map((tool: { name: string }) => tool.name).sort()).toEqual(
+      [...ALL_TOOL_NAMES].sort(),
+    );
     expect(requests[2].model).toBe("gpt-5.6-terra");
     expect(JSON.stringify(requests[2].input)).toContain("first-context-canary");
     await page.getByLabel("Chat model", { exact: true }).selectOption("codex:gpt-5.6-sol");
@@ -407,6 +394,38 @@ test("screen questions automatically observe through the real worker and recover
       /Read screen.*Done/,
     );
     expect(await electron.evaluate(() => Reflect.get(globalThis, "desktopCaptureCalls"))).toBe(0);
+
+    // Exercise every utility through the real Pi worker and main broker, with smoke-only
+    // hosts. Any accidental real clipboard access or external app launch fails immediately.
+    await electron.evaluate(({ clipboard, shell }) => {
+      const forbidden = () => {
+        throw new Error("Real utility side effect forbidden in smoke tests");
+      };
+      clipboard.readText = forbidden;
+      clipboard.writeText = forbidden;
+      shell.openExternal = forbidden;
+      shell.openPath = forbidden;
+      shell.showItemInFolder = forbidden;
+    });
+    const file = join(userData, "utility-fixture.txt");
+    await writeFile(file, "utility fixture");
+    const utilities = [
+      { name: "desktop_get_environment", args: {}, expected: "fixture-time" },
+      { name: "desktop_read_clipboard", args: {}, expected: "Fixture clipboard text" },
+      { name: "desktop_write_clipboard", args: { text: "copied by fixture" }, expected: "written" },
+      { name: "desktop_read_clipboard", args: {}, expected: "copied by fixture" },
+      { name: "desktop_open_url", args: { url: "https://example.com" }, expected: "dispatched" },
+      { name: "desktop_open_folder", args: { path: userData }, expected: "dispatched" },
+      { name: "desktop_reveal_file", args: { path: file }, expected: "dispatched" },
+    ];
+    for (const { name, args, expected } of utilities) {
+      const reply = await sendAndWaitForReply(
+        page,
+        `utility-fixture:${JSON.stringify({ name, args })}`,
+      );
+      await expect(reply).toContainText(expected);
+      await expect(reply.getByRole("list", { name: "Tool activity" })).toContainText("Done");
+    }
   } finally {
     await electron.close();
     await cleanup(userData);

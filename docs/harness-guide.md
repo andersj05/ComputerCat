@@ -1,12 +1,15 @@
 # Harness guide
 
-Reviewed: 2026-09-19.
+Reviewed: 2026-09-20.
 
 **Options → Harness guide → Open harness guide in browser** opens an offline XP-themed
 reference. The clickable map explains the companion, Pi/model loop, desktop broker, providers,
 file/shell branch and saved context. Examples trace screen, selection, detail, file and voice
 questions without executing them. The catalog searches all registered tools; the remaining
 pages explain extension points, context retention and current limits.
+The catalog separates seven desktop observations, six everyday utilities and eight Pi tools.
+Utilities can change clipboard contents and launch browser/file-manager windows; the guide
+distinguishes OS dispatch from verified UI results. See [harness research](harness-improvements.md).
 
 ## Keep the guide with the implementation
 

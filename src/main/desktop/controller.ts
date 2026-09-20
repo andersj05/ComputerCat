@@ -9,6 +9,7 @@ import {
   desktopResultSchema,
 } from "../../shared/desktop";
 import { CaptureError } from "./capture-error";
+import type { DesktopUtilities } from "./utilities";
 
 export interface DesktopSource {
   id: string;
@@ -52,6 +53,7 @@ export class DesktopController {
   constructor(
     private readonly provider: DesktopProvider,
     private readonly now = Date.now,
+    private readonly utilities?: DesktopUtilities,
   ) {}
 
   cancel(): void {
@@ -93,17 +95,17 @@ export class DesktopController {
     if (!parsed.success) return desktopError("Invalid desktop tool request.");
     if (this.blocked.size)
       return desktopError(
-        "Desktop observations are unavailable while the computer is locked, suspended, or closing.",
+        "Desktop tools are unavailable while the computer is locked, suspended, or closing.",
       );
     if (turnSignal.aborted) return desktopError("Desktop request cancelled.");
     if (this.busy)
-      return desktopError("Another desktop observation is still running. Wait for it to finish.");
+      return desktopError("Another desktop operation is still running. Wait for it to finish.");
     if (this.captureTurn !== turnSignal) {
       this.captureTurn = turnSignal;
       this.failedCaptures.clear();
     }
     const request = parsed.data;
-    const sourceId = request.operation === "list" ? undefined : request.sourceId;
+    const sourceId = "sourceId" in request ? request.sourceId : undefined;
     const issued = sourceId ? this.sources.get(sourceId) : undefined;
     if (sourceId && (!issued || issued.expires <= this.now() || issued.turn !== turnSignal))
       return desktopError(
@@ -120,6 +122,12 @@ export class DesktopController {
     this.busy = true;
     // A timed-out OS call retains this lock until it actually settles.
     const work = (async (): Promise<DesktopResult> => {
+      signal.throwIfAborted();
+      if (request.operation === "utility") {
+        return this.utilities
+          ? this.utilities.execute(request.request, signal)
+          : desktopError("Desktop utilities are unavailable in this runtime.");
+      }
       if (request.operation === "list") {
         const list = await this.provider.list(signal);
         signal.throwIfAborted();
@@ -296,6 +304,10 @@ export class DesktopController {
             "The desktop observation exceeded the supported size. Try a smaller window.",
           );
     } catch (error) {
+      if (request.operation === "utility")
+        return desktopError(
+          "Desktop utility stopped, timed out or failed. An action already handed to the OS may still complete; inspect the current state before retrying.",
+        );
       if (!signal.aborted && error instanceof CaptureError) return desktopError(error.message);
       return desktopError(
         signal.aborted

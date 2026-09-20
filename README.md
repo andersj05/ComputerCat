@@ -55,12 +55,25 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
   enabled voice keeps a **Voice options** link beside Talk.
 
-The companion includes on-demand screen context for connected models. **Computer control,
+The companion includes on-demand screen context and everyday desktop utilities for connected models. **Mouse/keyboard control,
 external MCP connections, and long-term user memory are not implemented yet.**
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
 That development context is separate from the app's conversation memory.
+
+## Everyday desktop help
+
+Ask the cat to open Downloads, show a file it found in its folder, open a web link, summarize
+text you copied, or copy an answer for pasting. Six dedicated tools handle current time and
+standard folders, plain-text clipboard reads/writes, and browser/file-manager launches.
+Clipboard text is limited to 8,000 characters; a read reports truncation. Clipboard content
+reaches your selected model and saved chat context. Copying replaces the clipboard; it does
+not paste into another app. Opening a link does not search the web or read the page.
+
+These tools run during your request. Stop, lock and sleep block pending work, but cannot undo
+an action already sent to the OS. The cat must inspect the resulting window before claiming
+the page or folder appeared. See the [harness research and next steps](docs/harness-improvements.md).
 
 ## Help with your screen
 

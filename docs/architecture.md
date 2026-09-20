@@ -66,7 +66,7 @@ images reduced to alt text, and links displayed without navigation. The app neve
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
-observation tools, and native Pi sessions are saved per conversation.
+observation tools and six desktop utilities, and native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
@@ -151,6 +151,25 @@ retention policy. Renderer activity events contain only tool names/status, not o
 Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.
 The existing shell tools remain unsandboxed; this is not a security boundary around the agent.
 See [desktop context](desktop-context.md) for usage, limitations and verification.
+
+## Desktop utilities (reviewed 2026-09-20)
+
+The [utility tools](../src/agent/desktop-utility-tools.ts) use a strict nested request on the
+existing private desktop channel. The broker routes them to an
+[app-owned service](../src/main/desktop/utilities.ts) under the same active-turn cancellation,
+lock/sleep blocks, serialization and deadline. The renderer gains no clipboard read or
+arbitrary opener API. Main gets current time/standard folders, reads or writes bounded plain
+text, opens HTTP/HTTPS URLs without credentials, opens existing absolute local directories,
+and reveals existing local files. Network/device paths and opening files as programs are
+outside this tool set. The existing privileged shell tools are unchanged.
+
+Clipboard relevance/authorization is prompt policy, not a security sandbox. Copied text follows
+native Pi retention and is not sent in renderer activity events. Launches report dispatch, not
+verified UI success. Cancellation cannot undo OS work already dispatched; uncertain outcomes
+must be inspected before retrying. The broker holds its lock until a stalled operation settles.
+See [research and scope](harness-improvements.md) and
+[boundary tests](../tests/unit/desktop-utilities.test.ts). Smoke mode replaces clipboard and
+external launches with isolated fixtures.
 
 ## Companion presentation and preferences
 

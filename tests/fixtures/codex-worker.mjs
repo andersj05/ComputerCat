@@ -49,22 +49,39 @@ globalThis.fetch = async (url, options) => {
         item.type === "function_call_output" &&
         JSON.stringify(item).includes("fixture-file-content"),
     );
-  const needsTool = needsRead || needsDesktop;
+  const utilityLines = userText.split("\n").filter((line) => line.startsWith("utility-fixture:"));
+  const utility = utilityLines.length
+    ? JSON.parse(utilityLines.at(-1).slice("utility-fixture:".length))
+    : undefined;
+  const utilityCallId = `offline-utility-${utilityLines.length}`;
+  const utilityResult = utility
+    ? body.input.find(
+        (item) => item.type === "function_call_output" && item.call_id === utilityCallId,
+      )
+    : undefined;
+  const needsUtility = utility && !utilityResult;
+  const needsTool = needsUtility || needsRead || needsDesktop;
   const desktopText = desktopResult
     ? typeof desktopResult.output === "string"
       ? desktopResult.output
       : JSON.stringify(desktopResult.output)
     : undefined;
-  const replyText = desktopText ? `Offline desktop result: ${desktopText}` : "Offline Codex reply.";
+  const replyText = utilityResult
+    ? `Offline utility result: ${typeof utilityResult.output === "string" ? utilityResult.output : JSON.stringify(utilityResult.output)}`
+    : desktopText
+      ? `Offline desktop result: ${desktopText}`
+      : "Offline Codex reply.";
   const item = needsTool
     ? {
         id: "offline-tool-call",
         type: "function_call",
-        call_id: needsRead ? "offline-read" : desktopCallId,
-        name: needsRead ? "read" : "desktop_observe",
-        arguments: needsRead
-          ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
-          : "{}",
+        call_id: needsUtility ? utilityCallId : needsRead ? "offline-read" : desktopCallId,
+        name: needsUtility ? utility.name : needsRead ? "read" : "desktop_observe",
+        arguments: needsUtility
+          ? JSON.stringify(utility.args)
+          : needsRead
+            ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
+            : "{}",
         status: "completed",
       }
     : {

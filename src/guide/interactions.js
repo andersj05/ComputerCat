@@ -15,14 +15,14 @@
     ],
     broker: [
       "A scoped route to the desktop",
-      "Desktop tool requests cross a private worker channel into main. The broker validates the request, checks the active turn and source, and supervises one OS observation at a time.",
+      "Desktop tool requests cross a private worker channel into main. The broker validates the request, checks the active turn and any source, and supervises one OS operation at a time, including utilities.",
       "src/agent/desktop-rpc.ts\nsrc/main/worker-runtime.ts\nsrc/main/desktop/controller.ts",
       "Add validation, cancellation and error handling here when extending desktop capabilities.",
     ],
     desktop: [
-      "Fresh evidence from one source",
-      "The provider identifies a window, reads text through Windows accessibility and captures an exact source in a temporary media renderer. Text and image results can survive independently when one fails.",
-      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/windows-reader.ts\nsrc/main/desktop/source-capture.ts",
+      "Desktop evidence and everyday actions",
+      "Observation reads one window through accessibility and scoped capture. Utilities get time/folder paths, read or write requested clipboard text, and open links or file locations. Actions report OS dispatch; a fresh observation checks the visible result.",
+      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/windows-reader.ts\nsrc/main/desktop/source-capture.ts\nsrc/main/desktop/utilities.ts",
       "Improve this layer for clearer text, better app targeting or more reliable screenshots.",
     ],
     files: [
@@ -176,7 +176,12 @@
     const summary = document.createElement("summary");
     const family = document.createElement("span");
     family.className = `tool-family ${tool.group}`;
-    family.textContent = tool.group === "desktop" ? "Desktop" : "Files & shell";
+    family.textContent =
+      tool.group === "desktop"
+        ? "Desktop observation"
+        : tool.group === "utilities"
+          ? "Everyday utilities"
+          : "Files & shell";
     const title = document.createElement("strong");
     title.textContent = tool.title;
     const name = document.createElement("code");

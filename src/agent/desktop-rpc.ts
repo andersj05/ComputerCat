@@ -8,7 +8,7 @@ type Pending = {
   finish: (result?: DesktopResult) => void;
 };
 
-/** Private worker-to-main observation calls, scoped to the currently running turn. */
+/** Private worker-to-main desktop calls, scoped to the currently running turn. */
 export class DesktopWorkerClient {
   private active: { id: string; signal: AbortSignal } | undefined;
   private readonly pending = new Map<string, Pending>();
@@ -32,9 +32,9 @@ export class DesktopWorkerClient {
     const turn = this.active;
     signal.throwIfAborted();
     if (!turn || turn.signal.aborted)
-      return Promise.reject(new Error("There is no active desktop observation turn."));
+      return Promise.reject(new Error("There is no active desktop tool turn."));
     if (this.pending.size >= 4)
-      return Promise.reject(new Error("Too many desktop observations are pending."));
+      return Promise.reject(new Error("Too many desktop requests are pending."));
     const cancellation = AbortSignal.any([signal, turn.signal]);
     const callId = randomUUID();
     return new Promise<DesktopResult>((resolve, reject) => {
@@ -43,7 +43,12 @@ export class DesktopWorkerClient {
         clearTimeout(timeout);
         cancellation.removeEventListener("abort", abort);
         if (result && !cancellation.aborted) resolve(result);
-        else reject(new Error("The desktop observation ended before a result arrived."));
+        else
+          reject(
+            new Error(
+              "The desktop request ended before a result arrived. An action may already have happened; inspect before retrying.",
+            ),
+          );
       };
       const abort = () => finish();
       const timeout = setTimeout(abort, this.timeoutMs);

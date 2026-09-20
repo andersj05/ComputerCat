@@ -35,7 +35,7 @@ export function harnessGuidePlugin(): Plugin {
         .replace("__PI_COUNT__", String(guideTools.filter((tool) => tool.group === "files").length))
         .replace(
           "__DESKTOP_COUNT__",
-          String(guideTools.filter((tool) => tool.group === "desktop").length),
+          String(guideTools.filter((tool) => tool.group !== "files").length),
         )
         .replaceAll("__VERSION__", JSON.parse(read("package.json")).version as string)
         .replace("__CAT__", readFileSync(resolve("assets/computer_cat.png")).toString("base64"));

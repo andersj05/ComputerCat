@@ -14,6 +14,7 @@ import type { DesktopExecutor } from "../shared/desktop";
 import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../shared/tools";
 import type { RuntimeConfig } from "./config";
 import { createDesktopTools } from "./desktop-tools";
+import { createDesktopUtilityTools } from "./desktop-utility-tools";
 import { type AgentRuntime, SYSTEM_PROMPT, UserFacingError } from "./runtime";
 
 export function isolatedResources(): ResourceLoader {
@@ -120,7 +121,14 @@ export async function createPiRuntime(
     model,
     ...(config.reasoning ? { thinkingLevel: config.reasoning } : {}),
     tools: desktop ? [...ALL_TOOL_NAMES] : [...PI_TOOL_NAMES],
-    ...(desktop ? { customTools: createDesktopTools(desktop, model.input.includes("image")) } : {}),
+    ...(desktop
+      ? {
+          customTools: [
+            ...createDesktopTools(desktop, model.input.includes("image")),
+            ...createDesktopUtilityTools(desktop),
+          ],
+        }
+      : {}),
     resourceLoader: isolatedResources(),
     sessionManager: manager,
     settingsManager: SettingsManager.inMemory({

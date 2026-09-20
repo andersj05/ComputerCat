@@ -18,7 +18,7 @@ does not establish that a different revision passes.
 | Why a lasting choice was made | [Decisions](decisions.md) | A consequential tradeoff is adopted or superseded |
 | A recurring failure and its remedy | [Known pitfalls](gotchas.md) | A remedy is verified or becomes obsolete |
 | Resume unfinished work | [Handoffs](handoffs/README.md) | A task pauses or transfers ownership |
-| Original proposals and alternatives | [Research plan](../research-and-build-plan.md) | New research is explicitly undertaken |
+| Research and tool expansion | [Original plan](../research-and-build-plan.md), [harness improvements](../harness-improvements.md) | Research priorities or tool scope change |
 | Speech and desktop work | [Research](../voice-and-desktop-research.md), [Whisper plan](../implementation/whisper/README.md) | Approach changes |
 | Findings from the setup audit | [Memory audit](../audits/2026-09-17-agent-memory.md) | The audit's validation results are recorded |
 

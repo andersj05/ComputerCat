@@ -142,14 +142,16 @@ export class WorkerRuntime implements AgentRuntime {
               type: "desktop-result",
               id,
               callId: event.callId,
-              result: checked.success ? checked.data : desktopError("Invalid desktop observation."),
+              result: checked.success
+                ? checked.data
+                : desktopError(
+                    "Invalid desktop tool response. An action may already have happened; inspect before retrying.",
+                  ),
             });
           };
           if (calls.size >= 20) {
             reply(
-              desktopError(
-                "Desktop observation limit reached for this reply. Ask the user to continue.",
-              ),
+              desktopError("Desktop tool limit reached for this reply. Ask the user to continue."),
             );
             return;
           }
@@ -158,8 +160,8 @@ export class WorkerRuntime implements AgentRuntime {
             reply(
               desktopError(
                 desktopBusy
-                  ? "Another desktop observation is in progress."
-                  : "Desktop context is unavailable.",
+                  ? "Another desktop operation is in progress."
+                  : "Desktop tools are unavailable.",
               ),
             );
             return;
@@ -171,7 +173,11 @@ export class WorkerRuntime implements AgentRuntime {
               return this.desktop?.(event.request, desktopSignal);
             })
             .then(reply, () =>
-              reply(desktopError("Desktop context is unavailable or the request was cancelled.")),
+              reply(
+                desktopError(
+                  "The desktop request failed or was cancelled. An action may already have happened; inspect before retrying.",
+                ),
+              ),
             )
             .finally(() => {
               desktopBusy = false;

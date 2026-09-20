@@ -1,4 +1,9 @@
-import { ALL_TOOL_NAMES, DESKTOP_TOOL_NAMES, type ToolActivity } from "../shared/tools";
+import {
+  ALL_TOOL_NAMES,
+  DESKTOP_TOOL_NAMES,
+  DESKTOP_UTILITY_TOOL_NAMES,
+  type ToolActivity,
+} from "../shared/tools";
 
 interface ToolGuide {
   title: string;
@@ -9,6 +14,48 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  desktop_get_environment: {
+    title: "Get time and standard folders",
+    purpose: "Find the current date, time zone, OS and common folder locations without guessing.",
+    returns:
+      "Current local/UTC time, OS information, and home, Desktop, Documents, Downloads and media paths.",
+    limit: "Does not scan files, apps, credentials or environment variables.",
+  },
+  desktop_read_clipboard: {
+    title: "Read copied text",
+    purpose: "Work with text you ask the cat to read from your clipboard.",
+    returns: "Up to 8,000 characters of plain text, with a truncation flag.",
+    limit:
+      "No images, files or clipboard history. The prompt restricts reading to clipboard requests; it is not an enforced permission mode. Text goes to the selected model and saved context.",
+  },
+  desktop_write_clipboard: {
+    title: "Copy text",
+    purpose: "Put requested text on the clipboard ready for you to paste.",
+    returns: "A write result and character count.",
+    limit:
+      "Replaces existing clipboard contents. Up to 8,000 characters. Does not paste into another app.",
+  },
+  desktop_open_url: {
+    title: "Open a web link",
+    purpose: "Open a requested web page in your default browser.",
+    returns: "Confirmation that the request was handed to the browser, not that the page loaded.",
+    limit:
+      "HTTP/HTTPS only, without embedded credentials. This does not search or read the web. Observe afterward to verify the page.",
+  },
+  desktop_open_folder: {
+    title: "Open a folder",
+    purpose: "Show an existing local folder in your file manager.",
+    returns: "Dispatch status after checking that the absolute path is a directory.",
+    limit:
+      "No network/device paths. Does not launch files or executables. Window contents require a fresh observation.",
+  },
+  desktop_reveal_file: {
+    title: "Show a file in its folder",
+    purpose: "Reveal a file the cat found or created when you want to see its location.",
+    returns: "Dispatch status after checking an existing absolute local path.",
+    limit:
+      "Does not open or execute the file. Selection depends on the file manager; observe to verify.",
+  },
   desktop_observe: {
     title: "Look at the current app",
     purpose: "Start here for “What is this page?” or “Explain this error.”",
@@ -111,6 +158,10 @@ const descriptions = {
 
 export const guideTools = ALL_TOOL_NAMES.map((name) => ({
   name,
-  group: (DESKTOP_TOOL_NAMES as readonly string[]).includes(name) ? "desktop" : "files",
+  group: (DESKTOP_TOOL_NAMES as readonly string[]).includes(name)
+    ? "desktop"
+    : (DESKTOP_UTILITY_TOOL_NAMES as readonly string[]).includes(name)
+      ? "utilities"
+      : "files",
   ...descriptions[name],
 }));

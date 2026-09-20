@@ -19,7 +19,20 @@ export const DESKTOP_TOOL_NAMES = [
   "desktop_capture_region",
 ] as const;
 
-export const ALL_TOOL_NAMES = [...PI_TOOL_NAMES, ...DESKTOP_TOOL_NAMES] as const;
+export const DESKTOP_UTILITY_TOOL_NAMES = [
+  "desktop_get_environment",
+  "desktop_read_clipboard",
+  "desktop_write_clipboard",
+  "desktop_open_url",
+  "desktop_open_folder",
+  "desktop_reveal_file",
+] as const;
+
+export const ALL_TOOL_NAMES = [
+  ...PI_TOOL_NAMES,
+  ...DESKTOP_TOOL_NAMES,
+  ...DESKTOP_UTILITY_TOOL_NAMES,
+] as const;
 
 export interface ToolActivity {
   id: string;

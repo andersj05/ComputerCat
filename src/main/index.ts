@@ -34,6 +34,7 @@ import { ChatController } from "./chat-controller";
 import { ConversationStore } from "./conversation-store";
 import { DesktopController } from "./desktop/controller";
 import { ElectronDesktopProvider } from "./desktop/electron-provider";
+import { createDesktopUtilities } from "./desktop/electron-utilities";
 import { desktopFixture } from "./desktop/fixture-provider";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
@@ -65,6 +66,8 @@ const desktop = new DesktopController(
   smoke
     ? desktopFixture(process.env.COMPUTERCAT_DESKTOP_FIXTURE === "1")
     : new ElectronDesktopProvider(),
+  Date.now,
+  createDesktopUtilities(smoke),
 );
 function captureWindow(): BrowserWindow | undefined {
   return voice?.snapshot().owner === "pet" ? pet : chat;

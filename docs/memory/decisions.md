@@ -228,3 +228,22 @@ before resizing for small details. Keep these read-only and within the same sour
 Evidence: [capture boundary](../../src/main/desktop/source-capture.ts),
 [broker](../../src/main/desktop/controller.ts), [tool definitions](../../src/agent/desktop-tools.ts),
 and [native verification](../../tests/smoke/native-capture.spec.ts).
+
+## D014: Add narrow desktop utilities before general application control
+
+Status: adopted and implemented, reviewed 2026-09-20.
+
+Expose six named utilities through the existing turn-scoped desktop broker: current environment,
+clipboard text read/write, open web link/folder and reveal file. Fixed native APIs replace shell
+generation for these common jobs. No new dependencies or renderer OS access are needed.
+Keep strict requests, bounded output, serialized dispatch and lock/sleep/cancellation handling.
+Report OS dispatch separately from verified application state; after an uncertain outcome,
+observe before retrying. Stop cannot undo an already dispatched OS action.
+
+Clipboard task relevance is prompt policy; this does not create an enforced permission mode
+around the existing privileged shell tools. No implicit clipboard fallback from failed selection
+reading. Clipboard tool results follow existing local Pi retention and selected-model delivery.
+
+Evidence: [research](../harness-improvements.md), [contract](../../src/shared/desktop-utilities.ts),
+[service](../../src/main/desktop/utilities.ts), [tests](../../tests/unit/desktop-utilities.test.ts).
+Web research, full browser/native control, connectors and selected-fact memory remain proposals.

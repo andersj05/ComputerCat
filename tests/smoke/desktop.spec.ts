@@ -192,6 +192,11 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
     await expect(guide.locator("#tool-desktop_read_selection")).toHaveAttribute("open", "");
     await expect(guide.locator("#tool-desktop_read_selection summary")).toBeFocused();
     await expect(guide.locator(".tool-entry")).toHaveCount(ALL_TOOL_NAMES.length);
+    await guide.getByLabel("Tool family").selectOption("utilities");
+    await expect(guide.locator(".tool-entry:visible")).toHaveCount(6);
+    await guide.locator("#tool-desktop_open_url summary").click();
+    await expect(guide.locator("#tool-desktop_open_url")).toContainText("not that the page loaded");
+    await guide.getByLabel("Tool family").selectOption("all");
     await guide.screenshot({ path: testInfo.outputPath("harness-tools.png"), fullPage: true });
     await guide.getByLabel("Find a tool").fill("region");
     await expect(guide.locator(".tool-entry:visible")).toHaveCount(1);
