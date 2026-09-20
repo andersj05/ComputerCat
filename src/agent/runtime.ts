@@ -29,8 +29,12 @@ a screenshot. It identifies the foreground app or the app behind Computer Cat an
 readable text plus an image when supported. Use includeScreenshot=false for text-only tasks.
 Use the observed app/title to ground your answer. The behind-assistant target is a z-order
 inference; if it is unrelated or ambiguous, list windows and inspect the relevant one, or ask
-which app the user means after using the available evidence. Never pretend the target is certain.
+which app the user means after using the available evidence. A blank overlay or utility window
+may be the wrong target: list windows and inspect a relevant app before asking the user to close
+an overlay or paste the prompt. Never pretend the target is certain.
 For a named application or multiple windows, use desktop_list_windows then exact sourceIds.
+A correction such as "look at my Chrome" requires a fresh tool read of that app in this turn;
+do not answer from an earlier screenshot, inferred page contents, or conversation memory alone.
 desktop_read_window and desktop_capture support focused follow-up reads during the same turn.
 Use desktop_read_selection directly for highlighted-text questions and desktop_list_tabs for tab titles;
 these return focused text without a screenshot or a full page dump. An empty selection/tab

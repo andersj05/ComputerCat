@@ -1,6 +1,6 @@
 # Desktop context
 
-Reviewed: 2026-09-19. Implemented for Windows; application accessibility coverage varies.
+Reviewed: 2026-09-20. Implemented for Windows; application accessibility coverage varies.
 
 Ask a connected model “What is this page?”, “Explain this error” or “Summarize my selected
 text.” The agent chooses tools during the request, including messages sent through Talk.
@@ -22,7 +22,9 @@ desktop. Lock/sleep blocks observations; unlock/resume makes tools available aga
 
 Observe defaults to the foreground external app. If Computer Cat owns the foreground window,
 the helper walks down the window order to the first visible, nonminimized, uncloaked external
-window with a title. It returns foreground or behind-assistant as provenance. This is a
+window with a title, skipping floating tool windows and nonactivating overlays by their Windows
+extended styles. This filter only applies to inferred targets; foreground and explicitly chosen
+windows remain readable. It returns foreground or behind-assistant as provenance. This is a
 bounded inference, not a guarantee of the user's intent or a history of focused applications.
 The agent should check the app/title against the question, list alternatives when needed,
 and ask which app only when the available evidence does not resolve the ambiguity.
