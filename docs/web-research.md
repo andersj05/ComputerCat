@@ -5,8 +5,10 @@ from registered capabilities. The current desktop utilities remain available.
 
 The first foundation is a public HTTP reader and static HTML extractor in
 [public-http.ts](../src/main/web/public-http.ts) and [extract.ts](../src/main/web/extract.ts).
-It is not yet registered as an agent tool. The next commits will add cached page reading,
-literal-text finding, an optional Brave Search adapter and private worker integration.
+The [service](../src/main/web/controller.ts) now supports cached page reading, literal-text
+finding and optional Brave Search, with 15-second deadlines and eight pages per turn.
+Page references expire after five minutes or the turn ends. The next commit will register
+these capabilities with Pi through the private worker channel; they are not yet agent tools.
 
 Design: public HTTP/HTTPS on standard ports; no browser cookies, JavaScript, proxy environment,
 arbitrary headers, downloaded files or authenticated sessions. Check every redirect and all DNS
