@@ -579,6 +579,7 @@ test("screen questions automatically observe through the real worker and recover
     await expect(draft).toContainText("Hi Robin");
     await expect(draft).toContainText("Unsent");
     await expect(draft).toContainText("expired or was already used");
+    await draft.getByRole("button", { name: /Tool activity/ }).click();
     await expect(draft.locator(".tool-activity .icon")).toHaveCount(5);
     await expect(draft.getByRole("list", { name: "Tool activity" })).toContainText(
       "Fill app field",
