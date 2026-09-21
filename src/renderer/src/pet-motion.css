@@ -17,12 +17,11 @@
   transform: var(--right-pose, none);
 }
 .pet-art .cat-blink {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0);
+  opacity: 0;
 }
 .pet-art .cat-mouth {
   display: none;
+  opacity: 0;
 }
 .pet-art .cat-mouth-open {
   transform-box: fill-box;
@@ -56,22 +55,22 @@
   --head-pose: translateY(14px) rotate(3deg);
   --head-motion: cat-read;
   --head-duration: 3.2s;
-  --left-pose: rotate(-22deg);
-  --right-pose: rotate(22deg);
+  --left-pose: rotate(-14deg);
+  --right-pose: rotate(14deg);
 }
 .pet-art[data-activity="review"] {
   --head-pose: rotate(-3deg);
   --head-motion: cat-review;
   --head-duration: 7s;
-  --left-pose: rotate(-22deg);
-  --right-pose: rotate(22deg);
+  --left-pose: rotate(-14deg);
+  --right-pose: rotate(14deg);
 }
 .pet-art[data-activity="working"] {
   --head-pose: translateY(9px);
   --head-motion: cat-type-nod;
   --head-duration: 2.4s;
-  --left-pose: rotate(-18deg);
-  --right-pose: rotate(18deg);
+  --left-pose: rotate(-12deg);
+  --right-pose: rotate(12deg);
 }
 .pet-art[data-activity="replying"] {
   --head-pose: rotate(-2deg);
@@ -83,8 +82,8 @@
   --head-pose: translateY(-8px) rotate(-4deg);
   --head-motion: cat-delight;
   --head-duration: 2.4s;
-  --left-pose: rotate(9deg);
-  --right-pose: rotate(-14deg);
+  --left-pose: rotate(3deg);
+  --right-pose: rotate(-8deg);
 }
 .pet-art[data-activity="stopping"] {
   --head-pose: translateY(8px);
@@ -100,7 +99,7 @@
   display: inline;
 }
 .pet-art[data-activity="happy"] .cat-blink {
-  transform: scaleY(1);
+  opacity: 1;
 }
 
 /* Motion is opt-in at the containing pet or staged Options preview. */
@@ -111,10 +110,10 @@
   animation: var(--head-motion, cat-look) var(--head-duration, 14s) ease-in-out infinite;
 }
 .animated .pet-art .cat-blink {
-  animation: cat-blink 6.8s linear infinite;
+  animation: cat-blink 6.8s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="idle"] .cat-eye-right {
-  animation: cat-wink 13.6s linear infinite;
+  animation: cat-wink 13.6s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="idle"] .cat-paw-right {
   animation: cat-fidget 14s ease-in-out infinite;
@@ -152,7 +151,7 @@
 .animated .pet-art[data-activity="working"] .cat-paw-right {
   animation-delay: -0.35s;
 }
-.animated .pet-art[data-activity="replying"] .cat-mouth-open {
+.animated .pet-art[data-activity="replying"] .cat-mouth {
   animation: cat-speak 1.4s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="replying"] .cat-paw-right {
@@ -210,11 +209,11 @@
   79%,
   83%,
   100% {
-    transform: scaleY(0);
+    opacity: 0;
   }
   44%,
   81% {
-    transform: scaleY(1);
+    opacity: 1;
   }
 }
 @keyframes cat-wink {
@@ -228,7 +227,7 @@
   89.5%,
   91.5%,
   100% {
-    transform: scaleY(0);
+    opacity: 0;
   }
   22%,
   40.5%,
@@ -236,11 +235,11 @@
   90.5%,
   94%,
   96% {
-    transform: scaleY(1);
+    opacity: 1;
   }
   92%,
   98% {
-    transform: scaleY(0);
+    opacity: 0;
   }
 }
 @keyframes cat-fidget {
@@ -424,18 +423,18 @@
   0%,
   44%,
   100% {
-    transform: rotate(22deg);
+    transform: rotate(14deg);
   }
   12%,
   32% {
-    transform: translate(-10px, -5px) rotate(25deg);
+    transform: translate(-4px, -3px) rotate(16deg);
   }
   22% {
-    transform: translate(5px, 3px) rotate(20deg);
+    transform: translate(3px, 2px) rotate(13deg);
   }
   62%,
   78% {
-    transform: translate(0, -17px) rotate(18deg);
+    transform: translate(0, -7px) rotate(12deg);
   }
 }
 @keyframes cat-type {
@@ -452,17 +451,17 @@
   32%,
   61%,
   100% {
-    transform: scaleY(0.25);
+    opacity: 0;
   }
   10%,
   42%,
   76% {
-    transform: scaleY(1);
+    opacity: 1;
   }
   21%,
   53%,
   88% {
-    transform: scaleY(0.6);
+    opacity: 1;
   }
 }
 @keyframes cat-explain {
@@ -481,15 +480,15 @@
 @keyframes cat-wave {
   0%,
   100% {
-    transform: rotate(-14deg);
+    transform: rotate(-8deg);
   }
   30%,
   60% {
-    transform: rotate(-34deg);
+    transform: rotate(-17deg);
   }
   45%,
   75% {
-    transform: rotate(-20deg);
+    transform: rotate(-11deg);
   }
 }
 @keyframes cat-sparkle {

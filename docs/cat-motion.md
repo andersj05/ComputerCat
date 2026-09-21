@@ -1,6 +1,6 @@
 # Cat activity and motion
 
-Reviewed: 2026-09-19. The original cat remains the character: transparent silhouette, original
+Reviewed: 2026-09-21. The original cat remains the character: transparent silhouette, original
 proportions and planted boots. Motion gives the current task a recognizable pose, with quieter
 idle behavior between tasks. It never opens a microphone or initiates model work.
 
@@ -46,8 +46,11 @@ library, network resource or additional preference to synchronize.
 ## Rendering and preview
 
 [PetArtwork](../src/renderer/src/PetArtwork.tsx) shares one local image between clipped layers.
-Overlapping shoulders, a small fur backing and a generous neck overlap avoid exposed cuts as paws
-and head move. The boots never transform. Pixel props use the same warm outline palette.
+Overlapping shoulders, a tapered warm-fur backing and a generous neck overlap cover cuts as paws
+and head move. The backing samples orange shoulder fur so an inward paw does not expose a wide,
+cream rectangle. Blinks use brief discrete closures; closed speech beats restore the original
+mouth instead of compressing an overlaid mouth into a line. The boots never transform. Pixel
+props use the same warm outline palette.
 [Motion CSS](../src/renderer/src/pet-motion.css) owns each activity's static pose and animation.
 Activity changes retain the SVG instead of restarting the whole rig on every streamed token.
 The pet's grid column can shrink independently of its controls; compact small-size buttons

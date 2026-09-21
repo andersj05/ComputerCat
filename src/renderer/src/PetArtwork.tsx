@@ -35,7 +35,7 @@ export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
           width="428"
           height="430"
           patternUnits="userSpaceOnUse"
-          viewBox="470 805 180 430"
+          viewBox="464 774 196 150"
           preserveAspectRatio="none"
         >
           <image href={catImage} width="1024" height="1536" />
@@ -54,7 +54,7 @@ export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
             fill={`url(#${id}-fur)`}
             stroke="#45291e"
             strokeWidth="14"
-            d="M377 823H744V860H764V958H751V1022H737V1093H751V1170H772V1220H380V1170H392V1093H376V1018H356V902H377Z"
+            d="M377 812H744V872H738V960H728V1046H722V1110H735V1158H752V1180H772V1230H375V1180H392V1158H405V1110H411V1046H402V960H386V872H377Z"
           />
         </g>
         <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-body)`} />
@@ -116,10 +116,10 @@ export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
           <path fill="none" stroke="#75452c" strokeWidth="12" d="M640 550L661 561H700L721 550" />
         </g>
         <g className="cat-mouth" shapeRendering="crispEdges">
-          <path fill="#ffefd1" d="M516 683H597V710H585V732H530V711H516Z" />
+          <path fill="#ffefd1" d="M514 682H606V708H619V734H591V744H529V734H501V708H514Z" />
           <g className="cat-mouth-open">
-            <path fill="#62382f" d="M525 689H591V721H580V737H539V721H525Z" />
-            <path fill="#e6a0a0" d="M541 716H578V732H541Z" />
+            <path fill="#62382f" d="M535 690H585V715H575V727H545V715H535Z" />
+            <path fill="#e6a0a0" d="M547 712H573V724H547Z" />
           </g>
         </g>
       </g>
