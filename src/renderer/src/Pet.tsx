@@ -157,7 +157,7 @@ export function Pet({
         aria-label="Show cat controls"
         title="Click for controls; drag to move"
       >
-        <PetArtwork activity={activity} />
+        <PetArtwork activity={activity} motionPaused={hidden || dragging} />
       </button>
       <div id="pet-controls" className="pet-dock">
         <button type="button" className="xp-button pet-chat" onClick={() => act(openChat)}>

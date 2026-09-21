@@ -261,11 +261,14 @@ The timer stops on quit. OS secure desktops and exclusive fullscreen surfaces re
 the ordinary desktop window stack. See [Electron’s window API](https://www.electronjs.org/docs/latest/api/browser-window#winsetalwaysontopflag-level-relativelevel).
 
 The original artwork is clipped into overlapping head, torso, paw and fixed boot layers in an SVG.
+Head and torso breathe together; separate pose groups blend activity changes without restarting
+the small repeating motions. Renderer-only Web Animations calls pause pose transitions when
+dragging or hidden, including new activities received while paused; there is no frame loop.
 Renderer-only [activity selection](../src/renderer/src/pet-activity.ts) derives poses from typed
 voice and chat snapshots; it introduces no IPC or capture privileges. CSS animates the layers
 and pixel props. Animate cat and OS reduced motion retain readable static poses; dragging and
 document hiding pause every layer. A scoped 2.4-second completion reaction cannot replay saved
-history. See [cat motion](cat-motion.md). Reviewed 2026-09-19.
+history. See [cat motion](cat-motion.md). Reviewed 2026-09-21.
 
 ## Saved conversations (reviewed 2026-09-17)
 
