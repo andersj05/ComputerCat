@@ -186,11 +186,12 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
     await expect(guide.locator("#component-source")).toContainText(
       "src/main/desktop/controller.ts",
     );
-    await guide.getByLabel("Follow an example").selectOption("selection");
-    await expect(guide.locator("#trace-steps")).toContainText("desktop_read_selection");
-    await guide.getByRole("link", { name: "desktop_read_selection", exact: true }).click();
-    await expect(guide.locator("#tool-desktop_read_selection")).toHaveAttribute("open", "");
-    await expect(guide.locator("#tool-desktop_read_selection summary")).toBeFocused();
+    await guide.getByLabel("Follow an example").selectOption("draft");
+    await expect(guide.locator("#trace-steps")).toContainText("desktop_fill");
+    await guide.screenshot({ path: testInfo.outputPath("harness-draft.png"), fullPage: true });
+    await guide.getByRole("link", { name: "desktop_fill", exact: true }).click();
+    await expect(guide.locator("#tool-desktop_fill")).toHaveAttribute("open", "");
+    await expect(guide.locator("#tool-desktop_fill summary")).toBeFocused();
     await expect(guide.locator(".tool-entry")).toHaveCount(ALL_TOOL_NAMES.length);
     await guide.getByLabel("Tool family").selectOption("utilities");
     await expect(guide.locator(".tool-entry:visible")).toHaveCount(7);
@@ -200,7 +201,7 @@ test("harness guide opens offline, preserves settings drafts, and explains the t
     await expect(guide.locator(".tool-entry:visible")).toHaveCount(10);
     await guide.getByLabel("Tool family").selectOption("all");
     await guide.screenshot({ path: testInfo.outputPath("harness-tools.png"), fullPage: true });
-    await guide.getByLabel("Find a tool").fill("region");
+    await guide.getByLabel("Find a tool").fill("desktop_capture_region");
     await expect(guide.locator(".tool-entry:visible")).toHaveCount(1);
     await guide.getByLabel("Tool family").selectOption("files");
     await expect(guide.locator("#no-tools")).toBeVisible();

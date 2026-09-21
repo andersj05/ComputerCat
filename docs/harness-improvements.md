@@ -1,6 +1,6 @@
 # Improving the desktop assistant harness
 
-Reviewed: 2026-09-20. Research and first implementation. The baseline was `dev` at
+Research reviewed: 2026-09-20; implementation status updated 2026-09-21. The baseline was `dev` at
 `8fd1e94`; the code was inspected before changes. Vendor documentation below is primary
 evidence about available approaches, not a claim that we benchmarked those products.
 
@@ -12,8 +12,8 @@ gap was a reliable way to perform ordinary desktop jobs: native actions, web res
 structured browser access and app controls. More tools alone will not fix uncertain targets,
 stale evidence or claiming success before checking the result.
 
-The first increment added six everyday utilities without new dependencies. The second adds
-[public web research](web-research.md). Follow with browser interaction and native application control. Expand connected
+The first increment added six everyday utilities without new dependencies. Public
+[web research](web-research.md) and [targeted Windows input](computer-use.md) followed. Expand structured browser access, connected
 services and user memory as separate capabilities. This order is a project recommendation
 based on the inspected gaps, not measured comparative performance.
 
@@ -22,16 +22,16 @@ based on the inspected gaps, not measured comparative performance.
 | Everyday desktop jobs | Even opening Downloads or copying an answer required generated shell commands | Implemented seven native utilities, including browser search recovery |
 | Fresh environment | Static prompt lacked a dedicated current-time/standard-folder source | Implemented `desktop_get_environment` |
 | Public web research | No search results, page extraction or citation tools; visible browser text is incomplete | Implemented ten tools: keyless search with browser recovery, source comparison, links, metadata, feeds and cached text reading |
-| Browser interaction | Windows accessibility exposes some text/tabs, but cannot navigate or fill forms | Prototype a structured browser adapter with an explicit session/profile |
-| Native app interaction | Observation has source IDs but no actionable element identities | Evaluate a supervised driver with fresh window/element references |
+| Browser interaction | Original observation tools exposed text/tabs without actions | Targeted accessibility input implemented; keyboard success qualification and structured browser integration remain |
+| Native app interaction | Original observation source IDs were not actionable | Implemented six input tools with disposable control references, native validation and post-action evidence |
 | Connections | Static tool-name union and intentionally empty Pi resource loader | Add configured, namespaced tools through a registry before general MCP support |
 | Personal continuity | Per-chat Pi history exists; no cross-chat selected-fact memory | Explicit save/list/update/delete of user-approved facts; no automatic screen history |
-| Reliability | Automated boundary coverage does not establish live-model task success | Implemented twelve repeated app tasks, scorecards and comparisons; live baseline still unmeasured |
+| Reliability | Automated boundary coverage does not establish live-model task success | Fifteen manual app tasks plus controlled-tool Luna evaluations; real-app input reliability is still unmeasured |
 
 ## Implemented first increment
 
 The first increment grew the app from 15 to 21 tools. With focused context and expanded research,
-the app now has 35 tools: eight Pi, ten observations, seven utilities and ten web tools. Utilities are
+the app now has 41 tools: eight Pi, ten observations, six computer-use tools, seven utilities and ten web tools. Utilities are
 defined in [utility tools](../src/agent/desktop-utility-tools.ts), validated in the
 [shared contract](../src/shared/desktop-utilities.ts), executed by the
 [main service](../src/main/desktop/utilities.ts) and backed by
@@ -96,7 +96,11 @@ No background collection, new credentials, package upgrade or paid API is introd
   cancellation, image preservation, bounded results and visible connection status. Do not
   expose everything advertised by an arbitrary server or import ambient credentials.
 
-## Concrete next increments
+## Increment roadmap
+
+The public web increment and a narrow UIA input adapter are now implemented; see their linked
+designs for measured scope. Browser integration, broader native coverage and the remaining
+items below are proposals, not completed capabilities.
 
 1. **Web research:** choose a supported search provider/configuration instead of scraping search
    UI pages. Add `web_search` and `web_read` with titles, URLs, timestamps, bounded excerpts and
@@ -123,11 +127,11 @@ No background collection, new credentials, package upgrade or paid API is introd
 
 ## Evaluation and completion criteria
 
-The [task evaluation workflow](task-evaluations.md) now implements twelve versioned cases with
+The [task evaluation workflow](task-evaluations.md) now implements fifteen versioned cases with
 fresh per-attempt fixtures, outcome criteria, review history and before/after reports. Start with
 the four-case subset repeated three times in the actual app. The CLI only plans and scores human
 observations; it does not execute model trials. The table below also includes broader and future
-acceptance scenarios, not a claim that every row is in the initial twelve-case suite.
+acceptance scenarios, not a claim that every row is in the manual suite.
 
 Use owned synthetic apps/files/clipboard data. Record completion, incorrect side effects,
 tool-call count, elapsed time, retries and whether the answer matches the observed outcome.

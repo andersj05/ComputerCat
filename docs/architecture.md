@@ -2,8 +2,8 @@
 
 The initial application is a desktop companion and a controlled Pi SDK integration. It has
 a local demo mode that works without credentials. The agent selects on-demand screen tools
-for relevant user requests. Mouse/keyboard control, external MCP servers and selected-fact user memory
-remain later features.
+for relevant user requests. Targeted Windows input extends that broker with fresh control
+references; external MCP servers and selected-fact user memory remain later features.
 
 Developer context is maintained separately in [shared project memory](memory/README.md), entered
 through root [AGENTS.md](../AGENTS.md). It is not loaded by the app's Pi resource loader and does
@@ -70,7 +70,8 @@ Reviewed 2026-09-20. The app never imports extensions or instructions discovered
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
 its explicit allowlist contains all eight built-in Pi tools plus ten app-owned desktop
-observation tools, seven desktop utilities and ten public web tools; native Pi sessions are saved per conversation.
+observation tools, six computer-use tools, seven desktop utilities and ten public web tools;
+native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
@@ -114,8 +115,8 @@ leave the UI usable, and cancellation must not append output from an old turn to
 The user explicitly enabled the complete built-in Pi file and shell tool set on 2026-09-17.
 These tools have local user privileges, with no per-command approval broker. The system prompt
 requires authorization for otherwise unrequested destructive actions; it is not an OS sandbox.
-Desktop observation now uses the on-demand broker below. Future input-control and external
-API tools need their own scope and authorization design.
+Desktop observation and targeted input use the on-demand broker below. External API tools
+need their own scope and authorization design.
 MCP support must preserve images and cancellation and expose only configured tools. A worker
 process isolates crashes, but is not an OS security sandbox. Adding tools requires an explicit
 permission design and tests for that new boundary.
@@ -190,6 +191,31 @@ retention policy. Renderer activity events contain only tool names/status, not o
 Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.
 The existing shell tools remain unsandboxed; this is not a security boundary around the agent.
 See [desktop context](desktop-context.md) for usage, limitations and verification.
+
+## Targeted Windows input (reviewed 2026-09-21)
+
+[Computer tools](../src/agent/computer-tools.ts) use the same private desktop channel and serial
+slot. [ComputerUse](../src/main/desktop/computer-use.ts) retains one native snapshot and exposes
+opaque observation IDs with per-snapshot element IDs. An action consumes the snapshot before
+dispatch. References expire after sixty seconds, another inspection/listing, turn change,
+Stop or lock/sleep. Results include fresh accessible state when available; dispatched input
+does not prove the task completed. Unsupported controls fail explicitly.
+
+The [Windows adapter](../src/main/desktop/windows-input.ts) runs fixed PowerShell/C# code in a
+hidden MTA process with a minimal environment, private JSON stdin and bounded stdout. It checks
+window/process identity, process start time, geometry, control runtime ID/name/value fingerprint,
+foreground window and last user-input tick. UI Automation patterns perform click/scroll and native
+fill. Chromium fill uses scoped text selection plus keyboard input to generate app input events;
+typing and allowlisted keys require verified foreground and exact editor/control focus.
+Protected controls are excluded. Stop kills the helper and the broker retains ownership until
+process exit, preventing overlapping input owners. Cancellation cannot undo dispatched input.
+
+The renderer gains activity labels only. Draft-versus-send and task relevance are model policy;
+this is not an OS sandbox around the existing shell tools. [Native/browser fixtures](computer-use.md)
+check native draft editing and focus refusal independently of model selection; browser keyboard
+success remains an interactive coverage gap. A smoke-only backend exercises the real
+worker/model loop without external native input or paid requests. Full browser DOM integration,
+coordinate control and arbitrary canvas interaction remain outside this increment.
 
 ## Desktop utilities (reviewed 2026-09-20)
 
