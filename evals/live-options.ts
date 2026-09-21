@@ -8,7 +8,7 @@ npm run eval:live                              Four tasks, one attempt each; aut
 npm run eval:live -- --check                    Check sign-in without a model call
 npm run eval:live -- --run luna-baseline --repeats 3
 npm run eval:live -- --tasks all --repeats 3     Twelve tasks, three attempts each
-Use --tasks comma-separated-IDs and --repeats 1-3. Quit Computer Cat before a model run.
+Use --tasks comma-separated-IDs and --repeats 1-3. Uses the running Computer Cat connection; opens the app if needed.
 Reports and synthetic traces are stored in .local/evals/RUN. See docs/live-evaluations.md.`;
 
 export function liveOptions(args: string[]) {

@@ -9,10 +9,13 @@ Subscription usage percentages and currency cost are not inferred from API token
 
 ## Run it
 
-Connect in Computer Cat → Options → Models first, then **quit Computer Cat**. The evaluation host
-uses the same single-instance lock to avoid concurrent refresh-token rotation. It preserves chats,
-model defaults and preferences; only a needed OAuth refresh updates the existing encrypted credential.
-It reads no global Codex/Pi login, production chats, desktop windows or actual clipboard content.
+Leave Computer Cat open and run the command below from this checkout. The CLI asks the running
+app to start a separate evaluation worker. The app reuses its **active ChatGPT connection** and
+owns token refresh for both chats and tests. The runner never opens or copies the credential
+vault. If the app is closed, the command opens it. If it needs a connection, its normal browser
+sign-in opens and the command continues automatically after connection (up to fifteen minutes).
+An already connected app needs no new sign-in. Ctrl+C cancels a sign-in started by that evaluation.
+After first installing this development bridge, an older running app may need one restart.
 
 ```sh
 npm run eval:live -- --check
@@ -34,17 +37,11 @@ npm run eval:live -- --run luna-search --tasks keyless-search,account-followup -
 `--tasks` accepts comma-separated IDs from the [live catalog](../evals/live-catalog.json), or `all`.
 `--repeats` accepts 1–3 and defaults to one. Use three for baseline comparisons (12 starter attempts). The complete suite is twelve tasks / 36 attempts. If you deliberately use
 a different Computer Cat profile, `--user-data ABSOLUTE_PATH` selects that app profile's encrypted
-connection. Do not provide a key or token on the command line.
+connection. Run the development app from this same checkout. Do not provide a key or token on the command line.
 
-The host selects the app profile for both user data and Electron session data. On Windows,
-`Local State` in that profile contains the OS-protected safeStorage key, so redirecting only session
-data breaks access to the saved connection. The [cross-process check](../tests/smoke/evaluations.spec.ts)
-persists an offline credential through Electron, loads it with the actual CLI, and verifies that
-preflight neither changes the credential nor makes a model request.
-
-If preflight cannot unlock a connection shown as connected in the app, preserve the profile and
-investigate the profile/key mismatch before disconnecting. The runner does not remove credentials
-or start a new login automatically. A valid saved connection still
+The [Electron integration check](../tests/smoke/evaluations.spec.ts) deliberately makes a fake
+saved vault unreadable after the test app connects, then proves the real CLI still uses that
+active connection without a model call or credential change. A valid saved connection still
 needs server-side model entitlement and available usage; preflight alone cannot verify those.
 
 ## What is measured
@@ -53,8 +50,9 @@ Luna runs through the production [Pi runtime](../src/agent/pi-runtime.ts), syste
 35 tool definitions. The [fixture adapters](../src/agent/evaluation/fixtures.ts) replace tool
 execution with controlled synthetic state. The actual desktop/web controllers still validate
 requests, extract pages, manage source references and perform browser-search recovery. The live
-runner calls this runtime directly inside its separate host; it does not exercise the app worker
-IPC or renderer. Those paths remain covered by the Electron integration suite.
+runner calls this runtime inside a separate Electron utility worker. A validated development
+launch request and private worker port connect it to main-owned auth; model access tokens travel
+only on that port. It does not exercise the production chat worker IPC or renderer. Those paths remain covered by the Electron integration suite.
 
 | Component | Live evaluation behavior |
 | --- | --- |
@@ -86,7 +84,7 @@ The pinned Codex transport does not map `maxTokens` into its request body, so th
 claim a hard token cap. Request/time limits bound runaway loops; token usage is measured afterward.
 A provider failure stops the batch; remaining trials stay unscored, with no complete pass rate.
 Ctrl+C requests cancellation and lets a completed credential rotation save before shutdown;
-the launcher force-stops an unresponsive host after 35 seconds. Already saved attempts remain
+the app force-stops an unresponsive evaluation worker after 35 seconds. Already saved attempts remain
 available; an interrupted current attempt may remain unscored. Do not combine an interrupted run with cherry-picked retries.
 
 Runs stay in ignored `.local/evals/RUN/`: a manifest, fresh fixtures, one JSON trace per completed
@@ -109,5 +107,9 @@ then repeat uncertain differences: three trials per task remain a small developm
 
 Implementation: [runner](../src/agent/evaluation/runner.ts), [graders](../src/agent/evaluation/grade.ts),
 [local host](../evals/live-main.ts), and [offline boundary tests](../tests/unit/live-evaluations.test.ts).
-The production worker never populates test adapters; they cannot be enabled through the renderer
-or an application preference. The local runner is separate from packaged application entry points.
+The production chat worker never populates test adapters. Evaluation requests are rejected in
+packaged apps; live runs are also rejected in smoke/CI hosts. The renderer has no evaluation or
+credential API. Only one evaluation runs at once, duplicate job IDs cannot trigger another run,
+and disconnect is blocked until the evaluation stops. CLI status files contain synthetic progress,
+never credentials. The CLI builds the development worker in ignored `.local/eval-runtime`; its
+fixed entry path is selected by main. No arbitrary program or output path is accepted in requests.

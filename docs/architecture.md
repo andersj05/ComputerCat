@@ -291,3 +291,14 @@ conversation; Options still sets defaults for new conversations.
 Pi’s find/grep tools can provision fd/ripgrep into an app-owned pi-runtime cache on first use.
 Helper downloads are disabled in smoke tests. Model catalogue network refresh remains disabled.
 Bash needs an installed shell; PowerShell is the default suggested shell on Windows.
+
+## Local evaluation ownership (reviewed 2026-09-20)
+
+The development-only [evaluation controller](../src/main/evaluation-controller.ts) reuses the running
+app's CodexAuth instance. A strictly validated Electron second-instance request selects bounded
+Luna/Medium cases; main starts a fixed utility-worker entry built by the CLI. Only short-lived
+access tokens cross the private worker port. The CLI reads synthetic status files in the checkout
+and never reads the encrypted vault. Main serializes refresh with ordinary chat requests.
+Cancellation, quit, duplicate requests and disconnect are handled by the owner. Packaged apps
+reject this route; smoke/CI allow connection checks but reject model runs. See
+[evaluation scope and recovery](live-evaluations.md) and [bridge tests](../tests/unit/evaluation-controller.test.ts).

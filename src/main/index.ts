@@ -1,4 +1,5 @@
-import { dirname, join } from "node:path";
+import { lstatSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   app,
@@ -15,10 +16,12 @@ import {
   session,
   shell,
   Tray,
+  utilityProcess,
 } from "electron";
 import { CodexAuth } from "../agent/codex-auth";
-import { readRuntimeConfig } from "../agent/config";
+import { readRuntimeConfig, workerEnvironment } from "../agent/config";
 import { type AppInfo, IPC } from "../shared/contracts";
+import { evaluationFromArguments, evaluationRequestSchema } from "../shared/evaluations";
 import { activeModelInfo, DEFAULT_MODEL_SETTINGS } from "../shared/models";
 import {
   loginAttemptSchema,
@@ -35,6 +38,8 @@ import { DesktopController } from "./desktop/controller";
 import { ElectronDesktopProvider } from "./desktop/electron-provider";
 import { createDesktopUtilities } from "./desktop/electron-utilities";
 import { desktopFixture } from "./desktop/fixture-provider";
+import { connectForEvaluation } from "./evaluation-connection";
+import { EvaluationController } from "./evaluation-controller";
 import { HarnessGuide } from "./harness-guide";
 import { ModelController } from "./model-controller";
 import { ModelSettingsStore } from "./model-settings";
@@ -53,6 +58,12 @@ import { WorkerRuntime } from "./worker-runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const smoke = process.env.COMPUTERCAT_SMOKE_TEST === "1";
+const evaluationLaunch = !app.isPackaged ? evaluationFromArguments(process.argv) : undefined;
+if (evaluationLaunch?.profile) {
+  if (!isAbsolute(evaluationLaunch.profile)) throw new Error("Invalid evaluation profile.");
+  app.setPath("userData", evaluationLaunch.profile);
+  app.setPath("sessionData", evaluationLaunch.profile);
+}
 if (smoke && process.env.COMPUTERCAT_TEST_USER_DATA)
   app.setPath("userData", process.env.COMPUTERCAT_TEST_USER_DATA);
 const config = readRuntimeConfig(process.env);
@@ -87,6 +98,8 @@ function stopAll(): void {
 if (smoke) app.commandLine.appendSwitch("use-fake-device-for-media-stream");
 let models: ModelController;
 let codex: CodexAuth;
+let evaluations: EvaluationController | undefined;
+const pendingEvaluations: unknown[] = evaluationLaunch ? [evaluationLaunch] : [];
 let disconnecting = false;
 let shortcutRegistered = false;
 let stopShortcutRegistered = false;
@@ -314,10 +327,19 @@ async function createWindow(role: "chat" | "pet"): Promise<BrowserWindow> {
   return window;
 }
 
-const hasLock = smoke || app.requestSingleInstanceLock();
+const hasLock = smoke || app.requestSingleInstanceLock(evaluationLaunch ?? {});
 if (!hasLock) app.quit();
 else {
-  app.on("second-instance", showChat);
+  app.on("second-instance", (_event, _args, directory, input) => {
+    if (!app.isPackaged && evaluationRequestSchema.safeParse(input).success) {
+      // A different checkout must not execute this checkout's evaluation worker.
+      if (resolve(directory) !== resolve(app.getAppPath())) return;
+      if (evaluations) void evaluations.receive(input).catch(() => {});
+      else if (pendingEvaluations.length < 10) pendingEvaluations.push(input);
+      return;
+    }
+    showChat();
+  });
   void app
     .whenReady()
     .then(async () => {
@@ -338,6 +360,38 @@ else {
         publishModels,
       );
       await codex.load();
+      if (!app.isPackaged) {
+        const root = app.getAppPath();
+        const entry = join(root, ".local/eval-runtime/main.mjs");
+        // The CLI builds this fixed development entry; neither renderer nor request supplies code.
+        evaluations = new EvaluationController(
+          root,
+          codex,
+          () => {
+            const file = lstatSync(entry);
+            if (!file.isFile() || file.isSymbolicLink())
+              throw new Error("Invalid evaluation worker.");
+            return utilityProcess.fork(entry, [], {
+              cwd: root,
+              env: {
+                ...workerEnvironment(process.env),
+                COMPUTERCAT_LIVE_EVAL: "1",
+                PI_CODING_AGENT_DIR: join(root, ".local/eval-runtime/pi"),
+              },
+              serviceName: "Computer Cat evaluations",
+              stdio: "ignore",
+            });
+          },
+          !smoke && !process.env.CI,
+          (signal) =>
+            connectForEvaluation(codex, signal, () => {
+              if (chat && !chat.isDestroyed()) {
+                showChat();
+                chat.webContents.send(IPC.modelsRequested);
+              }
+            }),
+        );
+      }
       models = new ModelController(
         modelSettings,
         codex,
@@ -674,8 +728,11 @@ else {
       });
       ipcMain.handle(IPC.codexDisconnect, async (event) => {
         assertSender(event, true);
-        if (disconnecting || controller.snapshot().busy)
-          return { ok: false, message: "Stop the current reply before disconnecting." };
+        if (disconnecting || controller.snapshot().busy || evaluations?.busy)
+          return {
+            ok: false,
+            message: "Stop the current reply or live evaluation before disconnecting.",
+          };
         disconnecting = true;
         desktop.cancel();
         try {
@@ -907,6 +964,8 @@ else {
         );
         tray.on("double-click", showChat);
       }
+      for (const request of pendingEvaluations.splice(0))
+        void evaluations?.receive(request).catch(() => {});
     })
     .catch(() => {
       console.error("Computer Cat could not start.");
@@ -920,10 +979,12 @@ app.on("before-quit", (event) => {
     if (quitting) return;
     quitting = true;
     desktop.setBlocked("closing", true);
-    void Promise.all([voice?.dispose(), controller.dispose()]).finally(() => {
-      shutdownComplete = true;
-      app.quit();
-    });
+    void Promise.all([voice?.dispose(), controller.dispose(), evaluations?.dispose()]).finally(
+      () => {
+        shutdownComplete = true;
+        app.quit();
+      },
+    );
   }
   quitting = true;
   clearInterval(presenceTimer);
