@@ -39,6 +39,30 @@ local inline links/imports, and documented npm scripts; factual accuracy still n
 Desktop changes also require `npm run test:smoke`. Tests use a deterministic local adapter,
 never real model credentials. Explain what changed and which behavior you verified in the PR.
 
+## Agent task reliability
+
+Code tests check whether the machinery works. Live task evaluations check whether the selected
+model completes the user's job through that machinery. Use the [evaluation workflow](docs/task-evaluations.md)
+for prompt, tool, context, recovery and model/SDK changes:
+
+1. Reproduce the failure with synthetic or public inputs and define observable success first.
+2. Before the change, run affected cases plus the four-case starter three times each in the app.
+   Keep the model, reasoning, browser and search configuration fixed.
+3. Make a focused change with small commits and appropriate offline boundary tests.
+4. Repeat the same tasks on the candidate, inspect regressions and critical failures, and put
+   the counts and limitations in the PR. Use the full suite before model/SDK upgrades or releases.
+
+Start with `npm run eval:init -- --run baseline --tasks screen-summary,account-followup,clipboard-copy,partial-source-failure`.
+The generated worksheet provides setup, prompts and scoring commands. The scorer records human
+observations; it never invokes models. Generated runs stay in ignored `.local/evals/`.
+An unmeasured change must say `Live task reliability: not measured` and explain the gap; passing
+scripted Pi tests is not a live-model success rate. Pure visual changes need visual/smoke evidence,
+not unrelated model trials. Normal CI validates both task catalogs and scorers offline.
+Use the [Luna/Medium live runner](docs/live-evaluations.md) for automated local harness comparisons;
+label its controlled-tool scope and retain actual-app spot checks for OS/browser behavior.
+Run verify → desktop smoke → live evaluations sequentially. The live command rebuilds the app;
+keep extra cat windows closed during desktop smoke checks, then leave the app open for model trials.
+
 ## Dependencies and releases
 
 Keep dependency versions exact. Upgrade through a feature PR after reading release notes.

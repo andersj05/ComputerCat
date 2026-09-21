@@ -2,6 +2,7 @@ import { type ChildProcessWithoutNullStreams, type SpawnOptions, spawn } from "n
 import { win32 } from "node:path";
 import { z } from "zod";
 import type { DesktopReadMode, DesktopWindowText } from "../../shared/desktop";
+import { webUrlSchema } from "../../shared/desktop-utilities";
 
 const LIMITS = {
   timeoutMs: 8_000,
@@ -87,6 +88,8 @@ public static class CatWindowTarget {
     text = New-Object System.Text.StringBuilder
     selected = New-Object System.Text.StringBuilder
     tabs = New-Object 'System.Collections.Generic.List[string]'
+    pages = New-Object 'System.Collections.Generic.List[object]'
+    controls = New-Object 'System.Collections.Generic.List[object]'
     seen = New-Object 'System.Collections.Generic.HashSet[string]'
     seenSelected = New-Object 'System.Collections.Generic.HashSet[string]'
     seenTabs = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -122,14 +125,34 @@ public static class CatWindowTarget {
       if ($info.IsPassword -or $info.IsOffscreen) { return }
       $name = ''
       if ($mode -ne 'selection') { $name = Clip $info.Name 512 }
+      if ($mode -eq 'page' -and $info.ControlType -eq [System.Windows.Automation.ControlType]::Document) {
+        if ($state.pages.Count -ge 8) { $result.truncated = $true; return }
+        $page = @{ title = $name }
+        $valuePattern = $null
+        try { if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
+          # A document's Value may be a URL in some browsers. Never guess from page text.
+          $value = $valuePattern.Current.Value
+          if ($value.Length -le 2081 -and $value -match '^https?://') { $page.url = $value }
+        } } catch { $result.truncated = $true }
+        $state.pages.Add($page)
+        # Do not traverse the page body or nested frames for a page-identity request.
+        return
+      }
+      if ($mode -eq 'controls' -and $name.Length -gt 0 -and $info.IsControlElement) {
+        $role = $info.ControlType.ProgrammaticName.Replace('ControlType.', '')
+        if (@('Button', 'CheckBox', 'ComboBox', 'Edit', 'Hyperlink', 'ListItem', 'MenuItem', 'RadioButton', 'Slider', 'TabItem', 'TreeItem') -contains $role) {
+          if ($state.controls.Count -ge 60) { $result.truncated = $true; return }
+          $state.controls.Add(@{ role = $role; name = (Clip $name 256); enabled = [bool]$info.IsEnabled })
+        }
+      }
       if ($mode -eq 'all') { Append-Text $state.text $state.seen $name 12000 }
-      if ($mode -ne 'selection' -and $info.ControlType -eq [System.Windows.Automation.ControlType]::TabItem -and $name.Length -gt 0) {
+      if (($mode -eq 'all' -or $mode -eq 'tabs') -and $info.ControlType -eq [System.Windows.Automation.ControlType]::TabItem -and $name.Length -gt 0) {
         $tabName = Clip $name 256
         if ($state.tabs.Count -ge 60) { $result.truncated = $true }
         elseif ($state.seenTabs.Add($tabName)) { $state.tabs.Add($tabName) }
       }
       $pattern = $null
-      if ($mode -ne 'tabs' -and $element.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$pattern)) {
+      if (($mode -eq 'all' -or $mode -eq 'selection') -and $element.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$pattern)) {
         try {
           $ranges = $pattern.GetSelection()
           for ($i = 0; $i -lt [Math]::Min($ranges.Length, 16); $i++) {
@@ -170,6 +193,8 @@ public static class CatWindowTarget {
   $result.text = $state.text.ToString()
   $result.selectedText = $state.selected.ToString()
   $result.tabs = @($state.tabs.ToArray())
+  if ($mode -eq 'page') { $result.pages = @($state.pages.ToArray()) }
+  if ($mode -eq 'controls') { $result.controls = @($state.controls.ToArray()) }
 } catch {
   $result = @{ title = ''; app = ''; text = ''; selectedText = ''; tabs = @(); truncated = $false; unavailableReason = 'window-unavailable' }
 }
@@ -184,6 +209,20 @@ const outputSchema = z
     text: z.string().max(LIMITS.text),
     selectedText: z.string().max(LIMITS.selectedText),
     tabs: z.array(z.string().max(LIMITS.tabTitle)).max(LIMITS.tabs),
+    pages: z
+      .array(z.strictObject({ title: z.string().max(512), url: z.string().max(2081).optional() }))
+      .max(8)
+      .optional(),
+    controls: z
+      .array(
+        z.strictObject({
+          role: z.string().max(40),
+          name: z.string().max(256),
+          enabled: z.boolean(),
+        }),
+      )
+      .max(60)
+      .optional(),
     truncated: z.boolean(),
     unavailableReason: z.literal("window-unavailable").optional(),
     nativeWindowId: z
@@ -268,7 +307,7 @@ export class WindowsReader {
     mode: DesktopReadMode,
   ): Promise<CurrentWindowInspection> {
     if (signal.aborted) throw cancelled();
-    if (!["all", "selection", "tabs"].includes(mode))
+    if (!["all", "selection", "tabs", "page", "controls"].includes(mode))
       return unavailable("Unsupported text reading mode.");
     if (this.platform !== "win32") {
       return unavailable("Reading application text is currently available on Windows only.");
@@ -373,6 +412,15 @@ export class WindowsReader {
                 text: parsed.text,
                 selectedText: parsed.selectedText,
                 tabs: parsed.tabs,
+                ...(parsed.pages
+                  ? {
+                      pages: parsed.pages.map(({ title, url }) => ({
+                        title,
+                        ...(url && webUrlSchema.safeParse(url).success ? { url } : {}),
+                      })),
+                    }
+                  : {}),
+                ...(parsed.controls ? { controls: parsed.controls } : {}),
                 truncated: parsed.truncated,
               };
           finish({

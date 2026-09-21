@@ -36,6 +36,20 @@ export class DesktopUtilities {
     try {
       signal.throwIfAborted();
       const request = parsed.data;
+      if (request.action === "search-browser") {
+        const url = new URL("https://www.google.com/search");
+        url.searchParams.set("q", request.query);
+        dispatched = true;
+        await this.host.openUrl(url.href);
+        signal.throwIfAborted();
+        return result({
+          status: "dispatched",
+          url: url.href,
+          query: request.query,
+          nextTool: "desktop_observe",
+          note: "Search opened in the default browser. This is dispatch only, not search evidence. Observe the browser now, check its title/query, then use visible results. If loading, take one fresh observation. Never claim results before reading them.",
+        });
+      }
       if (request.action === "environment") return result(this.host.environment());
       if (request.action === "clipboard-read") {
         const text = await this.host.readClipboard();

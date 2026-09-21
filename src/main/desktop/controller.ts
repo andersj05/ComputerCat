@@ -9,6 +9,7 @@ import {
   desktopResultSchema,
 } from "../../shared/desktop";
 import { CaptureError } from "./capture-error";
+import { findWindowText } from "./find-text";
 import type { DesktopUtilities } from "./utilities";
 
 export interface DesktopSource {
@@ -152,17 +153,24 @@ export class DesktopController {
           ],
         };
       }
-      if (request.operation === "selection" || request.operation === "tabs") {
+      if (
+        request.operation === "selection" ||
+        request.operation === "tabs" ||
+        request.operation === "page" ||
+        request.operation === "controls" ||
+        request.operation === "find-text"
+      ) {
         if (issued?.source.kind === "screen")
-          return desktopError("Choose a window to read selection or tabs.");
-        const current = issued ? undefined : await this.provider.current(signal, request.operation);
+          return desktopError("Choose a window to read app context.");
+        const mode = request.operation === "find-text" ? "all" : request.operation;
+        const current = issued ? undefined : await this.provider.current(signal, mode);
         signal.throwIfAborted();
         const source = issued?.source ?? current?.source;
         if (!source)
           return desktopError(
             "The current app is unavailable. Use desktop_list_windows to choose a window.",
           );
-        const text = current?.text ?? (await this.provider.read(source, signal, request.operation));
+        const text = current?.text ?? (await this.provider.read(source, signal, mode));
         signal.throwIfAborted();
         return {
           ...(text.unavailableReason ? { isError: true } : {}),
@@ -177,10 +185,20 @@ export class DesktopController {
                 observedAt: new Date(this.now()).toISOString(),
                 ...(request.operation === "selection"
                   ? { selectedText: text.selectedText }
-                  : { tabs: text.tabs }),
+                  : request.operation === "tabs"
+                    ? { tabs: text.tabs }
+                    : request.operation === "page"
+                      ? { pages: text.pages ?? [] }
+                      : request.operation === "controls"
+                        ? { controls: text.controls ?? [] }
+                        : {
+                            query: request.query,
+                            ...findWindowText(text.text, request.query),
+                            sourceTruncated: text.truncated,
+                          }),
                 truncated: text.truncated,
                 ...(text.unavailableReason ? { unavailableReason: text.unavailableReason } : {}),
-                note: `${note} An empty result means the app exposed none, not proof that none exists.`,
+                note: `${note} An empty result means the app exposed none, not proof that none exists. Search covers only the bounded accessibility snapshot. Document URLs are candidates, not verified browser navigation. Controls are descriptive, not actionable handles.`,
               }),
             },
           ],

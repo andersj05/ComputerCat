@@ -9,6 +9,11 @@ body:
       description: Include the expected behavior and steps to reproduce. Do not include API keys or private screenshots.
     validations:
       required: true
+  - type: textarea
+    id: agent-reproduction
+    attributes:
+      label: Agent task reproduction (optional)
+      description: For incorrect agent behavior, include a synthetic/public example prompt, the selected model and reasoning, relevant app/browser, and the result you independently checked. Include an evaluation task ID if available. Do not paste private conversations or credentials.
   - type: input
     id: version
     attributes:

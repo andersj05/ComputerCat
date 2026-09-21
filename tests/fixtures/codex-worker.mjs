@@ -71,16 +71,38 @@ globalThis.fetch = async (url, options) => {
       ? entry.output
       : entry.output.find((part) => part.type === "input_text")?.text;
   const webPage = webResult("read") ? JSON.parse(outputText(webResult("read"))) : undefined;
-  const webSteps = [
-    { stage: "search", name: "web_search", args: { query: "fixture research" } },
-    { stage: "read", name: "web_read", args: { url: "https://example.com/guide" } },
-    { stage: "find", name: "web_find", args: { pageId: webPage?.pageId, query: "needle" } },
-    {
-      stage: "more",
-      name: "web_read_more",
-      args: { pageId: webPage?.pageId, start: webPage?.nextStart },
-    },
-  ];
+  const browserRecovery = webTurns.at(-1)?.includes("browser-recovery");
+  const webSteps = browserRecovery
+    ? [
+        { stage: "search", name: "web_search", args: { query: "fixture browser recovery" } },
+        { stage: "observe", name: "desktop_observe", args: { includeScreenshot: false } },
+      ]
+    : [
+        { stage: "search", name: "web_search", args: { query: "fixture research" } },
+        { stage: "read", name: "web_read", args: { url: "https://example.com/guide" } },
+        { stage: "find", name: "web_find", args: { pageId: webPage?.pageId, query: "needle" } },
+        {
+          stage: "more",
+          name: "web_read_more",
+          args: { pageId: webPage?.pageId, start: webPage?.nextStart },
+        },
+        { stage: "status", name: "web_get_status", args: {} },
+        {
+          stage: "links",
+          name: "web_list_links",
+          args: { pageId: webPage?.pageId, query: "article" },
+        },
+        { stage: "metadata", name: "web_read_metadata", args: { pageId: webPage?.pageId } },
+        { stage: "follow", name: "web_follow_link", args: { pageId: webPage?.pageId, index: 0 } },
+        {
+          stage: "many",
+          name: "web_read_many",
+          args: {
+            urls: ["https://example.com/guide", "https://example.com/article", "http://127.0.0.1"],
+          },
+        },
+        { stage: "feed", name: "web_read_feed", args: { url: "https://example.com/feed.xml" } },
+      ];
   const webStep = webTurns.length ? webSteps.find((step) => !webResult(step.stage)) : undefined;
   const needsTool = webStep || needsUtility || needsRead || needsDesktop;
   const desktopText = desktopResult
@@ -90,7 +112,9 @@ globalThis.fetch = async (url, options) => {
     : undefined;
   const replyText =
     webTurns.length && !webStep
-      ? "Offline web research complete: [Fixture web guide](https://example.com/guide)."
+      ? browserRecovery
+        ? "Offline browser recovery observed."
+        : "Offline web research complete: [Fixture web guide](https://example.com/guide)."
       : utilityResult
         ? `Offline utility result: ${typeof utilityResult.output === "string" ? utilityResult.output : JSON.stringify(utilityResult.output)}`
         : desktopText

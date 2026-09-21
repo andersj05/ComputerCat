@@ -64,13 +64,18 @@ That development context is separate from the app's conversation memory.
 
 ## Public web research
 
-Give the cat a public URL and ask it to read or summarize the page with sources. It can search
+Ask the cat to search a topic or an account already visible on your screen, or give it a public
+URL to read with sources. Search needs no API key: it tries keyless DuckDuckGo, then opens a
+Google search in your default browser when direct search is blocked. The cat must observe the
+results before answering; browser challenges still require your interaction. It can search
 within the extracted text and continue reading longer pages from the same snapshot. Reading
-needs no search key. These tools support static HTML, plain text, Markdown and JSON; they do
-not use browser sign-ins, run page scripts, read PDFs or access private networks.
+needs no search key. The cat can compare up to three sources, follow discovered links, inspect
+page metadata and headings, and read public RSS/Atom feeds. Static reading supports HTML, plain
+text, Markdown and JSON. It does not use browser sign-ins, run page scripts, read PDFs or access
+private networks.
 
-For general web search, optionally set `COMPUTERCAT_BRAVE_SEARCH_API_KEY` in `.env.local`
-and restart `npm run dev`. For a packaged build, supply it in the app's launch environment.
+For an optional Brave Search connection (tried before keyless search), set
+`COMPUTERCAT_BRAVE_SEARCH_API_KEY` in `.env.local` and restart `npm run dev`. For a packaged build, supply it in the app's launch environment.
 This is a separate Brave Search credential, with the provider's own account and usage terms;
 it is not included in a model subscription. No settings screen for this key exists yet.
 The key stays in the main process. Retrieved page text and search results reach your selected
@@ -81,8 +86,8 @@ chat. See [web scope and limits](docs/web-research.md).
 ## Everyday desktop help
 
 Ask the cat to open Downloads, show a file it found in its folder, open a web link, summarize
-text you copied, or copy an answer for pasting. Six dedicated tools handle current time and
-standard folders, plain-text clipboard reads/writes, and browser/file-manager launches.
+text you copied, copy an answer for pasting, or search in your browser. Seven dedicated tools
+handle current time and standard folders, plain-text clipboard reads/writes, and browser/file-manager launches.
 Clipboard text is limited to 8,000 characters; a read reports truncation. Clipboard content
 reaches your selected model and saved chat context. Copying replaces the clipboard; it does
 not paste into another app. Opening a link does not search the web or read the page.
@@ -99,6 +104,11 @@ there is no Share screen button. It can identify the current app, combine a scre
 accessible text, inspect named windows, and read exposed browser tabs and selected text.
 Focused text tools avoid collecting the full page; region screenshots let it inspect small
 text or diagrams more closely without sending the whole window again.
+The cat can also find a phrase in exposed app text, list visible buttons and fields with their
+enabled states, and read document titles and page addresses where the app exposes them.
+Try “Find the error mentioning timeout,” “What buttons are available?” or “What's this page's
+address?” These tools do not click controls, scroll, or read hidden tabs; incomplete results
+are identified as such.
 When the cat or chat has focus, the app behind it is used as a starting point.
 
 Observations happen on tool calls during your request, not in a background screen feed.
@@ -211,8 +221,10 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | --- | --- |
 | `npm run dev` | Development app with hot reload |
 | `npm run memory:check` | Offline checks for shared agent context and documentation links |
-| `npm run verify` | Memory checks, lint, TypeScript, offline unit/integration tests, production build |
+| `npm run verify` | Memory/evaluation checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
+| `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
+| `npm run eval:live` | Four live Luna/Medium task attempts with automatic grading and a local report |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
 | `npm run voice:test-native` | Offline native protocol and cancellation tests |
@@ -226,6 +238,14 @@ refresh, model selection, streaming, and provider errors without live credential
 They never control other applications. Live account entitlement is verified only when you sign
 in and send a message yourself.
 
+Task reliability is measured separately with [twelve repeatable app tasks](docs/task-evaluations.md):
+context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
+worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
+The manual scorer makes no model calls; actual trials happen in the app. An opt-in
+[Luna/Medium runner](docs/live-evaluations.md) automatically evaluates adapted tasks against
+controlled tool fixtures. Start with four tasks repeated three times. Live-model results are
+kept separate from offline tests and from actual Windows/public-web reliability.
+
 ## Project layout
 
 ```text
@@ -235,6 +255,7 @@ src/main/         Electron lifecycle, IPC boundary, conversation controller
 src/preload/      Small typed bridge exposed to the renderer
 src/renderer/     Cat, chat, preferences, and visual tokens
 src/shared/       Serializable contracts and input validation
+evals/            Task definitions, synthetic fixtures, offline scorecards and reports
 tests/unit/       Offline behavioral tests and real Pi SDK integration
 tests/smoke/      Electron desktop and packaged-worker checks
 scripts/          Repository automation

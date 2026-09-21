@@ -2,11 +2,34 @@ import { Parser } from "htmlparser2";
 import { publicUrl, WebError } from "./public-http";
 
 export const MAX_PAGE_TEXT = 100_000;
+export interface PageMetadata {
+  description?: string;
+  author?: string;
+  siteName?: string;
+  canonicalUrl?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  headings: { level: number; text: string }[];
+  feeds: { title: string; url: string }[];
+}
+const metaFields: Record<
+  string,
+  Exclude<keyof PageMetadata, "canonicalUrl" | "headings" | "feeds">
+> = {
+  description: "description",
+  "og:description": "description",
+  author: "author",
+  "og:site_name": "siteName",
+  "article:published_time": "publishedTime",
+  "article:modified_time": "modifiedTime",
+};
 export interface ExtractedPage {
   title: string;
   text: string;
   links: { title: string; url: string }[];
   truncated: boolean;
+  linksTruncated: boolean;
+  metadata: PageMetadata;
 }
 const hiddenTags = new Set([
   "script",
@@ -54,6 +77,8 @@ export function extractPage(body: string, contentType: string, url: string): Ext
       text: body.slice(0, MAX_PAGE_TEXT),
       links: [],
       truncated: body.length > MAX_PAGE_TEXT,
+      linksTruncated: false,
+      metadata: { headings: [], feeds: [] },
     };
   if (mime !== "text/html" && mime !== "application/xhtml+xml")
     throw new WebError(
@@ -63,6 +88,9 @@ export function extractPage(body: string, contentType: string, url: string): Ext
   let title = "";
   let inTitle = false;
   let truncated = false;
+  let linksTruncated = false;
+  const metadata: PageMetadata = { headings: [], feeds: [] };
+  let heading: { level: number; text: string } | undefined;
   const hidden: boolean[] = [];
   let anchor: { title: string; url: string } | undefined;
   const links: { title: string; url: string }[] = [];
@@ -81,13 +109,41 @@ export function extractPage(body: string, contentType: string, url: string): Ext
           /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attrs.style ?? "");
         hidden.push(skip);
         if (skip) return;
+        if (name === "meta" && attrs.content) {
+          const key = (attrs.property ?? attrs.name ?? "").toLowerCase();
+          const field = Object.hasOwn(metaFields, key) ? metaFields[key] : undefined;
+          if (field && !metadata[field])
+            metadata[field] = attrs.content.slice(0, field === "description" ? 1000 : 300);
+        }
+        if (name === "link" && attrs.href) {
+          try {
+            const href = publicUrl(new URL(attrs.href, url).href).href;
+            if (href.length <= 2048) {
+              const rel = attrs.rel?.toLowerCase().split(/\s+/) ?? [];
+              if (rel.includes("canonical") && !metadata.canonicalUrl) metadata.canonicalUrl = href;
+              if (
+                rel.includes("alternate") &&
+                /^(application\/(rss|atom)\+xml)$/i.test(attrs.type ?? "") &&
+                metadata.feeds.length < 5
+              )
+                metadata.feeds.push({ title: (attrs.title ?? "Feed").slice(0, 200), url: href });
+            }
+          } catch {
+            /* Ignore unsupported metadata URLs. */
+          }
+        }
+        if (/^h[1-6]$/.test(name) && metadata.headings.length < 40)
+          heading = { level: Number(name[1]), text: "" };
         if (name === "title") inTitle = true;
         if (blocks.has(name)) append("\n");
         if (name === "td" || name === "th") append("\t");
-        if (name === "a" && attrs.href && links.length < 20) {
+        if (name === "a" && attrs.href) {
           try {
             const href = publicUrl(new URL(attrs.href, url).href).href;
-            if (href.length <= 2048) anchor = { title: "", url: href };
+            if (href.length <= 2048) {
+              if (links.length < 200) anchor = { title: "", url: href };
+              else linksTruncated = true;
+            }
           } catch {
             /* Ignore non-web links. */
           }
@@ -99,11 +155,17 @@ export function extractPage(body: string, contentType: string, url: string): Ext
         if (inTitle) title = (title + normalized).slice(0, 512);
         else append(normalized);
         if (anchor) anchor.title = (anchor.title + normalized).slice(0, 120);
+        if (heading) heading.text = (heading.text + normalized).slice(0, 200);
       },
       onclosetag(name) {
         const skip = hidden.pop();
         if (skip) return;
         if (name === "title") inTitle = false;
+        if (/^h[1-6]$/.test(name) && heading) {
+          if (heading.text.trim())
+            metadata.headings.push({ ...heading, text: heading.text.trim() });
+          heading = undefined;
+        }
         if (name === "a" && anchor) {
           if (!links.some((link) => link.url === anchor?.url)) links.push(anchor);
           anchor = undefined;
@@ -123,5 +185,5 @@ export function extractPage(body: string, contentType: string, url: string): Ext
     throw new WebError(
       "The page has no readable static text. It may need JavaScript or sign-in; no browser session was accessed.",
     );
-  return { title: title.trim() || url, text, links, truncated };
+  return { title: title.trim() || url, text, links, truncated, linksTruncated, metadata };
 }

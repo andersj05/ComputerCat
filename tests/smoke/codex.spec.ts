@@ -291,7 +291,7 @@ test("Codex sign-in, model defaults, refresh, real worker streaming, and restart
 test("public web research crosses the real worker with offline sources and citations", async ({}, testInfo) => {
   test.setTimeout(60_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-codex-"));
-  const { electron, page } = await launch(userData);
+  const { electron, page } = await launch(userData, true);
   try {
     await interceptCodex(electron);
     await page.getByRole("button", { name: "Options…" }).click();
@@ -345,13 +345,24 @@ test("public web research crosses the real worker with offline sources and citat
     expect(electron.windows()).toHaveLength(2);
     await reply.getByRole("button", { name: /Tool activity/ }).click();
     const activity = reply.getByRole("list", { name: "Tool activity" });
-    for (const label of ["Search web", "Read web page", "Find text on page", "Read more of page"])
+    for (const label of [
+      "Search web",
+      "Read web page",
+      "Find text on page",
+      "Read more of page",
+      "Check web capabilities",
+      "Explore page links",
+      "Inspect source details",
+      "Follow source link",
+      "Read several sources",
+      "Read news feed",
+    ])
       await expect(activity).toContainText(new RegExp(`${label}.*Done`));
     await page.screenshot({ path: testInfo.outputPath("web-research.png") });
     const requests = await electron.evaluate(
       () => Reflect.get(globalThis, "offlineCodex").requests,
     );
-    expect(requests).toHaveLength(5);
+    expect(requests).toHaveLength(11);
     const outputs = requests
       .at(-1)
       .input.filter((entry: { type: string }) => entry.type === "function_call_output");
@@ -372,10 +383,48 @@ test("public web research crosses the real worker with offline sources and citat
       nextStart: null,
       retrievedAt: data[1].retrievedAt,
     });
+    expect(data[0]).toMatchObject({ status: "results", provider: "DuckDuckGo HTML" });
+    expect(data[4].search.requiresKey).toBe(false);
+    expect(data[5].links[0]).toMatchObject({ index: 0, url: "https://example.com/article" });
+    expect(data[6]).toMatchObject({
+      author: "Fixture author",
+      feeds: [{ title: "Feed", url: "https://example.com/feed.xml" }],
+    });
+    expect(data[7]).toMatchObject({
+      title: "Fixture article",
+      text: "Independent article evidence.",
+    });
+    expect(data[8].results[2].error).toBeTruthy();
+    expect(data[8].results[1].text).toBe("Independent article evidence.");
+    expect(data[9].items[0].url).toBe("https://example.com/article");
     expect(JSON.stringify(requests)).not.toContain("fixture-search-key");
     expect(
       await page.evaluate(() => Object.keys(window.computerCat).filter((key) => /^web/i.test(key))),
     ).toEqual([]);
+    await electron.evaluate(({ powerMonitor }) => powerMonitor.emit("unlock-screen"));
+    const recovered = await sendAndWaitForReply(page, "web-fixture:browser-recovery");
+    await expect(recovered).toContainText("Offline browser recovery observed.");
+    const recoveryRequests = await electron.evaluate(
+      () => Reflect.get(globalThis, "offlineCodex").requests,
+    );
+    const recovery = recoveryRequests
+      .at(-1)
+      .input.filter(
+        (entry: { call_id?: string }) =>
+          entry.call_id?.startsWith("offline-web-2-") && "output" in entry,
+      );
+    const decode = (entry: { output: string | { type: string; text: string }[] }) =>
+      JSON.parse(
+        typeof entry.output === "string"
+          ? entry.output
+          : (entry.output.find((part) => part.type === "input_text")?.text ?? "{}"),
+      );
+    expect(decode(recovery[0])).toMatchObject({
+      status: "browser-opened",
+      nextTool: "desktop_observe",
+    });
+    expect(JSON.stringify(decode(recovery[1]))).toContain("Fixture help page");
+    expect(decode(recovery[0]).results).toBeUndefined();
   } finally {
     await electron.close();
     await cleanup(userData);
@@ -505,6 +554,9 @@ test("screen questions automatically observe through the real worker and recover
     const file = join(userData, "utility-fixture.txt");
     await writeFile(file, "utility fixture");
     const utilities = [
+      { name: "desktop_read_page", args: {}, expected: "https://example.com/help" },
+      { name: "desktop_list_controls", args: {}, expected: "Save document" },
+      { name: "desktop_find_text", args: { query: "saving" }, expected: "searchedCharacters" },
       { name: "desktop_get_environment", args: {}, expected: "fixture-time" },
       { name: "desktop_read_clipboard", args: {}, expected: "Fixture clipboard text" },
       { name: "desktop_write_clipboard", args: { text: "copied by fixture" }, expected: "written" },
@@ -520,6 +572,7 @@ test("screen questions automatically observe through the real worker and recover
       );
       await expect(reply).toContainText(expected);
       await expect(reply.getByRole("list", { name: "Tool activity" })).toContainText("Done");
+      await expect(reply.locator(".tool-activity .icon")).toHaveCount(1);
     }
   } finally {
     await electron.close();
