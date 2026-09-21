@@ -102,6 +102,7 @@ export async function loadSuite(root = repository, mode: Run["mode"] = "manual-l
     ...(mode === "live-fixture"
       ? [
           "evals/live-main.ts",
+          "evals/live-options.ts",
           "scripts/run-live-evals.mjs",
           ...(await files(root, join(root, "src/agent/evaluation"))),
         ]

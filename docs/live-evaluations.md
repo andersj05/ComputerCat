@@ -16,28 +16,35 @@ It reads no global Codex/Pi login, production chats, desktop windows or actual c
 
 ```sh
 npm run eval:live -- --check
-npm run eval:live -- --run luna-baseline
+npm run eval:live
 ```
 
-The first command checks local sign-in and model availability without a model call. The second
-runs four starter tasks three times each: screen summary, account follow-up, clipboard copy and
-partial source failure. There are **12 attempts**, each with a fresh in-memory conversation and
+The first command checks local sign-in and model availability without a model call and can run while the app is open. The second
+runs four starter tasks once each: screen summary, account follow-up, clipboard copy and
+partial source failure. There are **four attempts**, with an automatic unique run name and a fresh in-memory conversation and
 fixture state. The scorer runs automatically. Use unique run names; previous results are never
 replaced or retried silently. A failed attempt stays failed.
 
 ```sh
-npm run eval:live -- --run luna-quick --repeats 1
+npm run eval:live -- --run luna-baseline --repeats 3
 npm run eval:live -- --run luna-full --tasks all --repeats 3
 npm run eval:live -- --run luna-search --tasks keyless-search,account-followup --repeats 3
 ```
 
 `--tasks` accepts comma-separated IDs from the [live catalog](../evals/live-catalog.json), or `all`.
-`--repeats` accepts 1–3. The complete suite is twelve tasks / 36 attempts. If you deliberately use
+`--repeats` accepts 1–3 and defaults to one. Use three for baseline comparisons (12 starter attempts). The complete suite is twelve tasks / 36 attempts. If you deliberately use
 a different Computer Cat profile, `--user-data ABSOLUTE_PATH` selects that app profile's encrypted
 connection. Do not provide a key or token on the command line.
 
-If preflight cannot unlock the saved connection, reconnect in the app and quit it before retrying.
-It does not remove credentials or start a new login automatically. A valid saved connection still
+The host selects the app profile for both user data and Electron session data. On Windows,
+`Local State` in that profile contains the OS-protected safeStorage key, so redirecting only session
+data breaks access to the saved connection. The [cross-process check](../tests/smoke/evaluations.spec.ts)
+persists an offline credential through Electron, loads it with the actual CLI, and verifies that
+preflight neither changes the credential nor makes a model request.
+
+If preflight cannot unlock a connection shown as connected in the app, preserve the profile and
+investigate the profile/key mismatch before disconnecting. The runner does not remove credentials
+or start a new login automatically. A valid saved connection still
 needs server-side model entitlement and available usage; preflight alone cannot verify those.
 
 ## What is measured

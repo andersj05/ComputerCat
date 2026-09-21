@@ -224,7 +224,7 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run verify` | Memory/evaluation checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
 | `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
-| `npm run eval:live -- --run luna-baseline` | Explicit live Luna/Medium evaluation against controlled tool fixtures |
+| `npm run eval:live` | Four live Luna/Medium task attempts with automatic grading and a local report |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
 | `npm run voice:test-native` | Offline native protocol and cancellation tests |

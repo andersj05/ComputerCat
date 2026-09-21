@@ -1,6 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { parseArgs } from "node:util";
 import { app, safeStorage } from "electron";
 import { CodexAuth } from "../src/agent/codex-auth";
 import { FixtureWorld } from "../src/agent/evaluation/fixtures";
@@ -8,34 +7,19 @@ import { gradeLiveTask } from "../src/agent/evaluation/grade";
 import { LIMITS, LIVE_MODEL, LIVE_REASONING, runLiveTask } from "../src/agent/evaluation/runner";
 import { EncryptedSecretStore } from "../src/main/secret-store";
 import { addReview, summarize, taskFor } from "./core.ts";
+import { LIVE_HELP, liveOptions } from "./live-options.ts";
 import { renderReport } from "./report.ts";
 import { initializeRun, loadSuite, readRun, saveReview, sourceHash } from "./storage.ts";
 
 async function main() {
-  if (process.env.COMPUTERCAT_LIVE_EVAL !== "1" || process.env.CI)
+  const values = liveOptions(process.argv.slice(2));
+  if (
+    process.env.COMPUTERCAT_LIVE_EVAL !== "1" ||
+    (process.env.CI && !values.check && !values.help)
+  )
     throw new Error("Use npm run eval:live locally.");
-  const { values } = parseArgs({
-    args: process.argv.slice(2),
-    options: {
-      run: { type: "string" },
-      tasks: { type: "string" },
-      repeats: { type: "string", default: "3" },
-      check: { type: "boolean" },
-      help: { type: "boolean" },
-      "user-data": { type: "string" },
-    },
-    allowPositionals: false,
-  });
-  if (values.help || (!values.run && !values.check)) {
-    console.log(
-      "Computer Cat live evaluations: Luna / Medium, controlled tool fixtures.\n" +
-        "npm run eval:live -- --check                         Check sign-in without a model call\n" +
-        "npm run eval:live -- --run luna-baseline             Four tasks, three attempts each\n" +
-        "npm run eval:live -- --run luna-quick --repeats 1    Four tasks, one attempt each\n" +
-        "npm run eval:live -- --run luna-full --tasks all     Twelve tasks, three attempts each\n" +
-        "Use --tasks comma-separated-IDs and --repeats 1-3. Quit Computer Cat before running.\n" +
-        "Reports and synthetic traces are stored in .local/evals/RUN. See docs/live-evaluations.md.",
-    );
+  if (values.help) {
+    console.log(LIVE_HELP);
     return;
   }
   const abort = new AbortController();
@@ -52,11 +36,13 @@ async function main() {
   app.setName("Computer Cat");
   app.setPath("userData", userData);
   // Share the app lock so two processes cannot rotate the same refresh token concurrently.
-  if (!app.requestSingleInstanceLock())
+  if (!values.check && !app.requestSingleInstanceLock())
     throw new Error(
       "Quit Computer Cat before running live evaluations, then retry. Its chats and model defaults are preserved.",
     );
-  app.setPath("sessionData", join(root, ".local/eval-runtime/session"));
+  // Windows stores the safeStorage encryption key in the profile's Local State.
+  // A separate session directory cannot decrypt an app-created credential.
+  app.setPath("sessionData", userData);
   await app.whenReady();
   const auth = new CodexAuth(
     new EncryptedSecretStore(join(userData, "codex-credentials.enc"), {
@@ -80,24 +66,21 @@ async function main() {
       throw new Error(
         "The pinned SDK does not offer Luna with Medium reasoning. No fallback model will be used.",
       );
-    if (!auth.snapshot().connected)
+    if (!auth.snapshot().connected) {
+      const problem = auth.snapshot().message
+        ? "Could not unlock the saved Computer Cat connection. If the app shows Connected, preserve its profile and check that this path matches the running app before changing sign-in."
+        : "No Computer Cat connection is saved in this profile. Connect in Computer Cat → Options → Models first.";
       throw new Error(
-        (auth.snapshot().message ? `${auth.snapshot().message} ` : "") +
-          "Connect your Codex subscription in Computer Cat → Options → Models, quit the app, then retry. No API key is needed.",
+        `${problem}\nProfile: ${userData}\nNo model request made. No credential was removed or replaced.`,
       );
+    }
     if (values.check) {
       console.log(
         `Ready: ${LIVE_MODEL}, ${LIVE_REASONING}; Computer Cat sign-in found. No model request made.`,
       );
       return;
     }
-    if (!values.run)
-      throw new Error(
-        "Provide --run NAME, for example npm run eval:live -- --run luna-baseline. Use --check for a no-model preflight.",
-      );
-    const repeats = Number(values.repeats);
-    if (!Number.isInteger(repeats) || repeats < 1 || repeats > 3)
-      throw new Error("Use --repeats 1, 2 or 3.");
+    const repeats = values.repeats;
     const suite = await loadSuite(root, "live-fixture");
     const tasks =
       values.tasks === "all"

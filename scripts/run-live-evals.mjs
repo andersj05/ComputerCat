@@ -2,10 +2,13 @@ import { spawn } from "node:child_process";
 import { isAbsolute, resolve } from "node:path";
 import electron from "electron";
 import { build } from "vite";
+import { liveOptions } from "../evals/live-options.ts";
 import { workerEnvironment } from "../src/agent/config.ts";
 
 // Separate from verify/CI: invoking this command explicitly enables live subscription usage.
-if (process.env.CI) throw new Error("Live evaluations are local-only and disabled in CI.");
+const options = liveOptions(process.argv.slice(2));
+if (process.env.CI && !options.check && !options.help)
+  throw new Error("Live evaluations are local-only and disabled in CI.");
 const root = resolve(import.meta.dirname, "..");
 process.chdir(root);
 await build({
