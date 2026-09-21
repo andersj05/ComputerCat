@@ -1,6 +1,7 @@
 # Computer use
 
-Design reviewed: 2026-09-21. Implementation is in progress on `feat/computer-use`.
+Reviewed: 2026-09-21. Windows native adapter and targeting boundary implemented;
+agent integration and release verification are in progress on `feat/computer-use`.
 
 The first increment extends the existing desktop broker with window inspection and targeted
 click, fill, text insertion, key and scroll operations. Windows UI Automation supplies control
@@ -34,6 +35,16 @@ process cleanup, unsupported controls, changed focus and ambiguous outcomes. Rea
 operate only a synthetic window created for the test, including an unsent email editor. A
 scripted model test checks the complete worker/tool loop independently of model intelligence.
 Optional live task trials remain separate and must report their actual measured scope.
+
+The [owned Windows editor test](../tests/smoke/computer-input.spec.ts) verified multiline fill,
+save without send, changed-field/window rejection and scrolling on 2026-09-21. Windows denied
+foreground activation on this host; keyboard typing/key success was not exercised, and refusal
+left the field unchanged. The [owned Chromium editor test](../tests/smoke/browser-input.spec.ts)
+verified subject, textarea and contenteditable replacement against the DOM, followed by save
+without send. No real account or website was operated. The
+[helper lifecycle tests](../tests/unit/windows-input.test.ts) check cancellation/timeout ownership,
+bounded output, strict input and environment isolation. These are machinery checks, not live
+model completion rates.
 
 Relevant existing contracts: [desktop broker](../src/main/desktop/controller.ts),
 [worker owner](../src/main/worker-runtime.ts), [desktop tools](../src/agent/desktop-tools.ts),
