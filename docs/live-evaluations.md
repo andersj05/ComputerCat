@@ -85,7 +85,8 @@ claim a hard token cap. Request/time limits bound runaway loops; token usage is 
 A provider failure stops the batch; remaining trials stay unscored, with no complete pass rate.
 Ctrl+C requests cancellation and lets a completed credential rotation save before shutdown;
 the app force-stops an unresponsive evaluation worker after 35 seconds. Already saved attempts remain
-available; an interrupted current attempt may remain unscored. Do not combine an interrupted run with cherry-picked retries.
+available; an interrupted current attempt may remain unscored. A startup timeout dispatches
+cancellation, and cancellation received before startup prevents a later paid run. Do not combine an interrupted run with cherry-picked retries.
 
 Runs stay in ignored `.local/evals/RUN/`: a manifest, fresh fixtures, one JSON trace per completed
 attempt and a Markdown report. Traces contain only synthetic task responses/tool inputs/results,

@@ -46,6 +46,12 @@ export class EvaluationController {
     const request = parsed.data;
     if (request.action === "cancel") {
       if (this.active?.job === request.job) this.active.abort.abort();
+      else if (!(await readEvaluationStatus(this.root, request.job)))
+        await writeEvaluationStatus(this.root, {
+          job: request.job,
+          state: "failed",
+          messages: ["Evaluation cancelled before starting."],
+        });
       return;
     }
     // A replay must never cause another paid run.
@@ -145,7 +151,11 @@ export class EvaluationController {
           else resolve(value);
         };
         stopped = () => {
-          worker.postMessage({ type: "cancel" });
+          try {
+            worker.postMessage({ type: "cancel" });
+          } catch {
+            complete(false);
+          }
           stopTimer ??= setTimeout(() => {
             worker.kill();
             complete(false);

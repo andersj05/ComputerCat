@@ -88,6 +88,7 @@ if (options.help) {
   process.on("SIGTERM", cancel);
   let read = 0;
   let received = false;
+  let terminal = false;
   const started = Date.now();
   console.log(
     options.check
@@ -104,21 +105,23 @@ if (options.help) {
         for (const message of status.messages.slice(read)) console.log(message);
         read = status.messages.length;
         if (status.state !== "running") {
+          terminal = true;
           process.exitCode = interrupted ? 130 : status.state === "passed" ? 0 : 1;
           break;
         }
       }
-      if (!received && Date.now() - started > 20000)
+      if (!received && Date.now() - started > 60000)
         throw new Error(
           "The running app has not loaded evaluation support, or belongs to another checkout. Restart Computer Cat from this checkout once, then retry. Your connection and chats stay in the app profile.",
         );
-      if ((stopAt && Date.now() > stopAt) || Date.now() - started > 61 * 60_000)
+      if ((stopAt && Date.now() > stopAt) || Date.now() - started > 76 * 60_000)
         throw new Error(
           "Evaluation host stopped responding. Check Computer Cat; completed attempts remain in .local/evals.",
         );
       await delay(250);
     }
   } finally {
+    if (!terminal && !interrupted) dispatch({ ...request, action: "cancel" });
     process.off("SIGINT", cancel);
     process.off("SIGTERM", cancel);
   }

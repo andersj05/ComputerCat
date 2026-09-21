@@ -117,6 +117,14 @@ describe("app-owned evaluation authentication", () => {
     expect(auth.accessToken).not.toHaveBeenCalled();
     await expect(readEvaluationStatus(root, "../outside")).rejects.toThrow();
   });
+  it("keeps a cancellation that arrives before startup from becoming a paid run later", async () => {
+    const { root, controller, request, auth, spawn } = await setup();
+    await controller.receive({ ...request, action: "cancel" });
+    await controller.receive(request);
+    expect((await readEvaluationStatus(root, request.job))?.state).toBe("failed");
+    expect(auth.accessToken).not.toHaveBeenCalled();
+    expect(spawn).not.toHaveBeenCalled();
+  });
   it("fails closed on duplicate token requests and worker crashes", async () => {
     const { root, controller, request, child, auth } = await setup();
     await controller.receive(request);
