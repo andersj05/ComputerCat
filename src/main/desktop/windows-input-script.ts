@@ -252,7 +252,20 @@ public static class CatInput {
         else Press(key);
       } else if (kind == "fill") {
         if (!Pattern(target, ValuePattern.Pattern, out pattern)) throw new Rejected("unsupported");
-        dispatched = true; ((ValuePattern)pattern).SetValue(text);
+        if (target.Current.FrameworkId == "Chrome") {
+          // Chromium's ValuePattern changes contenteditable DOM without firing
+          // input events. Use actual editor input so the web app receives edits.
+          Focus(new IntPtr(handle), target);
+          if (Signature(target) != signature) throw new Rejected("stale");
+          object range;
+          if (!Pattern(target, TextPattern.Pattern, out range)) throw new Rejected("unsupported");
+          dispatched = true;
+          ((TextPattern)range).DocumentRange.Select();
+          CheckFocus(new IntPtr(handle), target);
+          if (text.Length == 0) Press("Backspace"); else TypeText(new IntPtr(handle), target, text);
+        } else {
+          dispatched = true; ((ValuePattern)pattern).SetValue(text);
+        }
       } else if (kind == "click") {
         if (Pattern(target, InvokePattern.Pattern, out pattern)) { dispatched = true; ((InvokePattern)pattern).Invoke(); }
         else if (Pattern(target, SelectionItemPattern.Pattern, out pattern)) { dispatched = true; ((SelectionItemPattern)pattern).Select(); }

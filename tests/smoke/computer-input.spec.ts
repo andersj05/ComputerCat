@@ -83,13 +83,11 @@ test("native computer input drafts in an owned window, verifies edits and refuse
     // refusal, never a reason for the test/helper to force input into another app.
     if (typed.status === "rejected") {
       expect(typed.reason).toBe("focus");
-      test
-        .info()
-        .annotations.push({
-          type: "native-input-coverage",
-          description:
-            "Windows denied foreground activation; typed-text success not exercised on this host.",
-        });
+      test.info().annotations.push({
+        type: "native-input-coverage",
+        description:
+          "Windows denied foreground activation; typed-text success not exercised on this host.",
+      });
     } else expect(typed.status).toBe("dispatched");
     expect(JSON.parse(await fixture.command("status"))).toMatchObject({
       body: typed.status === "dispatched" ? "User changed this + café 🐈" : "User changed this",

@@ -91,7 +91,7 @@ export function createComputerTools(execute: DesktopExecutor): ToolDefinition[] 
       name: "desktop_fill",
       label: "Fill app field",
       description:
-        "Replace the complete value of an observed writable editor advertising fill, including multiline draft text. Prefer this to typing when setting a field. Empty text clears it. Check its current value first; preserve unrelated user text. Never sends Enter or submits a form." +
+        "Replace the complete value of an observed writable editor advertising fill, including multiline draft text. Prefer this to typing when setting a field. Empty text clears it. Check its current value first; preserve unrelated user text. Chromium editors require keyboard focus so the app receives input events. Does not press Enter or append a submit key; verify the resulting draft and app state." +
         scope,
       parameters: Type.Object({ ...target, text }, { additionalProperties: false }),
       executionMode: "sequential",

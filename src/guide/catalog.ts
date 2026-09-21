@@ -34,7 +34,8 @@ const descriptions = {
     title: "Fill an app field",
     purpose: "Replace a writable editor's value, including a multiline draft.",
     returns: "Action status and fresh field contents for verification.",
-    limit: "Up to 8,000 characters. Requires ValuePattern support; does not send Enter or submit.",
+    limit:
+      "Up to 8,000 characters. Requires an accessible editor; Chromium also requires native keyboard focus. Verify the draft and app state afterward.",
   },
   desktop_type_text: {
     title: "Type into an editor",

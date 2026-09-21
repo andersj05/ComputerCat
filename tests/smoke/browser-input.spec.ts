@@ -5,7 +5,7 @@ import { _electron, expect, test } from "@playwright/test";
 import { WindowsInput } from "../../src/main/desktop/windows-input";
 import type { ComputerSnapshot } from "../../src/shared/computer-use";
 
-test("native accessibility fills browser editors and verifies DOM without submitting", async () => {
+test("native browser input verifies app events or refuses denied focus without changing drafts", async () => {
   test.skip(process.platform !== "win32", "Windows accessibility test");
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-browser-input-"));
@@ -33,6 +33,13 @@ test("native accessibility fills browser editors and verifies DOM without submit
     const id = await app.evaluate(() => Reflect.get(globalThis, "ownedEditorSource") as string);
     const source = { id, name: "Owned browser email fixture", kind: "window" as const };
     const input = new WindowsInput();
+    // Playwright emulates Electron focus. Only the native observation below proves
+    // OS foreground ownership; an interactive host may decline this request.
+    await app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      window?.show();
+      window?.focus();
+    });
     const signal = new AbortController().signal;
     const find = (state: ComputerSnapshot, name: string) => {
       const control = state.elements.find((element) => element.name === name);
@@ -42,6 +49,7 @@ test("native accessibility fills browser editors and verifies DOM without submit
     };
     let state = await input.inspect(source, signal);
     expect(JSON.stringify(state)).not.toContain("never-expose-browser-secret");
+    const edited: string[] = [];
     for (const [name, selector, text] of [
       ["Subject", "#subject", "Friday design review"],
       ["Message body", "#body", "Hi Robin,\nCan we review the design on Friday? Café 🐈"],
@@ -55,9 +63,24 @@ test("native accessibility fills browser editors and verifies DOM without submit
         { kind: "fill", elementId: "e1", text },
         signal,
       );
-      expect(result.status).toBe("dispatched");
-      if (selector === "#rich") await expect(page.locator(selector)).toHaveText(text);
-      else await expect(page.locator(selector)).toHaveValue(text);
+      if (result.status === "rejected" && state.foreground !== state.windowHandle) {
+        expect(result.reason).toBe("focus");
+        if (selector === "#rich") await expect(page.locator(selector)).toHaveText("Original text");
+        else await expect(page.locator(selector)).toHaveValue("");
+        test.info().annotations.push({
+          type: "native-input-coverage",
+          description: `Windows denied foreground for ${name}; keyboard replacement success was not exercised.`,
+        });
+      } else {
+        expect(result.status, `Native editor result: ${result.reason}`).toBe("dispatched");
+        if (selector === "#rich") await expect(page.locator(selector)).toHaveText(text);
+        else await expect(page.locator(selector)).toHaveValue(text);
+        edited.push(selector.slice(1));
+        // DOM changes alone do not establish that a web app received the edit.
+        expect(await page.evaluate(() => Reflect.get(window, "inputEvents"))).toEqual(
+          expect.arrayContaining(edited),
+        );
+      }
       expect(result.snapshot).toBeDefined();
       state = result.snapshot as ComputerSnapshot;
     }
@@ -66,6 +89,11 @@ test("native accessibility fills browser editors and verifies DOM without submit
     ).toMatchObject({ status: "dispatched" });
     await expect(page.locator("#status")).toHaveText("Saved, unsent");
     await expect(page.locator("#recipient")).toHaveValue("robin@example.com");
+    expect(
+      [
+        ...new Set(await page.evaluate(() => Reflect.get(window, "inputEvents") as string[])),
+      ].sort(),
+    ).toEqual(edited.sort());
   } finally {
     await app.close();
     await cleanup();

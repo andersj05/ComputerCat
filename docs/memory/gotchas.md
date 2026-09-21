@@ -3,6 +3,21 @@
 Keep reproducible lessons here. Each entry states its scope, evidence, and review date.
 Remove obsolete remedies; keep transient environment failures in the relevant handoff.
 
+## Browser text changes need app input events
+
+Reviewed: 2026-09-21. Scope: Windows UI Automation with Electron 44 / Chromium editors.
+
+The owned browser fixture showed that ValuePattern.SetValue updates a contenteditable's DOM
+without dispatching an input event, while ordinary inputs and textareas did receive events.
+The [helper](../../src/main/desktop/windows-input-script.ts) therefore uses editor-scoped text
+selection and guarded keyboard input for Chromium fills. The managed accessibility metadata
+does not reliably distinguish these three editor kinds. Do not restore direct browser SetValue
+or accept a DOM-only assertion as proof of app state. The [fixture](../../tests/smoke/browser-input.spec.ts)
+requires exact text and input events on successful dispatch, or unchanged text on denied focus.
+This host verified refusal; positive browser keyboard coverage remains pending. Playwright's
+emulated focus and BrowserWindow.isFocused are not substitutes for GetForegroundWindow plus
+the native focused control. See [verification scope](../computer-use.md).
+
 ## Overlays can win inferred current-window selection
 
 Reviewed: 2026-09-20. When Computer Cat has focus, window z-order is only a guess at the

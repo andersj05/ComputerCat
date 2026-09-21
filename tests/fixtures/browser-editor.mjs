@@ -18,7 +18,8 @@ app.whenReady().then(async () => {
 <div role="textbox" aria-label="Rich message" id="rich" contenteditable="true" style="min-height:70px;border:1px solid">Original text</div>
 <label>Protected fixture <input type="password" value="never-expose-browser-secret"></label>
 <button id="save">Save draft</button><button id="send">Send message</button><output id="status">Unsent</output>
-<script>document.querySelector('#save').onclick=()=>document.querySelector('#status').textContent='Saved, unsent';
+<script>window.inputEvents=[]; document.addEventListener('input', event=>window.inputEvents.push(event.target.id));
+document.querySelector('#save').onclick=()=>document.querySelector('#status').textContent='Saved, unsent';
 document.querySelector('#send').onclick=()=>document.querySelector('#status').textContent='Sent';</script></body></html>`)}`,
   );
   globalThis.ownedEditorSource = window.getMediaSourceId();
