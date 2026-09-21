@@ -204,6 +204,11 @@ describe("computer-use boundary", () => {
   });
 
   it.each([
+    ...["\ud800", "\udc00", "\u0000", "\u001b"].map((text) => ({
+      operation: "act",
+      observationId: randomUUID(),
+      action: { kind: "type", elementId: "e1", text },
+    })),
     {
       operation: "act",
       observationId: randomUUID(),
@@ -223,5 +228,15 @@ describe("computer-use boundary", () => {
     { operation: "inspect", sourceId: "window:123:0" },
   ])("rejects forged or unbounded requests", (request) => {
     expect(desktopRequestSchema.safeParse(request).success).toBe(false);
+  });
+
+  it("accepts literal multilingual, multiline drafts at the input boundary", () => {
+    expect(
+      desktopRequestSchema.safeParse({
+        operation: "act",
+        observationId: randomUUID(),
+        action: { kind: "fill", elementId: "e1", text: "Hi Robin,\nCafé 🐈\t金曜日" },
+      }).success,
+    ).toBe(true);
   });
 });

@@ -28,9 +28,10 @@ const text = z
     (value) =>
       [...value].every((character) => {
         const code = character.charCodeAt(0);
+        if (code >= 0xd800 && code <= 0xdfff) return character.length === 2;
         return (code >= 32 && code !== 127) || code === 9 || code === 10 || code === 13;
       }),
-    "Text must not contain control characters.",
+    "Text must be valid Unicode without control characters other than tabs and newlines.",
   );
 export const computerActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("click"), elementId }),

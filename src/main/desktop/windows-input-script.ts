@@ -215,13 +215,16 @@ public static class CatInput {
   }
   static void TypeText(IntPtr hwnd, AutomationElement node, string text) {
     // Each pair is queued together. Keep batches small so loss of focus stops further text.
-    for (int offset = 0; offset < text.Length; offset += 16) {
+    for (int offset = 0; offset < text.Length;) {
       CheckFocus(hwnd, node); NoHeldKeys();
+      int end = Math.Min(text.Length, offset + 16);
+      if (end < text.Length && Char.IsHighSurrogate(text[end - 1]) && Char.IsLowSurrogate(text[end])) end++;
       var events = new List<Input>();
-      for (int i = offset; i < Math.Min(text.Length, offset + 16); i++) {
+      for (int i = offset; i < end; i++) {
         events.Add(Key(text[i], false, true)); events.Add(Key(text[i], true, true));
       }
       Send(events.ToArray());
+      offset = end;
       Thread.Sleep(10);
     }
   }
@@ -247,6 +250,9 @@ public static class CatInput {
       object pattern;
       if (kind == "type" || kind == "key") {
         Focus(new IntPtr(handle), target);
+        // Focusing can run app handlers or scroll the editor. Revalidate before input.
+        if (Signature(target) != signature) throw new Rejected("stale");
+        CheckFocus(new IntPtr(handle), target); NoHeldKeys();
         dispatched = true;
         if (kind == "type") TypeText(new IntPtr(handle), target, text);
         else Press(key);
@@ -261,7 +267,7 @@ public static class CatInput {
           if (!Pattern(target, TextPattern.Pattern, out range)) throw new Rejected("unsupported");
           dispatched = true;
           ((TextPattern)range).DocumentRange.Select();
-          CheckFocus(new IntPtr(handle), target);
+          CheckFocus(new IntPtr(handle), target); NoHeldKeys();
           if (text.Length == 0) Press("Backspace"); else TypeText(new IntPtr(handle), target, text);
         } else {
           dispatched = true; ((ValuePattern)pattern).SetValue(text);
