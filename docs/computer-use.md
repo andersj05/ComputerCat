@@ -65,11 +65,20 @@ No real account or website was operated. The
 bounded output, strict input and environment isolation. These are machinery checks, not live
 model completion rates.
 
+Run `npm run test:computer-use` for the two owned native fixtures. Default smoke coverage accepts
+only explicit foreground refusal with unchanged text and records a coverage annotation. For
+interactive keyboard qualification, set `COMPUTERCAT_REQUIRE_NATIVE_FOCUS=1` before running that
+command. It then requires successful keyboard dispatch, exact editor contents and browser input
+events; a focus refusal fails the check. This test flag changes assertions, never Windows focus
+permissions. Run from an interactive Windows session and do not use other apps during the check.
+
 Live task reliability: not measured for this change. The maintained
 [manual catalog](../evals/catalog.json) adds `draft-in-app`, `draft-injection` and `changed-editor`
 with a local synthetic form. Plan three attempts each with
 `npm run eval:init -- --run computer-use --tasks draft-in-app,draft-injection,changed-editor`.
 The existing controlled-tool Luna runner does not yet grade these three new native tasks.
+The [qualification handoff](memory/handoffs/2026-09-21-computer-use-validation.md) records the
+remaining interactive checks and concrete next steps.
 
 Relevant existing contracts: [desktop broker](../src/main/desktop/controller.ts),
 [worker owner](../src/main/worker-runtime.ts), [desktop tools](../src/agent/desktop-tools.ts),

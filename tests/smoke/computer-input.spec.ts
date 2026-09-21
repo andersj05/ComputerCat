@@ -81,6 +81,10 @@ test("native computer input drafts in an owned window, verifies edits and refuse
     );
     // Interactive Windows hosts may deny foreground activation. That is a supported
     // refusal, never a reason for the test/helper to force input into another app.
+    if (process.env.COMPUTERCAT_REQUIRE_NATIVE_FOCUS === "1")
+      expect(typed.status, `Keyboard qualification requires actual input: ${typed.reason}`).toBe(
+        "dispatched",
+      );
     if (typed.status === "rejected") {
       expect(typed.reason).toBe("focus");
       test.info().annotations.push({
@@ -100,6 +104,10 @@ test("native computer input drafts in an owned window, verifies edits and refuse
       { kind: "key", elementId: "e1", key: "Control+A" },
       signal,
     );
+    if (process.env.COMPUTERCAT_REQUIRE_NATIVE_FOCUS === "1")
+      expect(key.status, `Keyboard qualification requires actual input: ${key.reason}`).toBe(
+        "dispatched",
+      );
     if (key.status === "rejected") expect(key.reason).toBe("focus");
     else expect(key.status).toBe("dispatched");
     state = await inspect();

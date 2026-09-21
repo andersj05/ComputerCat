@@ -63,6 +63,11 @@ test("native browser input verifies app events or refuses denied focus without c
         { kind: "fill", elementId: "e1", text },
         signal,
       );
+      if (process.env.COMPUTERCAT_REQUIRE_NATIVE_FOCUS === "1")
+        expect(
+          result.status,
+          `Keyboard qualification requires actual input: ${result.reason}`,
+        ).toBe("dispatched");
       if (result.status === "rejected" && state.foreground !== state.windowHandle) {
         expect(result.reason).toBe("focus");
         if (selector === "#rich") await expect(page.locator(selector)).toHaveText("Original text");
