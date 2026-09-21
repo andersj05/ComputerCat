@@ -1,20 +1,19 @@
 # Current project state
 
-Reviewed: 2026-09-20. Recheck checkout and tests.
+Reviewed: 2026-09-20. Recheck tests.
 
 ## What exists
 
-Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
-[package.json](../../package.json) and [.node-version](../../.node-version).
+Pinned versions: [package.json](../../package.json), [.node-version](../../.node-version).
 
 - The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
-- Seven [desktop tools](../desktop-context.md) observe apps, windows, screenshots and regions,
-  accessible text, tabs and selection on demand. Capture targets one source; app coverage varies.
-- Six [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
-  clipboard text, open links/folders and reveal files. Launch results confirm dispatch, not UI success.
-- Four [web tools](../web-research.md) read, page and find public static text, plus optional Brave
-  search using a separate main-process key. Page references expire after five minutes or turn end.
+- Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
+  controls and matching text, or capture a source/region on demand. App coverage varies.
+- Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
+  clipboard text, search, open links/folders and reveal files. Launches confirm dispatch only.
+- Ten [web tools](../web-research.md) search, compare sources, explore links, metadata and feeds,
+  with keyless search, optional Brave and browser recovery. Page references expire after five minutes or turn end.
 - Demo replies are deterministic and offline. App-owned Codex login and direct model selection
   work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
 - Options stages pet/voice/model defaults; Apply/OK saves, Cancel discards unapplied changes.
@@ -24,6 +23,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   Enabled models stay ready unless idle unload is selected. CPU portable/AVX2 only; no saved audio.
   Cat panel size/drafts persist during this run; New chat stays visible and secondary actions use ⋯.
   See the [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md).
+
+- [Luna evals](../live-evaluations.md) reuse the app's sign-in.
 
 ## Persistence boundaries
 

@@ -69,8 +69,8 @@ See [link boundary](../src/main/open-link.ts) and [tests](../tests/unit/open-lin
 Reviewed 2026-09-20. The app never imports extensions or instructions discovered in arbitrary folders.
 
 The Pi worker owns a session for the current conversation. Its resource loader is explicitly empty,
-its explicit allowlist contains all eight built-in Pi tools plus seven app-owned desktop
-observation tools, six desktop utilities and four public web tools; native Pi sessions are saved per conversation.
+its explicit allowlist contains all eight built-in Pi tools plus ten app-owned desktop
+observation tools, seven desktop utilities and ten public web tools; native Pi sessions are saved per conversation.
 The worker starts in the OS Desktop folder. Tools use the current user’s filesystem/shell
 permissions; validated tool activity events cross the worker port without raw tool output. Main resolves the selected connection
 before each turn and sends validated configuration over the private worker port. The worker's
@@ -128,7 +128,8 @@ eight cached pages per turn, five-minute page references and 15-second request d
 The worker enforces a separate 20-call budget and suppresses late results on Stop, turn end,
 chat change or disposal. Fetching remains worker-only; the renderer can only dispatch a clicked
 HTTP/HTTPS link through its typed bridge. Desktop lock/sleep gates
-desktop operations independently; public web tools remain usable.
+desktop operations independently; public HTTP reads remain usable. Search recovery dispatches
+through the desktop broker and respects those blocks.
 
 [Public HTTP](../src/main/web/public-http.ts) checks public-only URLs, every DNS answer and
 redirect, then pins the vetted address to the actual socket. Responses are bounded at 2 MB;
@@ -136,8 +137,14 @@ static extraction retains up to 100,000 characters and returns 8,000-character s
 source metadata. No cookies, proxy environment or JavaScript is used. Search credentials go
 only to the fixed Brave origin, with redirects rejected; they never enter worker configuration
 or renderer state. Retrieved content persists in Pi context like other tool results. These
-restrictions govern these four tools; existing shell tools still have OS user permissions.
-See [design, sources and tests](web-research.md).
+restrictions govern these ten web tools; existing shell tools still have OS user permissions.
+Search tries configured Brave, then keyless DuckDuckGo HTML (five seconds per provider).
+A challenge or failure falls back to a Google search in the default browser. Dispatch is not
+evidence: the model must observe the browser, verify the query and read results. No challenge
+or sign-in bypass is provided. Source tools compare up to three pages with independent errors,
+page/filter up to 200 links, follow an observed link, inspect cached metadata and read RSS/Atom.
+Every fetched URL uses the same protected public transport. Batch cancellation keeps serialization
+until all child reads settle. See [design, sources and tests](web-research.md).
 
 ## On-demand desktop context (reviewed 2026-09-19)
 
@@ -169,6 +176,15 @@ when the other fails. Named-window listing, reading and capture remain available
 models automatically omit the screenshot from observation. Screen content is untrusted data.
 Focused selection/tab tools skip full-page text collection and images. Region capture validates
 normalized bounds and crops before downsizing to preserve detail within the image budget.
+Reviewed 2026-09-20: page identity reads at most eight visible Document controls and optional
+HTTP/HTTPS ValuePattern URLs, omitting embedded credentials and invalid values. Control listing
+returns at most sixty visible named controls with role and enabled state, without reading their
+values. Literal phrase search returns five bounded excerpts from a fresh accessibility snapshot,
+with searched length, further-match and source-truncation indicators. These three tools reuse
+the private broker's validation, source lifetime, cancellation and lock/sleep gates; they add no
+renderer privilege or input control. App coverage varies; document URLs are candidates and
+search does not scroll. See [reader](../src/main/desktop/windows-reader.ts) and
+[boundary tests](../tests/unit/desktop-controller.test.ts).
 Native Pi session files persist observations, including images, under the existing per-chat
 retention policy. Renderer activity events contain only tool names/status, not observed content.
 Independent lock/sleep blocks clear on unlock/resume. No startup/background capture runs.
@@ -275,3 +291,14 @@ conversation; Options still sets defaults for new conversations.
 Pi’s find/grep tools can provision fd/ripgrep into an app-owned pi-runtime cache on first use.
 Helper downloads are disabled in smoke tests. Model catalogue network refresh remains disabled.
 Bash needs an installed shell; PowerShell is the default suggested shell on Windows.
+
+## Local evaluation ownership (reviewed 2026-09-20)
+
+The development-only [evaluation controller](../src/main/evaluation-controller.ts) reuses the running
+app's CodexAuth instance. A strictly validated Electron second-instance request selects bounded
+Luna/Medium cases; main starts a fixed utility-worker entry built by the CLI. Only short-lived
+access tokens cross the private worker port. The CLI reads synthetic status files in the checkout
+and never reads the encrypted vault. Main serializes refresh with ordinary chat requests.
+Cancellation, quit, duplicate requests and disconnect are handled by the owner. Packaged apps
+reject this route; smoke/CI allow connection checks but reject model runs. See
+[evaluation scope and recovery](live-evaluations.md) and [bridge tests](../tests/unit/evaluation-controller.test.ts).

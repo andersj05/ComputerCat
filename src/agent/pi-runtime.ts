@@ -2,12 +2,14 @@ import { dirname } from "node:path";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import {
+  type AgentSession,
   createAgentSession,
   createExtensionRuntime,
   ModelRuntime,
   type ResourceLoader,
   SessionManager,
   SettingsManager,
+  type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { ChatMessage } from "../shared/contracts";
 import type { DesktopExecutor } from "../shared/desktop";
@@ -61,6 +63,12 @@ export async function createModelRuntime(): Promise<ModelRuntime> {
   return runtime;
 }
 
+/** Explicit test adapters; never populated by the renderer, environment or production worker. */
+export interface PiRuntimeAdapters {
+  builtInTools: ToolDefinition[];
+  configure?: (session: AgentSession) => void;
+}
+
 export async function createPiRuntime(
   config: Pick<RuntimeConfig, "provider" | "model" | "apiKey" | "reasoning">,
   cwd: string,
@@ -68,7 +76,16 @@ export async function createPiRuntime(
   saved?: { sessionFile: string; history: ChatMessage[] },
   desktop?: DesktopExecutor,
   web?: WebExecutor,
+  adapters?: PiRuntimeAdapters,
 ): Promise<AgentRuntime> {
+  if (
+    adapters &&
+    (adapters.builtInTools.length !== PI_TOOL_NAMES.length ||
+      PI_TOOL_NAMES.some(
+        (name) => adapters.builtInTools.filter((tool) => tool.name === name).length !== 1,
+      ))
+  )
+    throw new Error("Test adapters must replace every built-in tool exactly once.");
   const models = injectedModels ?? (await createModelRuntime());
   const model = models.getModel(config.provider, config.model);
   if (!model)
@@ -119,6 +136,7 @@ export async function createPiRuntime(
       });
   }
   const customTools = [
+    ...(adapters?.builtInTools ?? []),
     ...(desktop
       ? [
           ...createDesktopTools(desktop, model.input.includes("image")),
@@ -142,6 +160,13 @@ export async function createPiRuntime(
       ...(config.provider === "openai-codex" ? { transport: "sse" as const } : {}),
     }),
   });
+
+  try {
+    adapters?.configure?.(session);
+  } catch (error) {
+    session.dispose();
+    throw error;
+  }
 
   return {
     async run(prompt, signal, onDelta, onTool) {

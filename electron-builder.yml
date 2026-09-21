@@ -18,11 +18,15 @@ extraResources:
     to: LICENSE
   - from: assets/computer_cat.png
     to: computer_cat.png
+  - from: assets/app-icon.ico
+    to: app-icon.ico
+  - from: assets/app-icon.png
+    to: app-icon.png
 beforePack: scripts/check-voice-package.cjs
 asar: true
 npmRebuild: true
 win:
-  icon: assets/computer_cat.png
+  icon: assets/app-icon.ico
   target: nsis
   artifactName: ComputerCat-${version}-${arch}-setup.${ext}
 nsis:

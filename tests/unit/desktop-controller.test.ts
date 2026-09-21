@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DesktopController, type DesktopProvider } from "../../src/main/desktop/controller";
+import { findWindowText } from "../../src/main/desktop/find-text";
 import type { DesktopResult } from "../../src/shared/desktop";
 
 function metadata(result: DesktopResult) {
@@ -17,6 +18,8 @@ function setup() {
     text: "Useful page text",
     selectedText: "selected words",
     tabs: ["First tab"],
+    pages: [{ title: "Example", url: "https://example.com/" }],
+    controls: [{ role: "Button", name: "Save", enabled: false }],
     truncated: false,
   };
   const provider = {
@@ -53,6 +56,109 @@ function setup() {
 afterEach(() => vi.useRealTimers());
 
 describe("on-demand desktop harness", () => {
+  it.each(["page", "controls"] as const)(
+    "returns focused %s with provenance and no unrelated text",
+    async (operation) => {
+      const { controller, abort, provider, list, advance } = setup();
+      const result = metadata(await controller.execute({ operation }, abort.signal));
+      expect(result[operation === "page" ? "pages" : "controls"]).toHaveLength(1);
+      expect(result.target).toBe("behind-assistant");
+      expect(result.observedAt).toBeDefined();
+      expect(result.text).toBeUndefined();
+      expect(result.selectedText).toBeUndefined();
+      expect(result.tabs).toBeUndefined();
+      expect(provider.current).toHaveBeenCalledWith(expect.any(AbortSignal), operation);
+      expect(provider.capture).not.toHaveBeenCalled();
+      const sources = await list();
+      const sourceId = sources[0]?.sourceId;
+      await controller.execute({ operation, sourceId }, abort.signal);
+      expect(provider.read).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "window:123:0" }),
+        expect.any(AbortSignal),
+        operation,
+      );
+      expect(
+        (await controller.execute({ operation, sourceId: sources[1]?.sourceId }, abort.signal))
+          .isError,
+      ).toBe(true);
+      advance();
+      expect((await controller.execute({ operation, sourceId }, abort.signal)).isError).toBe(true);
+      expect(provider.read).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("searches fresh exposed text and distinguishes truncated sources from further matches", async () => {
+    const { controller, abort, provider } = setup();
+    const current = await provider.current(abort.signal);
+    if (!current) throw new Error("Missing fixture");
+    provider.current.mockResolvedValue({
+      ...current,
+      text: { ...current.text, text: "Error [42] details. ".repeat(10), truncated: true },
+    });
+    const result = metadata(
+      await controller.execute({ operation: "find-text", query: "error [42]" }, abort.signal),
+    );
+    expect(result.matches).toHaveLength(5);
+    expect(result.matches[0]).toMatchObject({ offset: 0 });
+    expect(result.hasMoreMatches).toBe(true);
+    expect(result.sourceTruncated).toBe(true);
+    expect(result.searchedCharacters).toBe(200);
+    expect(result.text).toBeUndefined();
+    expect(provider.current).toHaveBeenLastCalledWith(expect.any(AbortSignal), "all");
+    expect(provider.capture).not.toHaveBeenCalled();
+    const empty = metadata(
+      await controller.execute({ operation: "find-text", query: "absent" }, abort.signal),
+    );
+    expect(empty.matches).toEqual([]);
+    expect(empty.sourceTruncated).toBe(true);
+  });
+
+  it.each(["page", "controls", "find-text"] as const)(
+    "blocks invalid/locked %s and suppresses a late result after Stop",
+    async (operation) => {
+      const { controller, abort, provider } = setup();
+      const request = operation === "find-text" ? { operation, query: "text" } : { operation };
+      expect(
+        (await controller.execute({ ...request, command: "unexpected" }, abort.signal)).isError,
+      ).toBe(true);
+      controller.setBlocked("locked", true);
+      expect((await controller.execute(request, abort.signal)).isError).toBe(true);
+      expect(provider.current).not.toHaveBeenCalled();
+      controller.setBlocked("locked", false);
+      const fixture = await provider.current(abort.signal);
+      let finish!: (value: typeof fixture) => void;
+      provider.current.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const pending = controller.execute(request, abort.signal);
+      controller.cancel();
+      finish(fixture);
+      const stopped = await pending;
+      expect(stopped.isError).toBe(true);
+      expect(JSON.stringify(stopped)).not.toContain("Useful page text");
+      expect(JSON.stringify(stopped)).not.toContain("example.com");
+    },
+  );
+
+  it("rejects malformed search queries at the privileged boundary", async () => {
+    const { controller, abort, provider } = setup();
+    for (const query of ["", "  ", 42, "x".repeat(201), null]) {
+      expect(
+        (await controller.execute({ operation: "find-text", query }, abort.signal)).isError,
+      ).toBe(true);
+    }
+    expect(provider.current).not.toHaveBeenCalled();
+  });
+
+  it("treats regex syntax literally and keeps Unicode match offsets aligned", () => {
+    expect(findWindowText("a.*b aZZb", "a.*b").matches).toEqual([
+      { offset: 0, excerpt: "a.*b aZZb" },
+    ]);
+    expect(findWindowText("İ 🐈 CAFÉ", "café").matches[0]?.offset).toBe(5);
+  });
   it("does not recapture a failed native source after relisting, but allows a new turn", async () => {
     const { controller, provider, abort, list, observe } = setup();
     provider.capture.mockRejectedValue(new Error("private native error"));

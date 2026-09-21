@@ -13,7 +13,7 @@ export const desktopRegionSchema = z
     "The region must fit inside the source.",
   );
 export type DesktopRegion = z.infer<typeof desktopRegionSchema>;
-export type DesktopReadMode = "all" | "selection" | "tabs";
+export type DesktopReadMode = "all" | "selection" | "tabs" | "page" | "controls";
 
 // Native IDs are kept behind expiring, opaque source IDs issued by the broker.
 export const desktopRequestSchema = z.discriminatedUnion("operation", [
@@ -33,6 +33,13 @@ export const desktopRequestSchema = z.discriminatedUnion("operation", [
   z.strictObject({ operation: z.literal("read"), sourceId: z.uuid() }),
   z.strictObject({ operation: z.literal("selection"), sourceId: z.uuid().optional() }),
   z.strictObject({ operation: z.literal("tabs"), sourceId: z.uuid().optional() }),
+  z.strictObject({ operation: z.literal("page"), sourceId: z.uuid().optional() }),
+  z.strictObject({ operation: z.literal("controls"), sourceId: z.uuid().optional() }),
+  z.strictObject({
+    operation: z.literal("find-text"),
+    sourceId: z.uuid().optional(),
+    query: z.string().trim().min(1).max(200),
+  }),
 ]);
 export type DesktopRequest = z.infer<typeof desktopRequestSchema>;
 export const desktopResultSchema = z.strictObject({
@@ -65,6 +72,8 @@ export interface DesktopWindowText {
   text: string;
   selectedText: string;
   tabs: string[];
+  pages?: { title: string; url?: string }[];
+  controls?: { role: string; name: string; enabled: boolean }[];
   truncated: boolean;
   unavailableReason?: string;
 }

@@ -4,6 +4,11 @@ The transparent cat is the app's character. Keep its full silhouette and origina
 The surrounding interface follows XP's desktop conventions: a compact messenger window, a
 Luna caption, Tahoma text, cream controls, inset white panes, and small colored toolbar icons.
 
+The app mark is an original pixel cat in a cream CRT monitor, shared by window captions,
+the taskbar, tray and Windows installer. [The generator](../scripts/generate-icons.mjs) writes
+the SVG, 256-pixel PNG and multi-size Windows ICO in assets; run `npm run icons:generate`
+after editing its pixel shapes. The desktop pet retains its original artwork. Reviewed 2026-09-20.
+
 ## Layout and copy
 
 - One conversation pane and one message box. No sidebar, dashboard cards, decorative scenery,
@@ -94,6 +99,10 @@ small document-plus icon. Actions (⋯), expand and close share that caption; th
 contextual microphone/send/stop icon. Hide the duplicate controls below the cat while the panel
 is open. History, Copy reply, full chat, model selection and voice settings live in the actions menu. Ctrl+N starts a new chat; Enter sends and Shift+Enter adds a line.
 Tool activity collapses to one named status line with failures; expand it to inspect the steps.
+Each step has a colored 16-pixel icon for its tool family and a separate labeled state.
+The summary shows the active tool, step count, failures and stopped work; reduced motion
+disables the running dot's pulse. Both chat views share this presentation. Reviewed 2026-09-20
+against [tool activity](../src/renderer/src/ToolActivity.tsx).
 During capture, the live preview lives in the reading pane, with only status and finish/cancel
 icons below it. Scrolling up pauses following streamed text; a floating Latest reply returns to
 the end. The top-left corner grip and top/left edges resize the panel toward the available desktop,

@@ -30,6 +30,7 @@ const pathSchema = z
   .refine((path) => !path.includes("\0"));
 
 export const desktopUtilitySchema = z.discriminatedUnion("action", [
+  z.strictObject({ action: z.literal("search-browser"), query: z.string().trim().min(1).max(600) }),
   z.strictObject({ action: z.literal("environment") }),
   z.strictObject({ action: z.literal("clipboard-read") }),
   z.strictObject({

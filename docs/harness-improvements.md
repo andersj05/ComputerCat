@@ -19,18 +19,19 @@ based on the inspected gaps, not measured comparative performance.
 
 | Area | Baseline finding | Result or next step |
 | --- | --- | --- |
-| Everyday desktop jobs | Even opening Downloads or copying an answer required generated shell commands | Implemented six narrow native tools below |
+| Everyday desktop jobs | Even opening Downloads or copying an answer required generated shell commands | Implemented seven native utilities, including browser search recovery |
 | Fresh environment | Static prompt lacked a dedicated current-time/standard-folder source | Implemented `desktop_get_environment` |
-| Public web research | No search results, page extraction or citation tools; visible browser text is incomplete | Implemented four tools: static page reading, pagination, text finding and optional Brave search with source metadata |
+| Public web research | No search results, page extraction or citation tools; visible browser text is incomplete | Implemented ten tools: keyless search with browser recovery, source comparison, links, metadata, feeds and cached text reading |
 | Browser interaction | Windows accessibility exposes some text/tabs, but cannot navigate or fill forms | Prototype a structured browser adapter with an explicit session/profile |
 | Native app interaction | Observation has source IDs but no actionable element identities | Evaluate a supervised driver with fresh window/element references |
 | Connections | Static tool-name union and intentionally empty Pi resource loader | Add configured, namespaced tools through a registry before general MCP support |
 | Personal continuity | Per-chat Pi history exists; no cross-chat selected-fact memory | Explicit save/list/update/delete of user-approved facts; no automatic screen history |
-| Reliability | Good cancellation/isolated fixtures, but no task-level model success measurements | Establish the evaluation set below before comparing drivers or prompts |
+| Reliability | Automated boundary coverage does not establish live-model task success | Implemented twelve repeated app tasks, scorecards and comparisons; live baseline still unmeasured |
 
 ## Implemented first increment
 
-The first increment grew the app from 15 to 21 tools; web research brings the full app to 25. The six desktop additions are
+The first increment grew the app from 15 to 21 tools. With focused context and expanded research,
+the app now has 35 tools: eight Pi, ten observations, seven utilities and ten web tools. Utilities are
 defined in [utility tools](../src/agent/desktop-utility-tools.ts), validated in the
 [shared contract](../src/shared/desktop-utilities.ts), executed by the
 [main service](../src/main/desktop/utilities.ts) and backed by
@@ -38,6 +39,7 @@ defined in [utility tools](../src/agent/desktop-utility-tools.ts), validated in 
 
 | Tool | Example request | Scope |
 | --- | --- | --- |
+| `desktop_search_browser` | “Search that account.” | Open a Google query in the default browser, then observe actual results; no key needed |
 | `desktop_get_environment` | “Where is my Downloads folder?” / “What date is it?” | Current local/UTC time, time zone, OS and named folder paths; no file/app scan |
 | `desktop_read_clipboard` | “Summarize the text I copied.” | Current plain text only, capped at 8,000 characters with truncation reported |
 | `desktop_write_clipboard` | “Copy that answer so I can paste it.” | Replace clipboard with up to 8,000 characters; no automatic paste |
@@ -121,6 +123,12 @@ No background collection, new credentials, package upgrade or paid API is introd
 
 ## Evaluation and completion criteria
 
+The [task evaluation workflow](task-evaluations.md) now implements twelve versioned cases with
+fresh per-attempt fixtures, outcome criteria, review history and before/after reports. Start with
+the four-case subset repeated three times in the actual app. The CLI only plans and scores human
+observations; it does not execute model trials. The table below also includes broader and future
+acceptance scenarios, not a claim that every row is in the initial twelve-case suite.
+
 Use owned synthetic apps/files/clipboard data. Record completion, incorrect side effects,
 tool-call count, elapsed time, retries and whether the answer matches the observed outcome.
 Keep deterministic boundary tests separate from optional, explicitly configured live-model
@@ -150,7 +158,7 @@ in-memory clipboard and inert launches; actual default-browser/file-manager beha
 live-model tool selection are not established by those fixtures.
 
 The utility and web increments were verified on 2026-09-20 with Node 24.12.0:
-`npm run verify` passed memory checks, lint, type checking, 332 tests and the production build;
-`npm run test:smoke` passed all 24 Electron checks. The 25-tool guide was visually inspected
+`npm run verify` passed memory checks, lint, type checking, 358 tests and the production build;
+`npm run test:smoke` passed all 29 Electron checks. The 35-tool guide was visually inspected
 at desktop and narrow widths. See [web validation and limitations](web-research.md) for the
-four-tool research flow, citation opening and final focused check.
+ten-tool research flow, browser recovery and citation checks.

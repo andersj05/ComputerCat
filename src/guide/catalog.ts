@@ -15,6 +15,78 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  web_get_status: {
+    title: "Check web capabilities",
+    purpose: "See which search routes and reading formats are available.",
+    returns: "Configured providers, browser fallback availability and tool limits.",
+    limit: "Configuration only; it does not test connectivity or reveal credentials.",
+  },
+  web_read_many: {
+    title: "Read several sources",
+    purpose: "Compare or corroborate up to three public sources together.",
+    returns:
+      "A separate page reference and 4,000-character excerpt per source, or its specific error.",
+    limit:
+      "The public-reader rules apply to every URL. Each read uses one of eight cached page slots.",
+  },
+  web_list_links: {
+    title: "Explore page links",
+    purpose: "Find a profile, related article, documentation or other relevant source link.",
+    returns: "20 links per page, optional title/URL filtering, stable indexes and pagination.",
+    limit:
+      "Up to 200 links retained from the cached static page. Links are not automatically visited.",
+  },
+  web_follow_link: {
+    title: "Follow a source link",
+    purpose: "Read a link already discovered on a relevant page.",
+    returns: "A fresh page reference, verified final URL and readable text.",
+    limit:
+      "Uses the public reader and validates redirects again. Does not click browser controls or submit forms.",
+  },
+  web_read_metadata: {
+    title: "Inspect source details",
+    purpose: "Check a page's description, author, dates, structure and available feeds.",
+    returns: "Available metadata, up to 40 headings and five RSS/Atom feed links.",
+    limit:
+      "These are claims by the source; missing values remain missing and do not prove identity or publication date.",
+  },
+  web_read_feed: {
+    title: "Read a news feed",
+    purpose: "Review recent articles from a known public RSS or Atom feed.",
+    returns: "Up to 20 entries with source links, dates and short descriptions.",
+    limit:
+      "Read the linked article for details. No subscription, background polling or attachment downloads.",
+  },
+  desktop_search_browser: {
+    title: "Search in your browser",
+    purpose: "Continue research without an API key when direct search is unavailable.",
+    returns:
+      "Dispatch status and the Google search URL; the cat must observe the browser to read results.",
+    limit:
+      "Changes browser focus. Does not prove the page loaded, read hidden tabs or bypass browser challenges.",
+  },
+  desktop_read_page: {
+    title: "Read page identity",
+    purpose: "Identify the document or find its source address without a screenshot.",
+    returns: "Up to eight exposed document titles, with HTTP/HTTPS URLs where supported.",
+    limit:
+      "These are accessibility candidates, not verified active-tab navigation. Some apps expose no URL. No browser history, hidden tabs or page body is read.",
+  },
+  desktop_list_controls: {
+    title: "Read app controls",
+    purpose: "Explain available buttons, fields, links and settings in an app.",
+    returns: "Up to sixty visible named controls, their roles and enabled states.",
+    limit:
+      "No field values or actionable handles. Does not click, focus or change controls. Coverage depends on the app.",
+  },
+  desktop_find_text: {
+    title: "Find text in an app",
+    purpose: "Locate an error, phrase or heading in a fresh window observation.",
+    returns:
+      "Up to five short matching excerpts and snapshot offsets, with source truncation and further-match flags.",
+    limit:
+      "Literal case-insensitive search of at most 12,000 exposed characters. Does not use the app's Find command, scroll or search hidden content.",
+  },
   web_read: {
     title: "Read a public web page",
     purpose: "Read a known URL without opening the browser.",
@@ -39,10 +111,11 @@ const descriptions = {
   },
   web_search: {
     title: "Search the public web",
-    purpose: "Find current sources through optional Brave Search.",
-    returns: "Up to five titles, URLs and snippets with retrieval time.",
+    purpose: "Find current sources without requiring an API key.",
+    returns:
+      "Up to five source links and snippets, or a browser-search dispatch that the cat must observe.",
     limit:
-      "Requires a separate configured API key. No paid development calls. Read a source page before relying on details; snippets are not full pages.",
+      "Tries configured Brave, keyless DuckDuckGo, then the default browser. Browser fallback changes focus and may require you to handle a challenge. Snippets are not full pages.",
   },
   desktop_get_environment: {
     title: "Get time and standard folders",
