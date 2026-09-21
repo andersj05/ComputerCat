@@ -29,8 +29,9 @@ open desktop apps, inspect saved credentials or read production conversation his
 
 This approach follows the separation of tasks, repeated trials, outcomes and graders described
 in [Anthropic's agent evaluation guidance](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
-The rubric is our product definition, not a claim of benchmarked agent quality. No live-model
-reliability baseline has been measured yet.
+The rubric is our product definition, not a claim of benchmarked agent quality. A
+[controlled-tool Luna baseline](evaluation-results/2026-09-20-luna-baseline.md) has been measured;
+a human-reviewed real-app/OS baseline remains unmeasured.
 
 For an automated local run using Luna/Medium and controlled tools, use the separate
 [live evaluation workflow](live-evaluations.md). The manual workflow below measures actual app/OS

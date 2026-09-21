@@ -4,8 +4,7 @@ Reviewed: 2026-09-20. Recheck tests.
 
 ## What exists
 
-Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
-[package.json](../../package.json) and [.node-version](../../.node-version).
+Pinned versions: [package.json](../../package.json), [.node-version](../../.node-version).
 
 - The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
@@ -24,6 +23,8 @@ Computer Cat uses Electron/React/TypeScript and Pi. Versions are pinned in
   Enabled models stay ready unless idle unload is selected. CPU portable/AVX2 only; no saved audio.
   Cat panel size/drafts persist during this run; New chat stays visible and secondary actions use ⋯.
   See the [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md).
+
+- [Luna evals](../live-evaluations.md) reuse the app's sign-in.
 
 ## Persistence boundaries
 

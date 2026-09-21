@@ -44,6 +44,10 @@ saved vault unreadable after the test app connects, then proves the real CLI sti
 active connection without a model call or credential change. A valid saved connection still
 needs server-side model entitlement and available usage; preflight alone cannot verify those.
 
+The [first repeated baseline](evaluation-results/2026-09-20-luna-baseline.md) passed 12/12 starter attempts.
+Run desktop smoke checks before live evaluations: the CLI rebuilds the app, and overlapping
+builds or extra cat windows can interfere with startup, pointer and focus checks.
+
 ## What is measured
 
 Luna runs through the production [Pi runtime](../src/agent/pi-runtime.ts), system prompt and all
