@@ -55,10 +55,10 @@ export function PetArtwork({
           id={`${id}-fur`}
           x="348"
           y="805"
-          width="428"
-          height="430"
+          width="96"
+          height="192"
           patternUnits="userSpaceOnUse"
-          viewBox="464 774 196 150"
+          viewBox="342 918 60 120"
           preserveAspectRatio="none"
         >
           <image href={catImage} width="1024" height="1536" />
@@ -78,7 +78,7 @@ export function PetArtwork({
               fill={`url(#${id}-fur)`}
               stroke="#45291e"
               strokeWidth="14"
-              d="M377 812H744V872H738V960H728V1046H722V1110H735V1158H752V1180H772V1230H375V1180H392V1158H405V1110H411V1046H402V960H386V872H377Z"
+              d="M377 812H744V872H738V960H728V1046H722V1110H735V1158H752V1180H765V1202H753V1218H739V1230H410V1218H389V1202H375V1180H392V1158H405V1110H411V1046H402V960H386V872H377Z"
             />
           </g>
           <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-body)`} />
@@ -138,25 +138,33 @@ export function PetArtwork({
             <g className="cat-blink cat-eye-left">
               <path
                 fill="#efbd73"
-                d="M398 507H412V489H439V478H476V489H490V509H504V565H490V590H424V578H410V552H398Z"
+                d="M386 505H399V488H411V474H487V484H503V506H516V551H525V579H510V594H484V608H423V595H406V580H393V551H386Z"
               />
               <path
                 fill="none"
                 stroke="#75452c"
                 strokeWidth="12"
-                d="M413 547L439 558H478L496 547"
+                d={
+                  activity === "happy"
+                    ? "M413 555L434 543H476L496 555"
+                    : "M413 547L439 558H478L496 547"
+                }
               />
             </g>
             <g className="cat-blink cat-eye-right">
               <path
                 fill="#efbd73"
-                d="M628 515H641V499H657V488H699V499H714V515H729V563H714V589H648V576H635V550H628Z"
+                d="M612 516H625V499H638V484H713V498H730V521H744V579H730V599H702V609H650V596H634V581H621V554H612Z"
               />
               <path
                 fill="none"
                 stroke="#75452c"
                 strokeWidth="12"
-                d="M640 550L661 561H700L721 550"
+                d={
+                  activity === "happy"
+                    ? "M640 558L661 546H700L721 558"
+                    : "M640 550L661 561H700L721 550"
+                }
               />
             </g>
             <g className="cat-mouth" shapeRendering="crispEdges">

@@ -48,8 +48,9 @@ animation library, network resource or additional preference to synchronize.
 
 [PetArtwork](../src/renderer/src/PetArtwork.tsx) shares one local image between clipped layers.
 Overlapping shoulders, a tapered warm-fur backing and a generous neck overlap cover cuts as paws
-and head move. The backing samples orange shoulder fur so an inward paw does not expose a wide,
-cream rectangle. Blinks use brief discrete closures; closed speech beats restore the original
+and head move. The backing tiles orange arm fur at a similar pixel scale so an inward paw does
+not expose a wide, cream rectangle. Eyelids cover the entire pupil, with upward creases for a
+happy expression. Blinks use brief discrete closures; closed speech beats restore the original
 mouth instead of compressing an overlaid mouth into a line. The boots never transform. Pixel
 props use the same warm outline palette.
 [Motion CSS](../src/renderer/src/pet-motion.css) owns each activity's static pose and animation.
