@@ -3,6 +3,12 @@ import type { ToolActivity as Activity } from "../../shared/tools";
 import { Icon, type IconName } from "./Icon";
 
 const TOOL_ICONS: Record<Activity["name"], IconName> = {
+  desktop_inspect: "desktop",
+  desktop_click: "options",
+  desktop_fill: "file",
+  desktop_type_text: "file",
+  desktop_press_key: "options",
+  desktop_scroll: "desktop",
   web_get_status: "options",
   web_read_many: "web",
   web_list_links: "tabs",
@@ -41,6 +47,12 @@ const TOOL_ICONS: Record<Activity["name"], IconName> = {
 };
 
 export const TOOL_LABELS: Record<Activity["name"], string> = {
+  desktop_inspect: "Inspect app controls",
+  desktop_click: "Activate app control",
+  desktop_fill: "Fill app field",
+  desktop_type_text: "Type into app editor",
+  desktop_press_key: "Press key in app",
+  desktop_scroll: "Scroll app region",
   web_get_status: "Check web capabilities",
   web_read_many: "Read several sources",
   web_list_links: "Explore page links",

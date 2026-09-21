@@ -15,6 +15,7 @@ import type { ChatMessage } from "../shared/contracts";
 import type { DesktopExecutor } from "../shared/desktop";
 import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../shared/tools";
 import type { WebExecutor } from "../shared/web";
+import { createComputerTools } from "./computer-tools";
 import type { RuntimeConfig } from "./config";
 import { createDesktopTools } from "./desktop-tools";
 import { createDesktopUtilityTools } from "./desktop-utility-tools";
@@ -140,6 +141,7 @@ export async function createPiRuntime(
     ...(desktop
       ? [
           ...createDesktopTools(desktop, model.input.includes("image")),
+          ...createComputerTools(desktop),
           ...createDesktopUtilityTools(desktop),
         ]
       : []),

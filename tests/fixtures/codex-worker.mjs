@@ -70,6 +70,54 @@ globalThis.fetch = async (url, options) => {
     typeof entry.output === "string"
       ? entry.output
       : entry.output.find((part) => part.type === "input_text")?.text;
+  const computerRequested = userText.includes("computer-fixture:draft");
+  const computerResult = (stage) =>
+    body.input.find(
+      (entry) =>
+        entry.type === "function_call_output" && entry.call_id === `offline-computer-${stage}`,
+    );
+  const computerState = (stage) => {
+    const result = computerResult(stage);
+    if (!result) return undefined;
+    const data = JSON.parse(outputText(result));
+    return data.observation ?? data;
+  };
+  const firstInspection = computerState("inspect");
+  const recoveryInspection = computerState("recover");
+  const computerSteps = [
+    { stage: "inspect", name: "desktop_inspect", args: {} },
+    {
+      stage: "subject",
+      name: "desktop_fill",
+      args: {
+        observationId: firstInspection?.observationId,
+        elementId: "e2",
+        text: "Friday review",
+      },
+    },
+    {
+      stage: "stale",
+      name: "desktop_fill",
+      args: {
+        observationId: firstInspection?.observationId,
+        elementId: "e3",
+        text: "Stale write must fail",
+      },
+    },
+    { stage: "recover", name: "desktop_inspect", args: {} },
+    {
+      stage: "body",
+      name: "desktop_fill",
+      args: {
+        observationId: recoveryInspection?.observationId,
+        elementId: "e3",
+        text: "Hi Robin,\nCan we review the design on Friday?",
+      },
+    },
+  ];
+  const computerStep = computerRequested
+    ? computerSteps.find((step) => !computerResult(step.stage))
+    : undefined;
   const webPage = webResult("read") ? JSON.parse(outputText(webResult("read"))) : undefined;
   const browserRecovery = webTurns.at(-1)?.includes("browser-recovery");
   const webSteps = browserRecovery
@@ -104,47 +152,55 @@ globalThis.fetch = async (url, options) => {
         { stage: "feed", name: "web_read_feed", args: { url: "https://example.com/feed.xml" } },
       ];
   const webStep = webTurns.length ? webSteps.find((step) => !webResult(step.stage)) : undefined;
-  const needsTool = webStep || needsUtility || needsRead || needsDesktop;
+  const needsTool = computerStep || webStep || needsUtility || needsRead || needsDesktop;
   const desktopText = desktopResult
     ? typeof desktopResult.output === "string"
       ? desktopResult.output
       : JSON.stringify(desktopResult.output)
     : undefined;
   const replyText =
-    webTurns.length && !webStep
-      ? browserRecovery
-        ? "Offline browser recovery observed."
-        : "Offline web research complete: [Fixture web guide](https://example.com/guide)."
-      : utilityResult
-        ? `Offline utility result: ${typeof utilityResult.output === "string" ? utilityResult.output : JSON.stringify(utilityResult.output)}`
-        : desktopText
-          ? `Offline desktop result: ${desktopText}`
-          : "Offline Codex reply.";
+    computerRequested && !computerStep
+      ? `Offline computer draft verified: ${outputText(computerResult("body"))}. Stale attempt: ${outputText(computerResult("stale"))}`
+      : webTurns.length && !webStep
+        ? browserRecovery
+          ? "Offline browser recovery observed."
+          : "Offline web research complete: [Fixture web guide](https://example.com/guide)."
+        : utilityResult
+          ? `Offline utility result: ${typeof utilityResult.output === "string" ? utilityResult.output : JSON.stringify(utilityResult.output)}`
+          : desktopText
+            ? `Offline desktop result: ${desktopText}`
+            : "Offline Codex reply.";
   const item = needsTool
     ? {
         id: "offline-tool-call",
         type: "function_call",
-        call_id: webStep
-          ? `${webId}-${webStep.stage}`
-          : needsUtility
-            ? utilityCallId
-            : needsRead
-              ? "offline-read"
-              : desktopCallId,
-        name: webStep
-          ? webStep.name
-          : needsUtility
-            ? utility.name
-            : needsRead
-              ? "read"
-              : "desktop_observe",
-        arguments: webStep
-          ? JSON.stringify(webStep.args)
-          : needsUtility
-            ? JSON.stringify(utility.args)
-            : needsRead
-              ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
-              : "{}",
+        call_id: computerStep
+          ? `offline-computer-${computerStep.stage}`
+          : webStep
+            ? `${webId}-${webStep.stage}`
+            : needsUtility
+              ? utilityCallId
+              : needsRead
+                ? "offline-read"
+                : desktopCallId,
+        name: computerStep
+          ? computerStep.name
+          : webStep
+            ? webStep.name
+            : needsUtility
+              ? utility.name
+              : needsRead
+                ? "read"
+                : "desktop_observe",
+        arguments: computerStep
+          ? JSON.stringify(computerStep.args)
+          : webStep
+            ? JSON.stringify(webStep.args)
+            : needsUtility
+              ? JSON.stringify(utility.args)
+              : needsRead
+                ? JSON.stringify({ path: JSON.parse(readLine.slice("read-fixture:".length)) })
+                : "{}",
         status: "completed",
       }
     : {
