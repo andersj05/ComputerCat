@@ -475,8 +475,27 @@ test("cat activities follow real snapshots, interrupt completion, and preserve m
           .every((animation) => animation.playState === "paused"),
       ),
     ).toBe(true);
+    // A new pose during a drag must freeze its interpolation as well as its loops.
+    await publish(base, { phase: "finalizing" });
+    await expect(art).toHaveAttribute("data-activity", "transcribing");
+    const heldPose = await pet.locator(".cat-head-pose").evaluate((element) => {
+      const transitions = element.getAnimations();
+      return {
+        transform: getComputedStyle(element).transform,
+        paused:
+          transitions.length > 0 && transitions.every((motion) => motion.playState === "paused"),
+      };
+    });
+    expect(heldPose.paused).toBe(true);
+    await pet.waitForTimeout(100);
+    await expect(pet.locator(".cat-head-pose")).toHaveCSS("transform", heldPose.transform);
     await pet.mouse.up();
     await expect(pet.locator(".pet-wrap")).toHaveAttribute("data-motion-paused", "false");
+    await expect
+      .poll(() =>
+        pet.locator(".cat-head-pose").evaluate((element) => element.getAnimations().length),
+      )
+      .toBe(0);
     // Playwright's own CDP session forces visibility, including for hidden Electron windows.
     // Exercise the Page Visibility boundary explicitly; native hide/show is checked separately.
     await pet.evaluate(() => {
@@ -534,6 +553,75 @@ test("activity preview stays local and all poses support staged and reduced moti
     ).toMatchObject({ chat: { busy: false, messages: [] }, voice: { phase: "idle" } });
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(pet.locator(".pet-wrap")).toHaveClass(/animated/);
+  } finally {
+    await electron.close();
+    await removeTestData(userData);
+  }
+});
+
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture argument.
+test("cat poses interpolate without moving the boots and speech rests on the original face", async ({}) => {
+  const userData = await mkdtemp(join(tmpdir(), "computercat-smoke-"));
+  const electron = await launch(userData);
+  try {
+    const { page } = await windows(electron);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.getByRole("button", { name: "Options…", exact: true }).click();
+    await page.getByRole("tab", { name: "Desktop cat", exact: true }).click();
+    const preview = page.locator(".preview-surface .pet-art");
+    const boots = await preview.locator(".cat-boots").boundingBox();
+    // Catch the real transition at its start so this check does not race its 360ms duration.
+    await preview.locator(".cat-head-pose").evaluate((element) => {
+      element.addEventListener(
+        "transitionrun",
+        () => {
+          for (const motion of element.getAnimations()) motion.pause();
+        },
+        { once: true },
+      );
+    });
+    await page.getByLabel("Preview activity", { exact: true }).selectOption("listening");
+    await expect
+      .poll(() =>
+        preview
+          .locator(".cat-head-pose")
+          .evaluate((element) =>
+            element.getAnimations().some((motion) => motion.playState === "paused"),
+          ),
+      )
+      .toBe(true);
+    const frames = await preview.locator(".cat-head-pose").evaluate((element) => {
+      const transition = element.getAnimations()[0];
+      if (!transition?.effect) throw new Error("Missing pose transition");
+      const duration = Number(transition.effect.getTiming().duration);
+      return [0, duration / 2, duration].map((time) => {
+        transition.currentTime = time;
+        return getComputedStyle(element).transform;
+      });
+    });
+    expect(new Set(frames).size).toBe(3);
+    expect(await preview.locator(".cat-boots").boundingBox()).toEqual(boots);
+    await page.getByLabel("Preview activity", { exact: true }).selectOption("replying");
+    const mouthFrames = await preview.locator(".cat-mouth").evaluate((element) => {
+      const motion = element.getAnimations()[0];
+      if (!motion?.effect) throw new Error("Missing speech animation");
+      motion.pause();
+      const duration = Number(motion.effect.getTiming().duration);
+      return [0, duration * 0.15, duration * 0.35].map((time) => {
+        motion.currentTime = time;
+        return getComputedStyle(element).opacity;
+      });
+    });
+    expect(mouthFrames).toEqual(["0", "1", "0"]);
+    await page.getByRole("checkbox", { name: "Animate cat" }).uncheck();
+    expect(
+      await preview.evaluate((element) => element.getAnimations({ subtree: true }).length),
+    ).toBe(0);
+    await expect(preview.locator(".cat-mouth")).toHaveCSS("opacity", "0");
+    await page.getByLabel("Preview activity", { exact: true }).selectOption("thinking");
+    expect(
+      await preview.evaluate((element) => element.getAnimations({ subtree: true }).length),
+    ).toBe(0);
   } finally {
     await electron.close();
     await removeTestData(userData);

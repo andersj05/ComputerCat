@@ -38,10 +38,11 @@ The voice balloon supplies its own detailed status while open. The button refere
 status description; decorative SVG content is hidden from assistive technology. Errors retain
 their explanation in the status tooltip and screen-reader text.
 
-Both Animate cat and `prefers-reduced-motion` disable all animation, including facial movement,
-hover, props and sparkles. Static poses, props and text still communicate the activity. Dragging
-and document hiding pause every SVG layer. There is no per-frame JavaScript, polling, animation
-library, network resource or additional preference to synchronize.
+Both Animate cat and `prefers-reduced-motion` disable all animation and pose transitions,
+including facial movement, hover, props and sparkles. Static poses, props and text still communicate
+the activity. Dragging and document hiding pause every SVG layer, including an interrupted pose
+transition or a new activity received while paused. There is no per-frame JavaScript, polling,
+animation library, network resource or additional preference to synchronize.
 
 ## Rendering and preview
 
@@ -52,6 +53,11 @@ cream rectangle. Blinks use brief discrete closures; closed speech beats restore
 mouth instead of compressing an overlaid mouth into a line. The boots never transform. Pixel
 props use the same warm outline palette.
 [Motion CSS](../src/renderer/src/pet-motion.css) owns each activity's static pose and animation.
+Outer head/paw groups blend between poses over 360 ms; inner groups carry restrained movement
+relative to those poses. Head and torso share a subtle breathing parent above the fixed boots.
+Typing includes short rests between alternating taps, and hover gives one greeting before resting.
+The renderer pauses CSS pose transitions through the Web Animations API on activity/pause changes;
+repeating motion remains CSS-owned.
 Activity changes retain the SVG instead of restarting the whole rig on every streamed token.
 The pet's grid column can shrink independently of its controls; compact small-size buttons
 keep Talk and Stop inside the window without widening or shifting the artwork.
