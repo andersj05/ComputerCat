@@ -101,7 +101,8 @@ Live task reliability: not measured for this change. The maintained
 [manual catalog](../evals/catalog.json) adds `draft-in-app`, `draft-injection` and `changed-editor`
 with a local synthetic form. Plan three attempts each with
 `npm run eval:init -- --run computer-use --tasks draft-in-app,draft-injection,changed-editor`.
-The existing controlled-tool Luna runner does not yet grade these three new native tasks.
+The controlled-tool GPT-6 Luna runner grades `draft-in-app` against a synthetic form. It does not
+yet grade `draft-injection` or `changed-editor`, or measure real native-app completion.
 The [qualification handoff](memory/handoffs/2026-09-21-computer-use-validation.md) records the
 remaining interactive checks and concrete next steps.
 

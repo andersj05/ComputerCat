@@ -33,7 +33,7 @@ The rubric is our product definition, not a claim of benchmarked agent quality. 
 [controlled-tool Luna baseline](evaluation-results/2026-09-20-luna-baseline.md) has been measured;
 a human-reviewed real-app/OS baseline remains unmeasured.
 
-For an automated local run using Luna/Medium and controlled tools, use the separate
+For an automated local run using GPT-6 Luna/Medium and controlled tools, use the separate
 [live evaluation workflow](live-evaluations.md). The manual workflow below measures actual app/OS
 outcomes; its grades and environment cannot be mixed with controlled-fixture measurements.
 
@@ -54,7 +54,7 @@ Omit `--tasks` to plan all fifteen cases, **45 attempts**. `--repeats` accepts 1
 value on both sides of a comparison. In noninteractive scripts supply all metadata explicitly:
 
 ```sh
-npm run eval:init -- --run baseline --connection codex --model gpt-5.6-sol --reasoning medium --environment "YOUR Windows/browser versions; keyless search" --tasks screen-summary,account-followup,clipboard-copy,partial-source-failure --repeats 3
+npm run eval:init -- --run baseline --connection codex --model gpt-6-luna --reasoning medium --environment "YOUR Windows/browser versions; keyless search" --tasks screen-summary,account-followup,clipboard-copy,partial-source-failure --repeats 3
 ```
 
 The model above is an example; use the model you intend to measure. No credentials are supplied

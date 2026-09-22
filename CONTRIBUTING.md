@@ -60,7 +60,7 @@ observations; it never invokes models. Generated runs stay in ignored `.local/ev
 An unmeasured change must say `Live task reliability: not measured` and explain the gap; passing
 scripted Pi tests is not a live-model success rate. Pure visual changes need visual/smoke evidence,
 not unrelated model trials. Normal CI validates both task catalogs and scorers offline.
-Use the [Luna/Medium live runner](docs/live-evaluations.md) for automated local harness comparisons;
+Use the [GPT-6 Luna/Medium live runner](docs/live-evaluations.md) for automated local harness comparisons;
 label its controlled-tool scope and retain actual-app spot checks for OS/browser behavior.
 Run verify → desktop smoke → live evaluations sequentially. The live command rebuilds the app;
 keep extra cat windows closed during desktop smoke checks, then leave the app open for model trials.
