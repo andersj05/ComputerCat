@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import type { ComputerSnapshot } from "../../src/shared/computer-use";
+import type { ComputerAction, ComputerSnapshot } from "../../src/shared/computer-use";
 import { findControl as find, test } from "../fixtures/input-test";
 
 test("browser draft events and dense control discovery", async ({
@@ -94,4 +94,112 @@ test("browser draft events and dense control discovery", async ({
   const opened = await input.act(searched, reply, { kind: "click", elementId: "e1" }, signal);
   expect(opened.status, opened.reason).toBe("dispatched");
   await expect(page.locator("#status")).toHaveText("Reply opened, unsent");
+});
+
+for (const editor of [
+  { name: "Subject", selector: "#subject", replacement: "Friday — Café 🐈 金曜日" },
+  { name: "Message body", selector: "#body", replacement: "First\r\nSecond\rThird\nCafé 🐈" },
+  { name: "Rich message", selector: "#rich", replacement: "First\r\nSecond\rThird\nCafé 🐈" },
+]) {
+  test(`browser replaces, selects, types and clears ${editor.name}`, async ({
+    input,
+    ownedBrowser: browser,
+  }) => {
+    test.setTimeout(90_000);
+    const { page, source } = browser;
+    const signal = new AbortController().signal;
+    const field = page.locator(editor.selector);
+    // Seed an existing user draft without exercising the adapter or firing input events.
+    await field.evaluate((node) => {
+      if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)
+        node.value = "Existing user draft";
+      else node.innerHTML = "<p>Existing <b>rich</b> draft</p><p>Second paragraph</p>";
+    });
+    const value = () => (editor.selector === "#rich" ? field.innerText() : field.inputValue());
+    const events = () => page.evaluate(() => Reflect.get(window, "inputEvents") as string[]);
+    const invariant = async () => {
+      await expect(page.locator("#recipient")).toHaveValue("robin@example.com");
+      await expect(page.locator("#status")).toHaveText("Unsent");
+      expect(await page.evaluate(() => Reflect.get(window, "enterKeys"))).toBe(0);
+      expect((await events()).every((id) => id === editor.selector.slice(1))).toBe(true);
+    };
+    const act = async (action: ComputerAction) => {
+      const before = await value();
+      const beforeEvents = await events();
+      const state = await input.inspect(source, signal);
+      const outcome = await input.act(state, find(state, editor.name), action, signal);
+      if (
+        process.env.COMPUTERCAT_REQUIRE_NATIVE_FOCUS !== "1" &&
+        outcome.status === "rejected" &&
+        outcome.reason === "focus" &&
+        state.foreground !== state.windowHandle
+      ) {
+        expect(await value()).toBe(before);
+        expect(await events()).toEqual(beforeEvents);
+        test.info().annotations.push({
+          type: "native-input-coverage",
+          description: `Windows denied focus for ${editor.name}; ${action.kind} and subsequent editing steps were not exercised.`,
+        });
+        await invariant();
+        return false;
+      }
+      expect(outcome.status, `${action.kind}: ${outcome.reason}`).toBe("dispatched");
+      expect(outcome.snapshot).toBeDefined();
+      await invariant();
+      return true;
+    };
+    const normalized = editor.replacement.replace(/\r\n?|\n/g, "\n");
+    if (!(await act({ kind: "fill", elementId: "e1", text: editor.replacement }))) return;
+    await expect.poll(value).toBe(normalized);
+    expect((await events()).length).toBeGreaterThan(0);
+    const filledEvents = await events();
+    if (!(await act({ kind: "key", elementId: "e1", key: "Control+A" }))) return;
+    expect(await value()).toBe(normalized);
+    expect(await events()).toEqual(filledEvents);
+    const selected = await field.evaluate((node) => {
+      if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)
+        return node.value.slice(node.selectionStart ?? 0, node.selectionEnd ?? 0);
+      return window.getSelection()?.toString() ?? "";
+    });
+    expect(selected).toBe(normalized);
+    if (!(await act({ kind: "type", elementId: "e1", text: "Replacement café 🐈 金曜日" }))) return;
+    await expect.poll(value).toBe("Replacement café 🐈 金曜日");
+    expect((await events()).length).toBeGreaterThan(filledEvents.length);
+    const typedEvents = await events();
+    if (!(await act({ kind: "fill", elementId: "e1", text: "" }))) return;
+    if (editor.selector === "#rich") {
+      // Chromium keeps a caret <br> after deleting all rich text. It contributes
+      // an innerText newline but no text content; do not trim away leftover user text.
+      await expect.poll(() => field.textContent()).toBe("");
+      expect(await value()).toMatch(/^\n?$/);
+    } else await expect.poll(value).toBe("");
+    expect((await events()).length).toBeGreaterThan(typedEvents.length);
+    await invariant();
+  });
+}
+
+test("browser rejects a replaced DOM control without touching its replacement", async ({
+  input,
+  ownedBrowser: browser,
+}) => {
+  const { page, source } = browser;
+  const signal = new AbortController().signal;
+  const state = await input.inspect(source, signal);
+  await page.locator("#subject").evaluate((node) => {
+    const replacement = node.cloneNode(true) as HTMLInputElement;
+    replacement.value = "User replacement";
+    node.replaceWith(replacement);
+  });
+  expect(
+    await input.act(
+      state,
+      find(state, "Subject"),
+      { kind: "fill", elementId: "e1", text: "must not overwrite" },
+      signal,
+    ),
+  ).toMatchObject({ status: "rejected", reason: "stale" });
+  await expect(page.locator("#subject")).toHaveValue("User replacement");
+  await expect(page.locator("#recipient")).toHaveValue("robin@example.com");
+  await expect(page.locator("#status")).toHaveText("Unsent");
+  expect(await page.evaluate(() => Reflect.get(window, "inputEvents"))).toEqual([]);
 });

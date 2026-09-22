@@ -23,6 +23,9 @@ always-on-top apps that could obscure the fixtures. Do not type or switch window
 The test never overrides Windows foreground restrictions. A VM needs an unlocked, active
 interactive desktop; a service or disconnected remote session is not keyboard qualification.
 
+Use `--grep` for a focused scenario subset; qualification applies only to the selected roster,
+not the full matrix. The report lists every selected scenario.
+
 For more samples, use `npm run test:computer-use:lab -- --repeat-each=10`. The fixture matrix is
 selected in [the lab configuration](../computer-use.config.ts). No application build is needed.
 For a full application check, also run `npm run verify` and `npm run test:smoke` sequentially.
@@ -46,7 +49,7 @@ mode before packaging and uploads reports even when the check fails. Ordinary
 | Fixture | Observable success and regression checks |
 | --- | --- |
 | WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls; separate resize, rename, disable and hide/recovery cases; empty replacement and native read-only refusal |
-| Chromium form | Subject, multiline textarea and existing contenteditable replacement; actual input events; no plain Enter; unchanged recipient; unsent draft; finding/clicking a nested Reply after seventy toolbar controls |
+| Chromium form | Subject, multiline textarea and existing contenteditable replacement; CRLF/CR/LF normalization; Control+A selection, Unicode insertion and empty replacement per editor; actual input events; replaced DOM control rejection; no plain Enter; unchanged recipient; unsent draft; finding/clicking a nested Reply after seventy toolbar controls |
 | Offline boundary tests | Consumed/expired/cross-turn references, cancellation and process ownership, invalid requests, provider errors, ambiguous outcomes; included in `npm run verify` |
 
 The shared [fixture lifecycle](../tests/fixtures/input-test.ts) creates fresh owned windows per
@@ -56,6 +59,9 @@ The [native fixture](../tests/smoke/computer-input.spec.ts) and
 [browser fixture](../tests/smoke/browser-input.spec.ts) use application state to check success.
 Playwright reads the owned browser DOM as an independent oracle; edits being measured go
 through WindowsInput, not Playwright typing. Its focus emulation does not prove native focus.
+Reviewed 2026-09-22: an emptied Chromium contenteditable retains a caret line break. The
+[editing oracle](../tests/smoke/browser-input.spec.ts) checks exact empty text content and at most
+one placeholder line, while checking actual input events; it does not trim leftover user text.
 The synthetic Send button only changes fixture state; no message can leave these forms.
 
 ## Read and compare measurements
