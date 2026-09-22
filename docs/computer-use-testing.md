@@ -16,9 +16,9 @@ npm ci
 npm run test:computer-use:lab
 ```
 
-This runs every selected scenario three times, serially, with no retries. It requires actual keyboard
-dispatch and verified values/events. Strict runs return a failing exit code when coverage is
-skipped or incomplete. Leave the desktop idle while it runs; minimize other
+The full matrix has eleven scenarios: six native and five Chromium, each repeated three times
+(33 attempts), serially and without retries. It requires actual keyboard dispatch and verified
+values/events. Strict runs return a failing exit code when coverage is skipped or incomplete. Leave the desktop idle while it runs; minimize other
 always-on-top apps that could obscure the fixtures. Do not type or switch windows during a run.
 The test never overrides Windows foreground restrictions. A VM needs an unlocked, active
 interactive desktop; a service or disconnected remote session is not keyboard qualification.
@@ -73,8 +73,9 @@ and `report.md`. The reporter saves progress after each completed attempt and re
 failure/interruption status. Version-2 reports retain the exact planned test roster, retries,
 per-attempt coverage gaps and sanitized reporting errors. Duplicate/missing attempts, missing or
 invalid attachments, and missing/out-of-order helper markers fail evidence validation in both modes.
-Diagnostic mode permits only asserted focus refusals with a recorded coverage gap; it never qualifies. An abruptly killed process may leave a `running` report, which
-cannot qualify. Playwright diagnostics remain in `test-results/computer-use-lab/`.
+Diagnostic mode permits only asserted focus refusals with a recorded coverage gap; it never qualifies.
+An abruptly killed process may leave a `running` report, which cannot qualify. Playwright diagnostics
+remain in `test-results/computer-use-lab/`.
 Reports contain synthetic operation labels and timing/environment metadata, never screenshots,
 editor contents, credentials or native handles. Generated files are ignored by Git.
 
@@ -90,8 +91,8 @@ The [recorder](../tests/fixtures/owned-input.ts) uses a monotonic clock for:
   there is no discarded warm-up or persistent-process measurement.
 
 The summary gives p50/p95 using nearest-rank percentiles. Only observed/dispatched calls from
-attempts that pass all assertions contribute to successful latency. Expected stale rejections
-and focus refusals remain visible as outcome counts. This prevents a fast refusal or an
+attempts that pass all assertions contribute to successful latency. Expected stale, unavailable
+and unsupported rejections and focus refusals remain visible as outcome counts. This prevents a fast refusal or an
 incorrect edit from looking like an optimization. The test oracle's own polling and fixture
 startup are outside adapter latency and included in overall attempt duration.
 
