@@ -18,7 +18,7 @@ import { measurementSchema } from "./schema";
 function identity(test: TestCase) {
   return {
     id: test.id,
-    scenario: `${relative(process.cwd(), test.location.file).replaceAll("\\", "/")}: ${test.titlePath().slice(1).join(" > ")}`,
+    scenario: `${relative(process.cwd(), test.location.file).replaceAll("\\", "/")}: ${test.titlePath().filter(Boolean).slice(1).join(" > ")}`,
     repeat: test.repeatEachIndex,
   };
 }
@@ -79,6 +79,7 @@ export default class ComputerUseReporter implements Reporter {
         ]),
         fixtures: hash([
           "tests/fixtures/owned-input.ts",
+          "tests/fixtures/input-test.ts",
           "tests/fixtures/owned-window.ts",
           "tests/fixtures/computer-input.ps1",
           "tests/fixtures/browser-editor.mjs",

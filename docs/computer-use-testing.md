@@ -16,7 +16,7 @@ npm ci
 npm run test:computer-use:lab
 ```
 
-This runs both scenarios three times, serially, with no retries. It requires actual keyboard
+This runs every selected scenario three times, serially, with no retries. It requires actual keyboard
 dispatch and verified values/events. Strict runs return a failing exit code when coverage is
 skipped or incomplete. Leave the desktop idle while it runs; minimize other
 always-on-top apps that could obscure the fixtures. Do not type or switch windows during a run.
@@ -45,9 +45,12 @@ mode before packaging and uploads reports even when the check fails. Ordinary
 
 | Fixture | Observable success and regression checks |
 | --- | --- |
-| WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls |
+| WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls; separate resize, rename, disable and hide/recovery cases; empty replacement and native read-only refusal |
 | Chromium form | Subject, multiline textarea and existing contenteditable replacement; actual input events; no plain Enter; unchanged recipient; unsent draft; finding/clicking a nested Reply after seventy toolbar controls |
 | Offline boundary tests | Consumed/expired/cross-turn references, cancellation and process ownership, invalid requests, provider errors, ambiguous outcomes; included in `npm run verify` |
+
+The shared [fixture lifecycle](../tests/fixtures/input-test.ts) creates fresh owned windows per
+scenario and always attaches measurements and closes child processes, including after assertions fail.
 
 The [native fixture](../tests/smoke/computer-input.spec.ts) and
 [browser fixture](../tests/smoke/browser-input.spec.ts) use application state to check success.
