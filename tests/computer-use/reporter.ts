@@ -88,6 +88,7 @@ export default class ComputerUseReporter implements Reporter {
           "tests/computer-use/metrics.ts",
           "tests/computer-use/schema.ts",
           "tests/computer-use/reporter.ts",
+          "tests/computer-use/setup.ts",
           "computer-use.config.ts",
         ]),
       },

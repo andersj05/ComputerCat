@@ -18,7 +18,9 @@ npm run test:computer-use:lab
 
 The full matrix has twelve scenarios: seven native and five Chromium, each repeated three times
 (36 attempts), serially and without retries. It requires actual keyboard dispatch and verified
-values/events. Strict runs return a failing exit code when coverage is skipped or incomplete. Leave the desktop idle while it runs; minimize other
+values/events. A startup guard rejects CLI/project overrides that enable multiple workers or
+retries before opening any fixture windows. Strict runs return a failing exit code when coverage
+is skipped or incomplete. Leave the desktop idle while it runs; minimize other
 always-on-top apps that could obscure the fixtures. Do not type or switch windows during a run.
 The test never overrides Windows foreground restrictions. A VM needs an unlocked, active
 interactive desktop; a service or disconnected remote session is not keyboard qualification.

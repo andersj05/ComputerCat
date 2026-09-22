@@ -8,6 +8,7 @@ process.env.COMPUTERCAT_REQUIRE_NATIVE_FOCUS = mode === "strict" ? "1" : "0";
 export default defineConfig({
   testDir: "tests/smoke",
   testMatch: ["computer-input.spec.ts", "browser-input.spec.ts"],
+  globalSetup: "./tests/computer-use/setup.ts",
   fullyParallel: false,
   workers: 1,
   repeatEach: 3,
