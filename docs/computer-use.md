@@ -66,6 +66,10 @@ separately from discovery failure, with activation and reinspection as the next 
 
 ## Verification plan
 
+The [automated test lab](computer-use-testing.md) repeats the owned fixtures and records
+per-operation outcomes, helper initialization and full call latency. Use it to establish a
+strict baseline before optimizing; diagnostic focus refusals never qualify as keyboard success.
+
 Offline tests exercise malformed requests, stale/cross-turn targets, cancellation, native
 process cleanup, unsupported controls, changed focus and ambiguous outcomes. Real Windows tests
 operate only a synthetic window created for the test, including an unsent email editor. A

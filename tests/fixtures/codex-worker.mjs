@@ -114,6 +114,39 @@ globalThis.fetch = async (url, options) => {
         text: "Hi Robin,\nCan we review the design on Friday?",
       },
     },
+    {
+      stage: "select",
+      name: "desktop_press_key",
+      args: {
+        observationId: computerState("body")?.observationId,
+        elementId: "e3",
+        key: "Control+A",
+      },
+    },
+    {
+      stage: "replace",
+      name: "desktop_type_text",
+      args: {
+        observationId: computerState("select")?.observationId,
+        elementId: "e3",
+        text: "Hi Robin,\nFriday works. Café 🐈",
+      },
+    },
+    {
+      stage: "scroll",
+      name: "desktop_scroll",
+      args: {
+        observationId: computerState("replace")?.observationId,
+        elementId: "e6",
+        direction: "down",
+        amount: "large",
+      },
+    },
+    {
+      stage: "save",
+      name: "desktop_click",
+      args: { observationId: computerState("scroll")?.observationId, elementId: "e5" },
+    },
   ];
   const computerStep = computerRequested
     ? computerSteps.find((step) => !computerResult(step.stage))
@@ -160,7 +193,7 @@ globalThis.fetch = async (url, options) => {
     : undefined;
   const replyText =
     computerRequested && !computerStep
-      ? `Offline computer draft verified: ${outputText(computerResult("body"))}. Stale attempt: ${outputText(computerResult("stale"))}`
+      ? `Offline computer draft verified: ${outputText(computerResult("save"))}. Stale attempt: ${outputText(computerResult("stale"))}`
       : webTurns.length && !webStep
         ? browserRecovery
           ? "Offline browser recovery observed."

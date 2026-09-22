@@ -53,7 +53,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Check native input before packaging
-        run: npm run test:computer-use
+        run: npm run test:computer-use:lab -- --repeat-each=1
+        env:
+          COMPUTERCAT_INPUT_LAB_MODE: diagnostic
       - run: npm run voice:build
       - run: npm run voice:test-native
       - run: npm run package:dir
@@ -68,6 +70,9 @@ jobs:
         if: always()
         with:
           name: windows-desktop-test-results
-          path: test-results/
+          path: |
+            test-results/
+            .local/computer-use/
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: ignore

@@ -1,17 +1,16 @@
-# Current project state
+# Current state
 
-Reviewed: 2026-09-21. Recheck tests.
+Reviewed: 2026-09-22.
 
 ## What exists
-
-Pinned versions: [package.json](../../package.json), [.node-version](../../.node-version).
 
 - The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
 - Six [computer-use tools](../computer-use.md) find named controls and click/fill/type/key/scroll.
-  Native/browser keyboard fixtures pass; real-app reliability is unmeasured.
+  [Lab](../computer-use-testing.md): twelve native/browser editing and recovery scenarios, with
+  validated per-attempt timing and coverage reports; real apps unmeasured.
 - Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, search, open links/folders and reveal files. Launches confirm dispatch only.
 - Ten [web tools](../web-research.md) search, compare sources, explore links, metadata and feeds,
@@ -58,7 +57,6 @@ The worker is not an OS sandbox; see [architecture](../architecture.md).
 ## Not implemented
 
 Coordinate input/dragging, full browser integration, external MCP, selected-fact user memory, speech output, other-provider
-credential settings, signing and app updates remain future work. The
-[research plan](../research-and-build-plan.md) proposes these; it is not a completion checklist.
+credential settings, signing and app updates remain future work. See [proposals](../research-and-build-plan.md).
 
-See [handoffs](handoffs/README.md) for unfinished work.
+See [unfinished work](handoffs/README.md).
