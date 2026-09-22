@@ -18,7 +18,11 @@ export type DesktopReadMode = "all" | "selection" | "tabs" | "page" | "controls"
 
 // Native IDs are kept behind expiring, opaque source IDs issued by the broker.
 export const desktopRequestSchema = z.discriminatedUnion("operation", [
-  z.strictObject({ operation: z.literal("inspect"), sourceId: z.uuid().optional() }),
+  z.strictObject({
+    operation: z.literal("inspect"),
+    sourceId: z.uuid().optional(),
+    query: z.string().trim().min(1).max(120).optional(),
+  }),
   z.strictObject({
     operation: z.literal("act"),
     observationId: z.uuid(),

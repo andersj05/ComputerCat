@@ -56,7 +56,7 @@ function setup() {
     list: async () => [source],
     capture: vi.fn(),
     read: vi.fn(),
-    current: async () => ({
+    current: vi.fn<DesktopProvider["current"]>(async () => ({
       source,
       target: "behind-assistant",
       text: {
@@ -67,7 +67,7 @@ function setup() {
         tabs: [],
         truncated: false,
       },
-    }),
+    })),
   };
   const controller = new DesktopController(provider, () => now);
   const turn = new AbortController();
@@ -83,6 +83,7 @@ function setup() {
     );
   return {
     controller,
+    provider,
     input,
     turn,
     inspect,
@@ -136,6 +137,23 @@ describe("computer-use boundary", () => {
       expect(input.act).not.toHaveBeenCalled();
     },
   );
+
+  it("searches before native result limits and resolves only window identity first", async () => {
+    const { controller, input, provider, turn, act, inspect } = setup();
+    const old = await inspect();
+    const result = data(
+      await controller.execute({ operation: "inspect", query: " Reply " }, turn.signal),
+    );
+    expect(provider.current).toHaveBeenLastCalledWith(expect.any(AbortSignal), "identity");
+    expect(input.inspect).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: "window:123:0" }),
+      expect.any(AbortSignal),
+      "Reply",
+    );
+    expect(result.observationId).not.toBe(old.observationId);
+    expect((await act(old.observationId)).isError).toBe(true);
+    expect(input.act).not.toHaveBeenCalled();
+  });
 
   it("does not expose post-action targets from a replacement process", async () => {
     const { inspect, act, input } = setup();
@@ -226,6 +244,8 @@ describe("computer-use boundary", () => {
     },
     { operation: "act", observationId: randomUUID(), action: { kind: "click", elementId: "e0" } },
     { operation: "inspect", sourceId: "window:123:0" },
+    { operation: "inspect", query: " " },
+    { operation: "inspect", query: "x".repeat(121) },
   ])("rejects forged or unbounded requests", (request) => {
     expect(desktopRequestSchema.safeParse(request).success).toBe(false);
   });

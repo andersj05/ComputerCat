@@ -100,23 +100,24 @@ public static class CatInput {
     if (info.ProcessId == owner || info.IsPassword || info.IsOffscreen || info.BoundingRectangle.IsEmpty) throw new Rejected("unavailable");
     return node;
   }
-  static void Walk(AutomationElement root, Action<AutomationElement> visit, ref bool truncated) {
+  static void Walk(AutomationElement root, Func<AutomationElement, bool> visit, ref bool truncated) {
     var watch = Stopwatch.StartNew();
     var pending = new Stack<Tuple<AutomationElement, int>>();
     pending.Push(Tuple.Create(root, 0));
     int count = 0;
-    var walker = TreeWalker.RawViewWalker;
-    while (pending.Count > 0 && count < 600 && watch.ElapsedMilliseconds < 3500) {
+    var walker = TreeWalker.ControlViewWalker;
+    while (pending.Count > 0 && count < 2000 && watch.ElapsedMilliseconds < 3500) {
       var item = pending.Pop();
       count++;
       try {
         var info = item.Item1.Current;
-        if (info.IsPassword || info.IsOffscreen || info.BoundingRectangle.IsEmpty) continue;
-        visit(item.Item1);
-        if (item.Item2 >= 14) { truncated = true; continue; }
+        if (info.IsPassword) continue;
+        // Layout containers can be offscreen/empty while a descendant is visible.
+        if (!info.IsOffscreen && !info.BoundingRectangle.IsEmpty && visit(item.Item1)) return;
+        if (item.Item2 >= 32) { truncated = true; continue; }
         var children = new List<AutomationElement>();
         var child = walker.GetFirstChild(item.Item1);
-        while (child != null && children.Count + count + pending.Count < 600 && watch.ElapsedMilliseconds < 3500) {
+        while (child != null && children.Count + count + pending.Count < 2000 && watch.ElapsedMilliseconds < 3500) {
           children.Add(child); child = walker.GetNextSibling(child);
         }
         if (child != null) truncated = true;
@@ -125,7 +126,7 @@ public static class CatInput {
     }
     if (pending.Count > 0) truncated = true;
   }
-  public static Hashtable Inspect(long handle, string expectedTitle, int owner) {
+  public static Hashtable Inspect(long handle, string expectedTitle, int owner, string query) {
     uint last = LastTick();
     string foreground = GetForegroundWindow().ToInt64().ToString(CultureInfo.InvariantCulture);
     var root = Root(handle, owner);
@@ -147,14 +148,17 @@ public static class CatInput {
         text.Append(Clip(part, remaining - 1)); text.Append('\n');
         if (part.Length >= remaining) clipped = true;
       }
+      // Filter before the output limit so browser chrome cannot crowd out Reply.
+      if (!String.IsNullOrEmpty(query) && name.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0) return false;
       string[] actions = Actions(node);
-      if (actions.Length == 0 && current.ControlType != ControlType.Edit && current.ControlType != ControlType.Button) return;
-      if (elements.Count >= 60) { clipped = true; return; }
+      if (actions.Length == 0 && current.ControlType != ControlType.Edit && current.ControlType != ControlType.Button) return false;
+      if (elements.Count >= 60) { clipped = true; return !String.IsNullOrEmpty(query); }
       var element = new Hashtable { {"runtimeId", node.GetRuntimeId()}, {"name", name},
         {"role", current.ControlType.ProgrammaticName.Replace("ControlType.", "")}, {"enabled", current.IsEnabled},
         {"bounds", Box(current.BoundingRectangle)}, {"signature", Signature(node)}, {"actions", actions} };
       if (value != null) { element["value"] = Clip(value, 8000); if (value.Length > 8000) clipped = true; }
       elements.Add(element);
+      return false;
     }, ref truncated);
     return new Hashtable { {"windowHandle", handle.ToString(CultureInfo.InvariantCulture)}, {"processId", info.ProcessId},
       {"processStarted", Start(info.ProcessId)}, {"foreground", foreground}, {"lastInput", last},
@@ -214,10 +218,18 @@ public static class CatInput {
       throw; }
   }
   static void TypeText(IntPtr hwnd, AutomationElement node, string text) {
+    // Chromium ignores VK_PACKET line-break characters. Use the editor soft-break
+    // chord for literal newlines, never an unmodified Enter or trailing submit key.
+    text = text.Replace("\r\n", "\n").Replace("\r", "\n");
     // Each pair is queued together. Keep batches small so loss of focus stops further text.
     for (int offset = 0; offset < text.Length;) {
       CheckFocus(hwnd, node); NoHeldKeys();
+      if (text[offset] == '\n') {
+        Press("Shift+Enter"); offset++; Thread.Sleep(10); continue;
+      }
       int end = Math.Min(text.Length, offset + 16);
+      int newline = text.IndexOf('\n', offset);
+      if (newline >= 0 && newline < end) end = newline;
       if (end < text.Length && Char.IsHighSurrogate(text[end - 1]) && Char.IsLowSurrogate(text[end])) end++;
       var events = new List<Input>();
       for (int i = offset; i < end; i++) {
@@ -241,7 +253,10 @@ public static class CatInput {
       if (GetForegroundWindow().ToInt64().ToString(CultureInfo.InvariantCulture) != foreground || LastTick() != last) throw new Rejected("user-input");
       AutomationElement target = null;
       bool truncated = false;
-      Walk(root, delegate(AutomationElement node) { if (SameId(node.GetRuntimeId(), runtimeId)) target = node; }, ref truncated);
+      Walk(root, delegate(AutomationElement node) {
+        if (!SameId(node.GetRuntimeId(), runtimeId)) return false;
+        target = node; return true;
+      }, ref truncated);
       if (target == null || Signature(target) != signature) throw new Rejected("stale");
       if (Array.IndexOf(Actions(target), kind) < 0) throw new Rejected("unsupported");
       // Recheck after traversal: a slow provider must not hide intervening user activity.
@@ -297,7 +312,7 @@ public static class CatInput {
     try {
       // Bounded settling, not a claim that navigation/network activity has completed.
       Thread.Sleep(80);
-      var after = Inspect(handle, null, owner);
+      var after = Inspect(handle, null, owner, null);
       if ((int)after["processId"] == pid && (string)after["processStarted"] == started) result["snapshot"] = after;
     } catch { }
     return result;
@@ -308,7 +323,7 @@ try {
   $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
   $owner = [int]$env:COMPUTERCAT_OWNER_PID
   if ($request.operation -eq 'inspect') {
-    $result = [CatInput]::Inspect([long]$request.handle, [string]$request.title, $owner)
+    $result = [CatInput]::Inspect([long]$request.handle, [string]$request.title, $owner, [string]$request.query)
   } elseif ($request.operation -eq 'act') {
     $s = $request.snapshot
     $e = $request.element

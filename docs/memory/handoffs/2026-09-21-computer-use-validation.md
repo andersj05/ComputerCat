@@ -1,6 +1,6 @@
 # Computer-use keyboard and model qualification
 
-Status: initial implementation ready for review; interactive qualification remains
+Status: strict owned native/browser keyboard fixtures pass; real-app qualification remains
 Updated: 2026-09-21
 Owner: computer-use development task
 Branch: `feat/computer-use`
@@ -16,8 +16,9 @@ coordinate input, dragging and a full browser connection are separate future cap
 ## Work present
 
 Core implementation is committed in `1a17926` through `40cc35a`; evaluation cases are in
-`1eb6027`. The documentation/qualification change containing this handoff completes the current
-checkpoint. There were no unrelated pre-existing edits. Recheck the actual checkout on resume.
+`1eb6027`. Discovery follow-up adds name-filtered inspection, a deeper control-view walk, reduced
+redundant traversal, corrected drafting guidance and multiline keyboard input. Evidence and
+entry points are in [computer use](../../computer-use.md). Recheck the checkout on resume.
 
 - [Six Pi tools](../../../src/agent/computer-tools.ts), registered through the private desktop
   channel, with observe/act/verify and draft-versus-send guidance in the runtime prompt.
@@ -38,26 +39,22 @@ Durable design and limits live in [computer use](../../computer-use.md) and the
 
 ## Verification
 
-- `npm run verify`: passed memory/catalog checks, lint, types, 426 tests in 43 files and build.
-- `npm run test:smoke`: all 33 tests passed against the final native implementation and current
-  evaluation cases. After the final guide and qualification-mode edits, both native fixtures
-  and the guide smoke check passed again (3 tests). Wide and narrow guide screenshots were inspected.
-- With `COMPUTERCAT_REQUIRE_NATIVE_FOCUS=1`, the browser test failed specifically because
-  Windows denied foreground focus. No browser text was injected. Default smoke coverage
-  checks unchanged fields on that refusal; it is not a successful keyboard-input trial.
-- Native WPF fill, save without send, scrolling and stale-field/window rejection succeeded.
-  Keyboard typing/key success and Chromium keyboard replacement remain unverified on this host.
+- `npm run verify`: passed memory/catalog checks, lint, types, 431 tests in 43 files and build.
+- The full desktop smoke run passed 32 checks and exposed dropped browser line breaks in the
+  remaining check. After the fix, both affected native fixtures passed with strict focus
+  qualification: actual typing/key dispatch, exact multiline values, browser input events,
+  unsent status, and finding/clicking Reply beyond sixty controls. No focus-refusal substitution
+  was accepted. Intermediate runs correctly rejected changed user input; the final run used
+  a quiet interactive desktop.
 - Live task reliability: not measured. No real account, message delivery or paid model run
   was used. Passing the scripted model loop does not grade model judgment.
 
 ## Remaining work and next action
 
-Keep the feature PR in draft until interactive qualification is recorded. From an interactive
-Windows terminal that can activate its own fixture, run `npm run test:computer-use` with
-`COMPUTERCAT_REQUIRE_NATIVE_FOCUS=1`. Both native and browser paths must actually dispatch and
-produce the exact Unicode/multiline editor values, with browser input events and unsent status.
-Also exercise clearing/replacing an existing rich draft, selection/key behavior, and Stop during
-typing. Do not bypass OS focus restrictions or weaken the success assertions to get a pass.
+Keep the feature PR in draft until real-app qualification is recorded. Strict owned native and
+browser keyboard checks now pass. Still exercise clearing/replacing an existing rich draft,
+selection/key behavior, Stop during typing and focus handoff in real Windows mail applications.
+Do not bypass OS focus restrictions or weaken the success assertions to get a pass.
 
 Then run the three new manual app tasks three times each, plus the standard four-case starter,
 using the intended model and fixed environment. Record actual outcomes and critical failures;

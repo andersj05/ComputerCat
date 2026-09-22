@@ -31,13 +31,27 @@ interface Options {
 export class WindowsInput implements ComputerInput {
   constructor(private readonly options: Options = {}) {}
 
-  async inspect(source: DesktopSource, signal: AbortSignal): Promise<ComputerSnapshot> {
+  async inspect(
+    source: DesktopSource,
+    signal: AbortSignal,
+    query?: string,
+  ): Promise<ComputerSnapshot> {
+    if (query !== undefined && (!query.trim() || query.length > 120))
+      throw new Error("Invalid control search.");
     const handle =
       source.kind === "window" ? /^window:([1-9]\d{0,18}):\d+$/.exec(source.id)?.[1] : undefined;
     if (!handle || BigInt(handle) > 0x7fff_ffff_ffff_ffffn)
       throw new Error("Invalid window target.");
     return computerSnapshotSchema.parse(
-      await this.run({ operation: "inspect", handle, title: source.name.slice(0, 512) }, signal),
+      await this.run(
+        {
+          operation: "inspect",
+          handle,
+          title: source.name.slice(0, 512),
+          ...(query !== undefined ? { query: query.trim() } : {}),
+        },
+        signal,
+      ),
     );
   }
 

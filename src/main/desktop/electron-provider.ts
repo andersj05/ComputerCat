@@ -10,7 +10,7 @@ export class ElectronDesktopProvider implements DesktopProvider {
   constructor(private readonly capturer: Pick<SourceCapturer, "capture"> = new SourceCapturer()) {}
   async current(
     signal: AbortSignal,
-    mode?: DesktopReadMode,
+    mode?: DesktopReadMode | "identity",
   ): Promise<CurrentDesktopWindow | undefined> {
     const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal, mode);
     signal.throwIfAborted();

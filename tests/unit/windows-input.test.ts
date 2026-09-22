@@ -82,6 +82,20 @@ describe("Windows input process ownership", () => {
     await expect(pending).resolves.toEqual(state);
   });
 
+  it("transports search text as data and rejects unbounded searches before launch", async () => {
+    const { input, launch, finish, payload } = setup();
+    const query = "Reply ' $()";
+    const pending = input.inspect(source, new AbortController().signal, query);
+    expect(JSON.parse(payload().split("\n")[1] ?? "")).toMatchObject({ query });
+    finish();
+    await pending;
+    for (const invalid of [" ", "x".repeat(121)])
+      await expect(input.inspect(source, new AbortController().signal, invalid)).rejects.toThrow(
+        "Invalid control search",
+      );
+    expect(launch).toHaveBeenCalledOnce();
+  });
+
   it.each(["abort", "timeout", "overflow", "pipe"])(
     "kills on %s but holds ownership until close",
     async (cause) => {

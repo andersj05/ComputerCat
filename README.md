@@ -131,8 +131,8 @@ scroll. Each action uses a fresh control reference and returns accessible state 
 Draft requests leave messages unsent; sending or submitting needs explicit authorization.
 
 These tools support Windows apps and browser controls that expose accessibility operations.
-Native draft editing has owned-fixture coverage. Chromium editors use guarded keyboard input;
-successful browser replacement still needs interactive validation on a host that grants focus.
+Owned native and Chromium fixtures verify draft editing with real keyboard input and browser
+input events. Reliability in real applications still needs validation.
 Custom canvas controls, drag-and-drop and arbitrary coordinate clicks are not supported. Windows may refuse
 keyboard focus, especially for protected/elevated apps. The cat reports that limitation.
 Avoid simultaneous typing while the cat works: changed input, windows or fields can invalidate

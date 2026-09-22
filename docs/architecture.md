@@ -212,8 +212,8 @@ process exit, preventing overlapping input owners. Cancellation cannot undo disp
 
 The renderer gains activity labels only. Draft-versus-send and task relevance are model policy;
 this is not an OS sandbox around the existing shell tools. [Native/browser fixtures](computer-use.md)
-check native draft editing and focus refusal independently of model selection; browser keyboard
-success remains an interactive coverage gap. A smoke-only backend exercises the real
+verify native/browser draft editing and keyboard input independently of model selection;
+real-app model completion remains unmeasured. A smoke-only backend exercises the real
 worker/model loop without external native input or paid requests. Full browser DOM integration,
 coordinate control and arbitrary canvas interaction remain outside this increment.
 

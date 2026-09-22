@@ -26,7 +26,10 @@ export interface CurrentDesktopWindow {
 export interface DesktopProvider {
   input?: ComputerInput;
   list(signal: AbortSignal): Promise<DesktopSource[]>;
-  current(signal: AbortSignal, mode?: DesktopReadMode): Promise<CurrentDesktopWindow | undefined>;
+  current(
+    signal: AbortSignal,
+    mode?: DesktopReadMode | "identity",
+  ): Promise<CurrentDesktopWindow | undefined>;
   capture(
     source: DesktopSource,
     signal: AbortSignal,
@@ -139,12 +142,12 @@ export class DesktopController {
       if (request.operation === "inspect") {
         if (!this.computer) return desktopError("Computer input is unavailable in this runtime.");
         this.computer.invalidate();
-        const current = issued ? undefined : await this.provider.current(signal, "controls");
+        const current = issued ? undefined : await this.provider.current(signal, "identity");
         signal.throwIfAborted();
         const source = issued?.source ?? current?.source;
         if (!source)
           return desktopError("The current app is unavailable. List windows and choose one.");
-        return this.computer.inspect(source, turnSignal, signal);
+        return this.computer.inspect(source, turnSignal, signal, request.query);
       }
       if (request.operation === "utility") {
         return this.utilities

@@ -10,9 +10,9 @@ initial target; arbitrary canvas controls and a browser DOM connection are separ
 
 | Tool | Operation |
 | --- | --- |
-| `desktop_inspect` | Current app or listed source; returns text and up to sixty named controls with advertised actions. |
+| `desktop_inspect` | Current app or listed source; returns text and up to sixty controls with advertised actions. Optional `query` searches a literal part of the control name before that output limit. |
 | `desktop_click` | Invoke/select/toggle/expand the exact observed control through its accessibility pattern. |
-| `desktop_fill` | Replace an editor's value with up to 8,000 literal characters, without Enter. |
+| `desktop_fill` | Replace an editor's value with up to 8,000 literal characters, without a trailing submit key. |
 | `desktop_type_text` | Insert Unicode text at the observed editor's caret/selection with focus checks; no clipboard. |
 | `desktop_press_key` | One allowlisted editing/navigation key in the observed control. Enter/Space may activate or submit. |
 | `desktop_scroll` | One small/large increment in an observed scrollable region. |
@@ -21,6 +21,23 @@ Actions return a new observation when possible. Public observations bound text t
 characters and each field preview to 1,000, flagging truncation; the native fingerprint covers
 the control value independently of that preview. A long/truncated field needs additional
 reading before claiming full verification. Drafts and observations follow normal Pi retention.
+
+## Discovery and latency (reviewed 2026-09-21)
+
+A missing control in the initial result is not evidence that the app does not expose it.
+Use desktop_inspect with query set to "Reply" to search names case-insensitively before the
+sixty-control output limit. The scan uses UI Automation's control view, traverses up to
+32 levels and 2,000 nodes within its existing 3.5-second traversal budget, and marks incomplete
+results. Invisible/empty containers do not hide visible descendants; password subtrees remain
+excluded. Search still cannot find controls an app does not expose or materialize.
+
+Current-app inspection resolves only window identity before the actionable scan. Action lookup
+stops when it finds the exact runtime ID, then revalidates the target and user activity.
+These remove redundant traversal; every request still starts PowerShell and compiles its fixed
+helper, and model/network latency remains additional. No end-to-end speedup has been measured.
+The [browser fixture](../tests/smoke/browser-input.spec.ts) checks a nested Reply control after
+70 toolbar buttons, including its native click and unsent outcome. Focus refusal is reported
+separately from discovery failure, with activation and reinspection as the next step.
 
 ## Boundaries
 
@@ -37,6 +54,9 @@ reading before claiming full verification. Drafts and observations follow normal
 - Chromium fill uses the editor's TextPattern selection and guarded Unicode keyboard input.
   Its ValuePattern setter can change a contenteditable's DOM without firing the input events
   that web apps need. A visible value alone does not prove an app received or saved a draft.
+- Literal line breaks in keyboard text input use Shift+Enter, because Chromium ignores
+  Unicode packet newline characters. CRLF/CR/LF normalize to one line break. App keyboard
+  handlers still apply; no plain Enter or trailing submit key is appended.
 - Results distinguish rejection before dispatch from an uncertain or dispatched action. Fresh
   accessible state accompanies completed actions when available. A timeout is never permission
   to repeat an action blindly. Cancellation cannot undo already dispatched input.
@@ -52,15 +72,16 @@ operate only a synthetic window created for the test, including an unsent email 
 scripted model test checks the complete worker/tool loop independently of model intelligence.
 Optional live task trials remain separate and must report their actual measured scope.
 
-The [owned Windows editor test](../tests/smoke/computer-input.spec.ts) verified multiline fill,
-save without send, changed-field/window rejection and scrolling on 2026-09-21. Windows denied
-foreground activation on this host; keyboard typing/key success was not exercised, and refusal
-left the field unchanged. The [owned Chromium editor test](../tests/smoke/browser-input.spec.ts)
-checks subject, textarea and contenteditable replacement against both DOM contents and input
-events when native focus succeeds. On this host, it verified focus refusal, unchanged fields,
-no input events, and Save without Send. Browser keyboard replacement success remains an
-interactive validation gap; Electron/Playwright's emulated focus is insufficient evidence.
-No real account or website was operated. The
+On 2026-09-21 both the [owned Windows editor](../tests/smoke/computer-input.spec.ts) and
+[owned Chromium editor](../tests/smoke/browser-input.spec.ts) passed with
+COMPUTERCAT_REQUIRE_NATIVE_FOCUS=1. This requires actual native keyboard dispatch, exact editor
+values, browser input events and unsent status. Coverage includes native fill/type/key/scroll,
+stale-field/window rejection, browser subject/textarea/contenteditable replacement, exact multiline
+text, no unmodified Enter key, and name search plus native click on a deeply nested Reply button
+after seventy toolbar controls. Earlier refusal-only runs did not cover successful typing; the
+strict run exposed and led to a fix for Chromium dropping Unicode packet line breaks.
+Electron/Playwright's emulated focus alone remains insufficient evidence. No real account or
+website was operated; Outlook-specific and live-model completion are unmeasured. The
 [helper lifecycle tests](../tests/unit/windows-input.test.ts) check cancellation/timeout ownership,
 bounded output, strict input and environment isolation. These are machinery checks, not live
 model completion rates.

@@ -34,6 +34,17 @@ describe("agent computer tools", () => {
       ).rejects.toThrow("Invalid computer action");
     expect(execute).toHaveBeenCalledTimes(2);
   });
+  it("passes bounded literal control searches through the tool boundary", async () => {
+    const { execute, invoke } = setup();
+    await invoke("desktop_inspect", { query: "Reply" });
+    expect(execute).toHaveBeenCalledWith(
+      { operation: "inspect", query: "Reply" },
+      expect.any(AbortSignal),
+    );
+    for (const query of [" ", "x".repeat(121)])
+      await expect(invoke("desktop_inspect", { query })).rejects.toThrow("Invalid computer action");
+    expect(execute).toHaveBeenCalledOnce();
+  });
   it("retains uncertain-outcome evidence and suppresses late results after Stop", async () => {
     const { execute, invoke } = setup();
     execute.mockResolvedValueOnce({

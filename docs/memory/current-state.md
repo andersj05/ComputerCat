@@ -10,8 +10,8 @@ Pinned versions: [package.json](../../package.json), [.node-version](../../.node
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
-- Six [computer-use tools](../computer-use.md) inspect/click/fill/type/key/scroll Windows controls
-  with disposable targets. Native drafts pass; browser keyboard success still needs validation.
+- Six [computer-use tools](../computer-use.md) find named controls and click/fill/type/key/scroll.
+  Native/browser keyboard fixtures pass; real-app reliability is unmeasured.
 - Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, search, open links/folders and reveal files. Launches confirm dispatch only.
 - Ten [web tools](../web-research.md) search, compare sources, explore links, metadata and feeds,

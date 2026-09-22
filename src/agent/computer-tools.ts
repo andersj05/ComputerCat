@@ -22,7 +22,8 @@ const target = {
 };
 const text = Type.String({
   maxLength: 8000,
-  description: "Literal text for the requested editor. No command syntax or automatic submission.",
+  description:
+    "Literal text for the requested editor. No command syntax or trailing submit key. Literal newlines use Shift+Enter in the editor; app keyboard handlers still apply.",
 });
 
 export function createComputerTools(execute: DesktopExecutor): ToolDefinition[] {
@@ -66,13 +67,27 @@ export function createComputerTools(execute: DesktopExecutor): ToolDefinition[] 
       description:
         "Start here when asked to draft in an app, fill a form, click a button, type, or scroll. Inspects the current app behind Computer Cat, or a sourceId from desktop_list_windows, returning visible text, field values, control names, roles and supported actions with disposable observation/element IDs. Windows only; no screenshot, no changes. Use desktop_observe for visual context if needed. Native controls and browser accessibility vary. An inferred app must match the user's task before you edit it. Never invent missing targets.",
       parameters: Type.Object(
-        { sourceId: Type.Optional(Type.String({ format: "uuid" })) },
+        {
+          sourceId: Type.Optional(Type.String({ format: "uuid" })),
+          query: Type.Optional(
+            Type.String({
+              minLength: 1,
+              maxLength: 120,
+              description:
+                "Case-insensitive literal part of a control name, e.g. Reply. Searches before the sixty-control output limit. Use when the target is missing or results are truncated; no match is not proof of absence from an incomplete scan.",
+            }),
+          ),
+        },
         { additionalProperties: false },
       ),
       executionMode: "sequential",
       execute: (_id, params, signal) =>
         run(
-          { operation: "inspect", ...(params.sourceId ? { sourceId: params.sourceId } : {}) },
+          {
+            operation: "inspect",
+            ...(params.sourceId ? { sourceId: params.sourceId } : {}),
+            ...(params.query !== undefined ? { query: params.query } : {}),
+          },
           signal,
         ),
     }),
@@ -91,7 +106,7 @@ export function createComputerTools(execute: DesktopExecutor): ToolDefinition[] 
       name: "desktop_fill",
       label: "Fill app field",
       description:
-        "Replace the complete value of an observed writable editor advertising fill, including multiline draft text. Prefer this to typing when setting a field. Empty text clears it. Check its current value first; preserve unrelated user text. Chromium editors require keyboard focus so the app receives input events. Does not press Enter or append a submit key; verify the resulting draft and app state." +
+        "Replace the complete value of an observed writable editor advertising fill, including multiline draft text. Prefer this to typing when setting a field. Empty text clears it. Check its current value first; preserve unrelated user text. Chromium editors require keyboard focus so the app receives input events. Literal newlines use Shift+Enter; no trailing submit key is appended. Verify the resulting draft and app state." +
         scope,
       parameters: Type.Object({ ...target, text }, { additionalProperties: false }),
       executionMode: "sequential",
@@ -102,7 +117,7 @@ export function createComputerTools(execute: DesktopExecutor): ToolDefinition[] 
       name: "desktop_type_text",
       label: "Type into app editor",
       description:
-        "Insert literal Unicode text into an observed writable editor advertising type. Focuses that exact editor and types at its current caret/selection, so existing selected text may be replaced. Prefer desktop_fill for complete replacement. Does not use the clipboard or append an Enter key. Stop and focus loss stop remaining input; verify the actual field afterward." +
+        "Insert literal Unicode text into an observed writable editor advertising type. Focuses that exact editor and types at its current caret/selection, so existing selected text may be replaced. Prefer desktop_fill for complete replacement. Does not use the clipboard or append a submit key; literal newlines use Shift+Enter. Stop and focus loss stop remaining input; verify the actual field afterward." +
         scope,
       parameters: Type.Object(
         { ...target, text: Type.String({ ...text, minLength: 1 }) },
