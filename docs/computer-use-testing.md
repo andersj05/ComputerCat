@@ -76,6 +76,9 @@ invalid attachments, and missing/out-of-order helper markers fail evidence valid
 Diagnostic mode permits only asserted focus refusals with a recorded coverage gap; it never qualifies.
 An abruptly killed process may leave a `running` report, which cannot qualify. Playwright diagnostics
 remain in `test-results/computer-use-lab/`.
+Refused/uncertain actions include privacy-preserving flags for foreground and input-tick changes,
+when a post-action snapshot exists. These do not identify which app or person caused activity.
+Failed ordinary smoke checks also print their final three measurement records for diagnosis.
 Reports contain synthetic operation labels and timing/environment metadata, never screenshots,
 editor contents, credentials or native handles. Generated files are ignored by Git.
 

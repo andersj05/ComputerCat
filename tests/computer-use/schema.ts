@@ -23,6 +23,13 @@ export const measurementSchema = z
       "uncertain:unavailable",
       "uncertain:unsupported",
     ]),
+    activity: z
+      .strictObject({
+        targetWasForeground: z.boolean(),
+        foregroundChanged: z.boolean().optional(),
+        inputTickChanged: z.boolean().optional(),
+      })
+      .optional(),
     totalMs: ms,
     initMs: ms.optional(),
     readyMs: ms.optional(),

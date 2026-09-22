@@ -87,7 +87,25 @@ export function ownedInput(
       measure(
         action.kind,
         element.name,
-        () => input.act(snapshot, element, action, AbortSignal.any([signal, lifetime.signal])),
+        async () => {
+          const result = await input.act(
+            snapshot,
+            element,
+            action,
+            AbortSignal.any([signal, lifetime.signal]),
+          );
+          if (active)
+            active.sample.activity = {
+              targetWasForeground: snapshot.foreground === snapshot.windowHandle,
+              ...(result.snapshot
+                ? {
+                    foregroundChanged: snapshot.foreground !== result.snapshot.foreground,
+                    inputTickChanged: snapshot.lastInput !== result.snapshot.lastInput,
+                  }
+                : {}),
+            };
+          return result;
+        },
         (result) =>
           result.status === "dispatched" ? "dispatched" : `${result.status}:${result.reason}`,
       ),

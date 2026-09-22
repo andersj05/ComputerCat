@@ -130,6 +130,16 @@ export function renderReport(report: LabReport) {
         )} | ${row.latency?.count ?? 0} | ${row.latency?.p50Ms.toFixed(1) ?? "—"} | ${row.latency?.p95Ms.toFixed(1) ?? "—"} | ${row.helperReady?.p50Ms.toFixed(1) ?? "—"} |`,
   );
   const cell = (value: string) => value.replaceAll("|", "\\|").replace(/[\r\n]/g, " ");
+  const activity = report.attempts
+    .flatMap((attempt) =>
+      attempt.measurements
+        .filter((sample) => sample.activity && !["observed", "dispatched"].includes(sample.outcome))
+        .map(
+          (sample) =>
+            `| ${cell(attempt.scenario)} | ${attempt.repeat + 1} | ${sample.operation} | ${sample.outcome} | ${sample.activity?.targetWasForeground} | ${sample.activity?.foregroundChanged ?? "unknown"} | ${sample.activity?.inputTickChanged ?? "unknown"} |`,
+        ),
+    )
+    .join("\n");
   const attempts = report.attempts
     .map(
       (attempt) =>
@@ -140,5 +150,5 @@ export function renderReport(report: LabReport) {
     evidenceProblems(report)
       .map((problem) => `- ${cell(problem)}`)
       .join("\n") || "None.";
-  return `# Computer-use lab\n\n${report.mode}; ${report.runStatus}; ${passed}/${report.plannedAttempts} attempts passed. Selected scenarios qualified: ${qualified(report) ? "yes" : "no"}.\n\nCommit: ${report.revision.commit}${report.revision.dirty ? " (working tree modified)" : ""}.\n\nPlatform: ${report.environment.platform} ${report.environment.release} ${report.environment.arch}; ${report.environment.cpu}; Node ${report.environment.node}; Electron ${report.environment.electron}.\n\n| Operation | All outcomes | Validated samples | p50 ms | p95 ms | Helper ready p50 ms |\n| --- | --- | ---: | ---: | ---: | ---: |\n${rows.join("\n")}\n\n| Attempt | Repeat | Retry | Status | Duration ms | Coverage gap |\n| --- | ---: | ---: | --- | ---: | --- |\n${attempts}\n\nEvidence issues:\n\n${issues}\n\nTimings include a fresh helper process, native work, post-action inspection and result parsing. Helper ready is elapsed time to receiving its fixed ready marker, including process startup and script compilation; it is not isolated CPU time. Failed attempts and refusals never contribute to successful latency. Expected stale, unavailable and unsupported rejections remain in outcome counts. Each repeat includes its first call; there is no discarded warm-up or persistent helper. Small-sample percentiles are descriptive, not statistical evidence of improvement.\n\nCoverage: owned synthetic windows only; no model, real-account, or full agent-loop success rate.\n`;
+  return `# Computer-use lab\n\n${report.mode}; ${report.runStatus}; ${passed}/${report.plannedAttempts} attempts passed. Selected scenarios qualified: ${qualified(report) ? "yes" : "no"}.\n\nCommit: ${report.revision.commit}${report.revision.dirty ? " (working tree modified)" : ""}.\n\nPlatform: ${report.environment.platform} ${report.environment.release} ${report.environment.arch}; ${report.environment.cpu}; Node ${report.environment.node}; Electron ${report.environment.electron}.\n\n| Operation | All outcomes | Validated samples | p50 ms | p95 ms | Helper ready p50 ms |\n| --- | --- | ---: | ---: | ---: | ---: |\n${rows.join("\n")}\n\n| Attempt | Repeat | Retry | Status | Duration ms | Coverage gap |\n| --- | ---: | ---: | --- | ---: | --- |\n${attempts}\n\n| Refused/uncertain action | Repeat | Operation | Outcome | Target was foreground | Foreground changed | Input tick changed |\n| --- | ---: | --- | --- | --- | --- | --- |\n${activity}\n\nActivity flags compare pre-action identity with returned post-action evidence. They identify changes, not which application or person caused them; absent post-action evidence remains unknown.\n\nEvidence issues:\n\n${issues}\n\nTimings include a fresh helper process, native work, post-action inspection and result parsing. Helper ready is elapsed time to receiving its fixed ready marker, including process startup and script compilation; it is not isolated CPU time. Failed attempts and refusals never contribute to successful latency. Expected stale, unavailable and unsupported rejections remain in outcome counts. Each repeat includes its first call; there is no discarded warm-up or persistent helper. Small-sample percentiles are descriptive, not statistical evidence of improvement.\n\nCoverage: owned synthetic windows only; no model, real-account, or full agent-loop success rate.\n`;
 }

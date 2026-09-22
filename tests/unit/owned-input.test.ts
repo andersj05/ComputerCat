@@ -29,8 +29,8 @@ function setup() {
   });
   vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcessWithoutNullStreams);
   const input = ownedInput({ platform: "win32", environment: { SystemRoot: "C:\\Windows" } });
-  const finish = () => {
-    child.stdout.emit("data", Buffer.from(JSON.stringify(snapshot)));
+  const finish = (value: unknown = snapshot) => {
+    child.stdout.emit("data", Buffer.from(JSON.stringify(value)));
     child.emit("close", 0);
   };
   return { input, child, finish };
@@ -62,6 +62,43 @@ describe("owned input measurement lifecycle", () => {
     expect(JSON.stringify(input.measurements)).not.toContain(snapshot.text);
     await input.close();
   });
+
+  it.each([true, false])(
+    "records only activity flags for a rejected action (post-state: %s)",
+    async (hasSnapshot) => {
+      const { input, finish } = setup();
+      const element = {
+        runtimeId: [1],
+        name: "Message",
+        role: "Edit",
+        enabled: true,
+        bounds: snapshot.bounds,
+        signature: "a".repeat(64),
+        actions: ["fill"] as const,
+        value: "private draft",
+      };
+      const pending = input.act(
+        snapshot,
+        { ...element, actions: [...element.actions] },
+        { kind: "fill", elementId: "e1", text: "synthetic edit" },
+        new AbortController().signal,
+      );
+      finish({
+        status: "rejected",
+        reason: "user-input",
+        ...(hasSnapshot ? { snapshot: { ...snapshot, foreground: "456", lastInput: 2 } } : {}),
+      });
+      await pending;
+      expect(input.measurements[0]?.activity).toEqual({
+        targetWasForeground: true,
+        ...(hasSnapshot ? { foregroundChanged: true, inputTickChanged: true } : {}),
+      });
+      expect(JSON.stringify(input.measurements)).not.toMatch(
+        /private draft|synthetic edit|456|lastInput|windowHandle/,
+      );
+      await input.close();
+    },
+  );
 
   it("cancels and waits for the helper before completing teardown or recording final measurements", async () => {
     const { input, child, finish } = setup();

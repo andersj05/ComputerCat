@@ -25,6 +25,9 @@ export const test = base.extend<{
       await use(input);
     } finally {
       await input.close();
+      if (info.status === "failed" || info.status === "timedOut")
+        console.log("Owned input failure evidence:", JSON.stringify(input.measurements.slice(-3)));
+
       await info.attach("computer-use-measurements", {
         body: JSON.stringify(input.measurements),
         contentType: "application/json",
