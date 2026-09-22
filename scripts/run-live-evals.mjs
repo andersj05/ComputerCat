@@ -93,7 +93,7 @@ if (options.help) {
   console.log(
     options.check
       ? "Checking Computer Cat's active connection…"
-      : `Starting ${request.run} with Luna / Medium…`,
+      : `Starting ${request.run} with GPT-6 Luna / Medium…`,
   );
   dispatch(request);
   try {

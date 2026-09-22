@@ -17,6 +17,10 @@ The first increment added six everyday utilities without new dependencies. Publi
 services and user memory as separate capabilities. This order is a project recommendation
 based on the inspected gaps, not measured comparative performance.
 
+The [2026-09-22 computer-use review](audits/2026-09-22-computer-use-opportunities.md)
+prioritizes a qualified native baseline, a measured helper-reuse experiment, and live-model
+computer-use cases. Its latency and completion evidence is scoped to the current fixtures.
+
 | Area | Baseline finding | Result or next step |
 | --- | --- | --- |
 | Everyday desktop jobs | Even opening Downloads or copying an answer required generated shell commands | Implemented seven native utilities, including browser search recovery |

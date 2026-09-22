@@ -1,10 +1,11 @@
 # Local live evaluations with Luna
 
-Reviewed: 2026-09-20. This runner uses **gpt-5.6-luna with Medium reasoning** through Computer Cat's
+Reviewed: 2026-09-22. This runner uses **gpt-6-luna with Medium reasoning** through Computer Cat's
 existing Codex subscription connection. It makes real model requests when explicitly launched.
 Normal `npm run verify` and CI stay offline. There is no fallback model or API-key connection.
-The pinned Pi 0.85.1 catalog contains this model and reasoning level; OpenAI's
-[Luna documentation](https://developers.openai.com/api/docs/models/gpt-5.6-luna) also lists Medium.
+Pi 0.85.1 lacks this model, so Computer Cat adds a local catalog entry shared by main and worker.
+[OpenAI's model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) lists Medium.
+Catalog readiness does not prove subscription access; a real request still depends on account eligibility.
 Subscription usage percentages and currency cost are not inferred from API token prices.
 
 ## Run it
@@ -29,13 +30,14 @@ fixture state. The scorer runs automatically. Use unique run names; previous res
 replaced or retried silently. A failed attempt stays failed.
 
 ```sh
-npm run eval:live -- --run luna-baseline --repeats 3
-npm run eval:live -- --run luna-full --tasks all --repeats 3
-npm run eval:live -- --run luna-search --tasks keyless-search,account-followup --repeats 3
+npm run eval:live -- --run gpt6-luna-baseline --repeats 3
+npm run eval:live -- --run gpt6-luna-full --tasks all --repeats 3
+npm run eval:live -- --run gpt6-luna-search --tasks keyless-search,account-followup --repeats 3
+npm run eval:live -- --run gpt6-computer-draft --tasks draft-in-app --repeats 3
 ```
 
 `--tasks` accepts comma-separated IDs from the [live catalog](../evals/live-catalog.json), or `all`.
-`--repeats` accepts 1–3 and defaults to one. Use three for baseline comparisons (12 starter attempts). The complete suite is twelve tasks / 36 attempts. If you deliberately use
+`--repeats` accepts 1–3 and defaults to one. Use three for baseline comparisons (12 starter attempts). The complete suite is thirteen tasks / 39 attempts. If you deliberately use
 a different Computer Cat profile, `--user-data ABSOLUTE_PATH` selects that app profile's encrypted
 connection. Run the development app from this same checkout. Do not provide a key or token on the command line.
 
@@ -44,14 +46,15 @@ saved vault unreadable after the test app connects, then proves the real CLI sti
 active connection without a model call or credential change. A valid saved connection still
 needs server-side model entitlement and available usage; preflight alone cannot verify those.
 
-The [first repeated baseline](evaluation-results/2026-09-20-luna-baseline.md) passed 12/12 starter attempts.
+The [GPT-5.6 Luna baseline](evaluation-results/2026-09-20-luna-baseline.md) passed 12/12 starter attempts.
+It is historical evidence and is not directly comparable with GPT-6 Luna results.
 Run desktop smoke checks before live evaluations: the CLI rebuilds the app, and overlapping
 builds or extra cat windows can interfere with startup, pointer and focus checks.
 
 ## What is measured
 
 Luna runs through the production [Pi runtime](../src/agent/pi-runtime.ts), system prompt and all
-35 tool definitions. The [fixture adapters](../src/agent/evaluation/fixtures.ts) replace tool
+41 tool definitions. The [fixture adapters](../src/agent/evaluation/fixtures.ts) replace tool
 execution with controlled synthetic state. The actual desktop/web controllers still validate
 requests, extract pages, manage source references and perform browser-search recovery. The live
 runner calls this runtime inside a separate Electron utility worker. A validated development
@@ -61,14 +64,14 @@ only on that port. It does not exercise the production chat worker IPC or render
 | Component | Live evaluation behavior |
 | --- | --- |
 | Model and tool selection | Real Luna/Medium requests through Pi, including multi-turn context |
-| Desktop | Synthetic accessible note/selection, changed page and file-manager state; no OS observation |
+| Desktop | Synthetic accessible note/selection, changed page, file-manager state and an isolated email editor; no OS observation or native input |
 | Web | Fixed HTML sources and a forced search challenge; no live website/DNS/browser session |
 | Clipboard | Isolated in-memory text; your clipboard is untouched |
 | File read/edit/write | Actual Pi implementations with virtual storage limited to the fixture todo.txt |
 | Shell, ls, find, grep | Registered definitions with blocking adapters; attempts are recorded and fail the scope criterion |
 | Stop/resume | Runtime streaming cancellation and the next turn; actual UI responsiveness remains a smoke/manual check |
 
-The twelve tasks are adaptations of the [manual app suite](task-evaluations.md). Fact-extraction
+The thirteen tasks are adaptations of the [manual app suite](task-evaluations.md). Fact-extraction
 prompts request JSON so deterministic graders can check values and sources without paying for a
 second model judge. File/clipboard tasks inspect their resulting state. Grading separately checks
 the outcome, supporting tool evidence, and unrelated actions. Facts guessed without a source do
@@ -77,8 +80,11 @@ and do not treat a mechanically accepted answer as general reasoning quality.
 
 **This measures live-model behavior against controlled tools. It is not an end-to-end Windows,
 public-web, or screenshot accuracy score.** Keep real-app spot checks and offline Electron tests.
-Reports label the mode and refuse comparisons with manual or synthetic example runs. All twelve
-cases use accessible text; image/vision quality is outside this suite.
+Reports label the mode and refuse comparisons with manual or synthetic example runs. The new
+`draft-in-app` case grades the exact saved, unsent editor state, a fresh post-action observation,
+and any attempted Send action. It uses the real computer-use tools and broker against an isolated
+stateful fixture; Windows focus, browser input events, and real-app success remain separate checks.
+All thirteen cases use accessible text; image/vision quality is outside this suite.
 
 ## Limits, traces and comparisons
 
@@ -100,8 +106,8 @@ output tokens. A cancelled/error response may report incomplete usage; counts ar
 billing ledger. Keep traces local and review before sharing.
 
 ```sh
-npm run eval:report -- --run luna-baseline
-npm run eval:compare -- --baseline luna-baseline --candidate luna-candidate
+npm run eval:report -- --run gpt6-luna-baseline
+npm run eval:compare -- --baseline gpt6-luna-baseline --candidate gpt6-luna-candidate
 ```
 
 Finish a baseline, make one harness change, then run a matching candidate with the same tasks and

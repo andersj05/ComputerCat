@@ -244,7 +244,7 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run test:computer-use:lab` | Repeat strict owned-editor checks and save reliability/latency reports; see [test lab](docs/computer-use-testing.md) |
 | `npm run test:computer-use:compare` | Compare compatible strict lab reports from the same environment |
 | `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
-| `npm run eval:live` | Four live Luna/Medium task attempts with automatic grading and a local report |
+| `npm run eval:live` | Four live GPT-6 Luna/Medium task attempts with automatic grading and a local report |
 | `npm run format` | Apply formatting and safe lint fixes |
 | `npm run voice:build` | Build and stage pinned Windows CPU speech helpers |
 | `npm run voice:test-native` | Offline native protocol and cancellation tests |
@@ -263,7 +263,7 @@ Task reliability is measured separately with [fifteen repeatable app tasks](docs
 context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
 worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
 The manual scorer makes no model calls; actual trials happen in the app. An opt-in
-[Luna/Medium runner](docs/live-evaluations.md) automatically evaluates adapted tasks against
+[GPT-6 Luna/Medium runner](docs/live-evaluations.md) automatically evaluates adapted tasks against
 controlled tool fixtures. Start with four tasks repeated three times. Live-model results are
 kept separate from offline tests and from actual Windows/public-web reliability.
 

@@ -3,7 +3,7 @@ import type { Task } from "../../../evals/core";
 import { createPiRuntime } from "../pi-runtime";
 import type { FixtureWorld } from "./fixtures";
 
-export const LIVE_MODEL = "gpt-5.6-luna";
+export const LIVE_MODEL = "gpt-6-luna";
 export const LIVE_REASONING = "medium";
 export const LIMITS = {
   requests: 6,

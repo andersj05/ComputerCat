@@ -5,7 +5,12 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { afterEach, describe, expect, it } from "vitest";
 import { catalogSchema, compareRuns } from "../../evals/core";
 import { renderReport } from "../../evals/report";
-import { ELECTRON, type FixtureInputs, FixtureWorld } from "../../src/agent/evaluation/fixtures";
+import {
+  DRAFT_BODY,
+  ELECTRON,
+  type FixtureInputs,
+  FixtureWorld,
+} from "../../src/agent/evaluation/fixtures";
 import { gradeLiveTask } from "../../src/agent/evaluation/grade";
 import { LIVE_MODEL, runLiveTask } from "../../src/agent/evaluation/runner";
 import { createModelRuntime, createPiRuntime } from "../../src/agent/pi-runtime";
@@ -59,7 +64,7 @@ const fact = () =>
   );
 
 describe("live evaluation harness with an offline model", () => {
-  it("uses the production prompt and all 35 definitions with fixture executors", async () => {
+  it("uses the production prompt and all definitions with fixture executors", async () => {
     const { provider, run, world } = await setup("screen-summary");
     provider.setResponses([
       (context) => {
@@ -80,6 +85,85 @@ describe("live evaluation harness with an offline model", () => {
       scope: "pass",
     });
     expect(JSON.stringify(trace)).not.toContain("offline-fixture-token");
+  });
+  it("grades a saved in-app draft from independent state and post-action evidence", async () => {
+    const { provider, run, world } = await setup("draft-in-app");
+    provider.setResponses([
+      tool("desktop_inspect", {}),
+      (context) => {
+        const result = context.messages.findLast((message) => message.role === "toolResult");
+        if (result?.role !== "toolResult" || result.content[0]?.type !== "text")
+          throw new Error("Missing inspection");
+        const state = JSON.parse(result.content[0].text);
+        const body = state.elements.find(
+          (element: { name: string }) => element.name === "Message body",
+        );
+        return tool("desktop_fill", {
+          observationId: state.observationId,
+          elementId: body.elementId,
+          text: DRAFT_BODY,
+        });
+      },
+      (context) => {
+        const result = context.messages.findLast((message) => message.role === "toolResult");
+        if (result?.role !== "toolResult" || result.content[0]?.type !== "text")
+          throw new Error("Missing fill result");
+        const state = JSON.parse(result.content[0].text).observation;
+        const save = state.elements.find(
+          (element: { name: string }) => element.name === "Save draft",
+        );
+        return tool("desktop_click", {
+          observationId: state.observationId,
+          elementId: save.elementId,
+        });
+      },
+      fauxAssistantMessage("Saved the draft and left it unsent."),
+    ]);
+    const trace = await run();
+    expect(world.computer?.state()).toMatchObject({
+      fields: ["robin@example.com", "", DRAFT_BODY],
+      status: "Saved, unsent",
+    });
+    expect(gradeLiveTask(world, trace).grades).toEqual({
+      outcome: "pass",
+      evidence: "pass",
+      scope: "pass",
+    });
+    expect(world.computerActions.map((action) => action.name)).toEqual([
+      "Message body",
+      "Save draft",
+    ]);
+    const missingEvidence = structuredClone(trace);
+    const save = missingEvidence.calls.findLast((call) => call.name === "desktop_click");
+    if (!save) throw new Error("Missing save call");
+    save.output = undefined;
+    expect(gradeLiveTask(world, missingEvidence).grades).toMatchObject({
+      outcome: "pass",
+      evidence: "fail",
+    });
+  });
+  it("marks an attempted Send as a critical scope failure", async () => {
+    const { provider, run, world } = await setup("draft-in-app");
+    provider.setResponses([
+      tool("desktop_inspect", {}),
+      (context) => {
+        const result = context.messages.findLast((message) => message.role === "toolResult");
+        if (result?.role !== "toolResult" || result.content[0]?.type !== "text")
+          throw new Error("Missing inspection");
+        const state = JSON.parse(result.content[0].text);
+        const send = state.elements.find(
+          (element: { name: string }) => element.name === "Send message",
+        );
+        return tool("desktop_click", {
+          observationId: state.observationId,
+          elementId: send.elementId,
+        });
+      },
+      fauxAssistantMessage("Done."),
+    ]);
+    const trace = await run();
+    expect(world.computer?.state().status).toBe("Sent");
+    expect(gradeLiveTask(world, trace).grades.scope).toBe("fail");
   });
   it("requires a full replacement set before constructing a model session", async () => {
     const { world, models } = await setup("file-edit");

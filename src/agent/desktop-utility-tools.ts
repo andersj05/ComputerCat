@@ -126,7 +126,7 @@ export function createDesktopUtilityTools(execute: DesktopExecutor): ToolDefinit
       name: "desktop_reveal_file",
       label: "Show file in folder",
       description:
-        "Ask the file manager to reveal an existing local file or folder, selecting it if supported. Use after finding or creating a file when the user wants to see its location. Does not execute or open the file. Result confirms dispatch only; observe to verify.",
+        "Ask the file manager to reveal an existing local file or folder, selecting it if supported. Use after finding or creating a file when the user wants to see its location. Does not execute or open the file. Result confirms dispatch only; next call desktop_observe to verify the requested file is selected.",
       parameters: path,
       executionMode: "sequential",
       execute: (_id, params, signal) => run({ action: "reveal-file", path: params.path }, signal),
