@@ -40,6 +40,20 @@ function setup(initial?: string, overrides: Partial<OAuthAuth> = {}) {
 }
 
 describe("Codex OAuth connection", () => {
+  it("lists GPT-6 Luna Medium using the same catalog as the worker", () => {
+    const auth = new CodexAuth(
+      { available: () => true, read: async () => undefined, write: async () => {} },
+      async () => {},
+      () => {},
+    );
+    instances.push(auth);
+    expect(auth.catalog()).toContainEqual({
+      id: "gpt-6-luna",
+      name: "GPT-6 Luna",
+      reasoning: ["off", "minimal", "low", "medium", "high", "xhigh", "max"],
+    });
+  });
+
   it("persists login, exposes only status, restores it, and removes it on disconnect", async () => {
     const { auth, storage, saved } = setup();
     await auth.load();

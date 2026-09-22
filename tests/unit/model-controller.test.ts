@@ -20,7 +20,7 @@ describe("model selection and conversation isolation", () => {
     let connected = true;
     const codex = {
       catalog: () => [
-        { id: "gpt-5.6-sol", name: "Sol", reasoning: ["medium" as const, "high" as const] },
+        { id: "gpt-6-luna", name: "GPT-6 Luna", reasoning: ["medium" as const, "high" as const] },
         { id: "another-model", name: "Another", reasoning: ["medium" as const] },
       ],
       snapshot: () => ({ connected, storageAvailable: true, login: null, message: null }),
@@ -80,7 +80,7 @@ describe("model selection and conversation isolation", () => {
       source: "codex",
       codexModel: "another-model",
     });
-    expect(controller.snapshot().active.codexModel).toBe("gpt-5.6-sol");
+    expect(controller.snapshot().active.codexModel).toBe("gpt-6-luna");
     const signal = new AbortController().signal;
     await old.run("first", signal, () => {});
     codex.accessToken.mockResolvedValueOnce("rotated-access");
@@ -88,8 +88,8 @@ describe("model selection and conversation isolation", () => {
     const next = controller.createRuntime();
     await next.run("new chat", signal, () => {});
     expect(requests.map((request) => request.model)).toEqual([
-      "gpt-5.6-sol",
-      "gpt-5.6-sol",
+      "gpt-6-luna",
+      "gpt-6-luna",
       "another-model",
     ]);
     expect(requests[1]?.apiKey).toBe("rotated-access");
