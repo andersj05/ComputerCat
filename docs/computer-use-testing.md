@@ -57,6 +57,10 @@ The shared [fixture lifecycle](../tests/fixtures/input-test.ts) creates fresh ow
 scenario and always attaches measurements and closes child processes, including after assertions fail.
 Input teardown aborts any outstanding helper and waits for its exit before recording final samples
 or starting another scenario; [offline lifecycle tests](../tests/unit/owned-input.test.ts) cover this.
+The owned WPF command channel also rejects concurrent or multiline commands, becomes unusable
+after a timeout/pipe failure, and waits for child exit before returning the failure. Delayed
+responses cannot become a later command's oracle. Startup, crash, cancellation, forced cleanup
+and unsuccessful cleanup are covered by [protocol tests](../tests/unit/owned-window.test.ts).
 
 The [native fixture](../tests/smoke/computer-input.spec.ts) and
 [browser fixture](../tests/smoke/browser-input.spec.ts) use application state to check success.
