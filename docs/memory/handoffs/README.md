@@ -25,7 +25,7 @@ do not infer all current work from the files present in one branch.
 
 ## Release qualification
 
-- [Expanded computer-use lab](2026-09-22-computer-use-lab-validation.md): eleven scenarios and
+- [Expanded computer-use lab](2026-09-22-computer-use-lab-validation.md): twelve scenarios and
   offline validation are implemented; full idle-desktop qualification remains.
 
 - [Computer use](2026-09-21-computer-use-validation.md): native input and the agent loop are

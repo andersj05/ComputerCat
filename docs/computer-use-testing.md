@@ -85,6 +85,9 @@ An abruptly killed process may leave a `running` report, which cannot qualify. P
 remain in `test-results/computer-use-lab/`.
 Refused/uncertain actions include privacy-preserving flags for foreground and input-tick changes,
 when a post-action snapshot exists. These do not identify which app or person caused activity.
+Reviewed 2026-09-22: repeated `user-input` refusals had a changed input tick with stable
+foreground ownership; other attempts dispatched successfully. These observations do not establish
+the source of activity or full idle-desktop qualification. The native guard remains unchanged.
 Failed ordinary smoke checks also print their final three measurement records for diagnosis.
 Reports contain synthetic operation labels and timing/environment metadata, never screenshots,
 editor contents, credentials or native handles. Generated files are ignored by Git.
@@ -135,7 +138,6 @@ Start a dedicated Windows VM with the same runtime versions and an interactive d
 repeatability or disruption becomes a problem. VM provisioning and real-account trials are
 outside this first lab; the repository runner is reusable there without a paid-model connection.
 
-
 ## Desktop geometry checks
 
 Reviewed 2026-09-22: at 125% scaling, the cat-panel resize smoke test observed identical
@@ -144,7 +146,6 @@ reported a transient 1–2 DIP difference. The [resize check](../tests/smoke/des
 uses exact native bounds for persistence and keeps renderer layout/anchor checks separately.
 Artwork bounding boxes use 0.001 CSS-pixel precision to exclude floating-point representation
 noise (observed as 174 versus 174.00003051757812), not to permit visible resizing.
-
 
 ## Offline tool-loop coverage
 
