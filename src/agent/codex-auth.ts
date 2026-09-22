@@ -8,11 +8,11 @@ import {
   getSupportedThinkingLevels,
   type Provider,
 } from "@earendil-works/pi-ai";
-import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { z } from "zod";
 import type { ActionResult } from "../shared/contracts";
 import type { CodexConnection, LoginMethod, ModelChoice } from "../shared/models";
 import { reasoningSchema } from "../shared/validation";
+import { computerCatCodexProvider } from "./codex-provider";
 import { UserFacingError } from "./runtime";
 
 export const CODEX_PROVIDER = "openai-codex";
@@ -125,7 +125,7 @@ export class CodexAuth {
     private readonly storage: SecretPersistence,
     private readonly openBrowser: (url: string) => Promise<void>,
     private readonly changed: () => void,
-    provider: Provider = openaiCodexProvider(),
+    provider: Provider = computerCatCodexProvider(),
   ) {
     this.credentials = new CodexCredentials(storage);
     this.models = createModels({

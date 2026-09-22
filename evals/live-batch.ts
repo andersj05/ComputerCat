@@ -37,7 +37,7 @@ export async function runLiveBatch(
   );
   const budget = { remaining: LIMITS.batchRequests };
   progress(
-    `Running ${run.trials.length} live-model attempts with Luna / Medium; controlled fixtures. Maximum ${LIMITS.batchRequests} model requests per batch.`,
+    `Running ${run.trials.length} live-model attempts with GPT-6 Luna / Medium; controlled fixtures. Maximum ${LIMITS.batchRequests} model requests per batch.`,
   );
   let tokens = 0;
   let requests = 0;

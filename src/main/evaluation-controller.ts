@@ -76,7 +76,7 @@ export class EvaluationController {
             model.id === EVALUATION_MODEL && model.reasoning.includes(EVALUATION_REASONING),
         )
     ) {
-      await fail("Luna / Medium is unavailable in the pinned SDK. No fallback model was used.");
+      await fail("GPT-6 Luna / Medium is unavailable in Computer Cat. No fallback model was used.");
       return;
     }
     if (request.action === "check") {
@@ -99,7 +99,7 @@ export class EvaluationController {
     }
     status.messages.push(
       this.auth.snapshot().connected
-        ? "Using Computer Cat's active connection; Luna / Medium. You can leave the cat open."
+        ? "Using Computer Cat's active connection; GPT-6 Luna / Medium. You can leave the cat open."
         : "Computer Cat needs a connection. Complete its browser sign-in; this command will continue automatically. Ctrl+C cancels.",
     );
     await writeEvaluationStatus(this.root, status);

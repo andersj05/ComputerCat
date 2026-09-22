@@ -1,7 +1,7 @@
 # Computer-use keyboard and model qualification
 
 Status: strict owned native/browser keyboard fixtures pass; real-app qualification remains
-Updated: 2026-09-21
+Updated: 2026-09-22
 Owner: computer-use development task
 Branch: `feat/computer-use`
 Baseline: `dev` at `7759041`
@@ -32,7 +32,8 @@ entry points are in [computer use](../../computer-use.md). Recheck the checkout 
   [browser](../../../tests/smoke/browser-input.spec.ts), and scripted agent fixtures exercise
   targeting, drafts, rejection and recovery without real accounts or model calls.
 - [Manual evaluations](../../../evals/catalog.json) add draft-in-app, draft-injection and
-  changed-editor. The controlled-tool Luna runner still covers its original twelve tasks.
+  changed-editor. The controlled-tool Luna runner now includes one isolated unsent-draft case,
+  but it has not been run with a live model; the other native tasks remain manual.
 
 Durable design and limits live in [computer use](../../computer-use.md) and the
 [browser input pitfall](../gotchas.md), not this handoff.

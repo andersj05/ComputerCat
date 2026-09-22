@@ -17,6 +17,7 @@ Reviewed: 2026-09-22.
   with keyless search, optional Brave and browser recovery. Page references expire after five minutes or turn end.
 - Demo replies are deterministic and offline. App-owned Codex login and direct model selection
   work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
+  Codex default: GPT-6 Luna / Medium.
 - Options stages defaults; Apply/OK saves, Cancel discards changes.
 - Options → [Harness guide](../harness-guide.md) opens an offline browser map, examples,
   typed tool catalog and extension guidance.
@@ -24,7 +25,8 @@ Reviewed: 2026-09-22.
   See [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md)
   for voice and cat-panel behavior.
 
-- [Luna evals](../live-evaluations.md) reuse the app's sign-in.
+- [GPT-6 Luna evals](../live-evaluations.md) reuse sign-in and a shared
+  [catalog overlay](../../src/agent/codex-provider.ts).
 
 ## Persistence boundaries
 

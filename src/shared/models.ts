@@ -5,7 +5,7 @@ export type ModelSettings = z.infer<typeof modelSettingsSchema>;
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   source: "demo",
-  codexModel: "gpt-5.6-sol",
+  codexModel: "gpt-6-luna",
   reasoning: "medium",
 };
 

@@ -1,6 +1,5 @@
 import { dirname } from "node:path";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
-import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import {
   type AgentSession,
   createAgentSession,
@@ -15,6 +14,7 @@ import type { ChatMessage } from "../shared/contracts";
 import type { DesktopExecutor } from "../shared/desktop";
 import { ALL_TOOL_NAMES, PI_TOOL_NAMES } from "../shared/tools";
 import type { WebExecutor } from "../shared/web";
+import { computerCatCodexProvider } from "./codex-provider";
 import { createComputerTools } from "./computer-tools";
 import type { RuntimeConfig } from "./config";
 import { createDesktopTools } from "./desktop-tools";
@@ -46,7 +46,7 @@ export async function createModelRuntime(): Promise<ModelRuntime> {
     allowModelNetwork: false,
     refreshOnCreate: false,
   });
-  const codex = openaiCodexProvider();
+  const codex = computerCatCodexProvider();
   // Main has already resolved OAuth. The worker accepts only that short-lived token;
   // it cannot log in, refresh, or consult ambient provider credentials.
   runtime.registerNativeProvider({

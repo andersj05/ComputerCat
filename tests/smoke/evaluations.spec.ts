@@ -55,7 +55,7 @@ test("evaluation CLI reuses the running app connection even when its saved vault
     expect(result.stdout).toContain(
       "using the running Computer Cat connection. No model request made.",
     );
-    expect(result.stdout).toContain("gpt-5.6-luna, medium");
+    expect(result.stdout).toContain("gpt-6-luna, medium");
     expect(await readFile(join(directory, "codex-credentials.enc"), "utf8")).toBe(
       "unreadable-offline-vault",
     );

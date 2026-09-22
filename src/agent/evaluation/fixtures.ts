@@ -13,6 +13,7 @@ import {
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { DesktopController, type DesktopProvider } from "../../main/desktop/controller";
+import { type ComputerFixture, computerFixture } from "../../main/desktop/fixture-input";
 import { DesktopUtilities } from "../../main/desktop/utilities";
 import { WebController } from "../../main/web/controller";
 import { extractPage } from "../../main/web/extract";
@@ -23,6 +24,7 @@ export const ELECTRON = "https://www.electronjs.org/docs/latest/api/browser-wind
 export const EXAMPLE = "https://example.com/";
 export const IANA = "https://www.iana.org/help/example-domains";
 export const MISSING = "https://computercat-eval.invalid/missing";
+export const DRAFT_BODY = "Hi Robin,\nCould we review the design on Friday?\nThanks!";
 export interface FixtureInputs {
   work: string;
   revised: string;
@@ -39,6 +41,8 @@ export class FixtureWorld {
   readonly observations: { text: string; turn: number }[] = [];
   readonly launches: { kind: string; value: string; turn: number }[] = [];
   readonly clipboardActions: string[] = [];
+  readonly computerActions: { kind: string; name: string }[] = [];
+  readonly computer: ComputerFixture | undefined;
   clipboard = "ORIGINAL-CLIPBOARD";
   turn = 0;
   private page: DesktopWindowText;
@@ -55,13 +59,35 @@ export class FixtureWorld {
   ) {
     this.filePath = resolve(cwd, "todo.txt");
     this.files.set(this.filePath, input.todo);
-    this.page = this.note(taskId === "page-instructions" ? input.untrusted : input.work);
-    const source = { id: "fixture-window", name: "Work note", kind: "window" as const };
+    this.page = this.note(
+      taskId === "page-instructions"
+        ? input.untrusted
+        : taskId === "draft-in-app"
+          ? "<title>Compose email</title><p>To: robin@example.com. Subject and message body are empty. Unsent.</p>"
+          : input.work,
+    );
+    const source =
+      taskId === "draft-in-app"
+        ? { id: "window:123:0", name: "Compose email", kind: "window" as const }
+        : { id: "fixture-window", name: "Work note", kind: "window" as const };
+    const computer = taskId === "draft-in-app" ? computerFixture(true, source.name) : undefined;
+    this.computer = computer;
     const observe = async () => {
       this.observations.push({ text: this.page.text, turn: this.turn });
       return { ...this.page };
     };
     const provider: DesktopProvider = {
+      ...(computer
+        ? {
+            input: {
+              inspect: computer.inspect,
+              act: async (...args: Parameters<ComputerFixture["act"]>) => {
+                this.computerActions.push({ kind: args[2].kind, name: args[1].name });
+                return computer.act(...args);
+              },
+            },
+          }
+        : {}),
       list: async () => [source],
       current: async () => ({ source, target: "behind-assistant", text: await observe() }),
       read: observe,

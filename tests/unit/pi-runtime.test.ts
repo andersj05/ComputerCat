@@ -25,6 +25,7 @@ describe("Pi integration without network or credentials", () => {
     await models.setRuntimeApiKey("openai-codex", "rotated-access-token");
     expect((await models.getAuth("openai-codex"))?.auth.apiKey).toBe("rotated-access-token");
     expect(models.getRegisteredNativeProvider("openai-codex")?.auth.oauth).toBeUndefined();
+    expect(models.getModel("openai-codex", "gpt-6-luna")?.thinkingLevelMap?.medium).toBe("medium");
   });
   it("exposes all built-in tools without discovering developer context", async () => {
     vi.stubEnv("PI_OFFLINE", "1");
