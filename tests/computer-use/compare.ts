@@ -1,50 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { z } from "zod";
 import { comparisonProblems, summarize } from "./metrics.ts";
-
-const ms = z.number().finite().nonnegative();
-const reportSchema = z.object({
-  version: z.literal(1),
-  createdAt: z.string(),
-  mode: z.enum(["strict", "diagnostic"]),
-  environment: z.object({
-    platform: z.string(),
-    release: z.string(),
-    arch: z.string(),
-    cpu: z.string(),
-    node: z.string(),
-    electron: z.string(),
-    playwright: z.string(),
-  }),
-  revision: z.object({
-    commit: z.string(),
-    dirty: z.boolean(),
-    helper: z.string(),
-    fixtures: z.string(),
-  }),
-  plannedAttempts: z.int().positive(),
-  runStatus: z.string(),
-  attempts: z.array(
-    z.object({
-      scenario: z.string(),
-      repeat: z.int().nonnegative(),
-      status: z.string(),
-      durationMs: ms,
-      coverage: z.array(z.string()),
-      measurements: z.array(
-        z.object({
-          operation: z.string(),
-          target: z.string(),
-          outcome: z.string(),
-          totalMs: ms,
-          initMs: ms.optional(),
-          readyMs: ms.optional(),
-          requestMs: ms.optional(),
-        }),
-      ),
-    }),
-  ),
-});
+import { reportSchema } from "./schema.ts";
 
 async function main() {
   const [baselinePath, candidatePath, extra] = process.argv.slice(2);

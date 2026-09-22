@@ -59,7 +59,10 @@ The synthetic Send button only changes fixture state; no message can leave these
 
 Each lab run prints a new `.local/computer-use/<timestamp>/` directory containing `report.json`
 and `report.md`. The reporter saves progress after each completed attempt and records final
-failure/interruption status. An abruptly killed process may leave a `running` report, which
+failure/interruption status. Version-2 reports retain the exact planned test roster, retries,
+per-attempt coverage gaps and sanitized reporting errors. Duplicate/missing attempts, missing or
+invalid attachments, and missing/out-of-order helper markers fail evidence validation in both modes.
+Diagnostic mode permits only asserted focus refusals with a recorded coverage gap; it never qualifies. An abruptly killed process may leave a `running` report, which
 cannot qualify. Playwright diagnostics remain in `test-results/computer-use-lab/`.
 Reports contain synthetic operation labels and timing/environment metadata, never screenshots,
 editor contents, credentials or native handles. Generated files are ignored by Git.
@@ -87,6 +90,7 @@ npm run test:computer-use:compare -- .local/computer-use/BASELINE/report.json .l
 
 The comparison fails closed unless both reports are complete strict passes with the same
 environment fingerprint, fixture/measurement hash, repetitions, operation mix and outcomes.
+Version-1 reports cannot be compared with version-2 runs; collect a fresh baseline.
 It permits a changed production helper and records commit, dirty-worktree status, and helper
 hash. Keep display scaling, machine, power mode and background load fixed too: the automatic
 fingerprint does not prove those conditions. Small sample counts are descriptive evidence;

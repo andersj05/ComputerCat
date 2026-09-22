@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, release } from "node:os";
-import { basename, dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import type {
   FullConfig,
   FullResult,
@@ -11,7 +11,17 @@ import type {
   TestCase,
   TestResult,
 } from "@playwright/test/reporter";
-import { type InputMeasurement, type LabReport, qualified, renderReport } from "./metrics";
+import { evidenceProblems, type InputMeasurement, type LabReport, renderReport } from "./metrics";
+
+import { measurementSchema } from "./schema";
+
+function identity(test: TestCase) {
+  return {
+    id: test.id,
+    scenario: `${relative(process.cwd(), test.location.file).replaceAll("\\", "/")}: ${test.titlePath().slice(1).join(" > ")}`,
+    repeat: test.repeatEachIndex,
+  };
+}
 
 export default class ComputerUseReporter implements Reporter {
   private report!: LabReport;
@@ -48,7 +58,7 @@ export default class ComputerUseReporter implements Reporter {
         }
       ).version;
     this.report = {
-      version: 1,
+      version: 2,
       createdAt,
       mode: process.env.COMPUTERCAT_INPUT_LAB_MODE === "diagnostic" ? "diagnostic" : "strict",
       environment: {
@@ -75,11 +85,14 @@ export default class ComputerUseReporter implements Reporter {
           "tests/smoke/computer-input.spec.ts",
           "tests/smoke/browser-input.spec.ts",
           "tests/computer-use/metrics.ts",
+          "tests/computer-use/schema.ts",
           "tests/computer-use/reporter.ts",
           "computer-use.config.ts",
         ]),
       },
       plannedAttempts: suite.allTests().length,
+      planned: suite.allTests().map(identity),
+      issues: [],
       runStatus: "running",
       attempts: [],
     };
@@ -89,12 +102,29 @@ export default class ComputerUseReporter implements Reporter {
 
   onTestEnd(test: TestCase, result: TestResult) {
     if (!this.report) return;
-    const attachment = result.attachments.find((item) => item.name === "computer-use-measurements");
+    const attachments = result.attachments.filter(
+      (item) => item.name === "computer-use-measurements",
+    );
     let measurements: InputMeasurement[] = [];
-    if (attachment?.body) measurements = JSON.parse(attachment.body.toString("utf8"));
+    try {
+      const attachment = attachments[0];
+      if (attachments.length !== 1 || !attachment)
+        throw new Error("Missing measurement attachment");
+      const body = attachment.body ?? (attachment.path ? readFileSync(attachment.path) : undefined);
+      if (!body) throw new Error("Missing measurement body");
+      measurements = measurementSchema
+        .array()
+        .min(1)
+        .parse(JSON.parse(body.toString("utf8")));
+    } catch {
+      // Preserve the test result and continue reporting; never copy raw attachment contents.
+      this.report.issues.push(
+        `${identity(test).scenario}: missing or invalid measurement attachment.`,
+      );
+    }
     this.report.attempts.push({
-      scenario: `${basename(test.location.file, ".spec.ts")}: ${test.title}`,
-      repeat: test.repeatEachIndex,
+      ...identity(test),
+      retry: result.retry,
       status: result.status,
       durationMs: result.duration,
       measurements,
@@ -109,13 +139,19 @@ export default class ComputerUseReporter implements Reporter {
     if (!this.report) return { status: "failed" as const };
     this.report.runStatus = result.status;
     const status =
-      result.status === "passed" && this.report.mode === "strict" && !qualified(this.report)
+      result.status === "passed" && evidenceProblems(this.report).length > 0
         ? "failed"
         : result.status;
     this.report.runStatus = status;
     this.save();
     console.log(renderReport(this.report));
     return { status };
+  }
+
+  onError() {
+    if (!this.report) return;
+    this.report.issues.push("Playwright reported a run error.");
+    this.save();
   }
 
   private save() {

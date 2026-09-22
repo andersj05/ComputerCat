@@ -37,7 +37,7 @@ export function ownedInput(): ComputerInput & { measurements: InputMeasurement[]
     },
   });
   async function measure<T>(
-    operation: string,
+    operation: InputMeasurement["operation"],
     target: string,
     run: () => Promise<T>,
     outcome: (result: T) => string,
@@ -48,7 +48,7 @@ export function ownedInput(): ComputerInput & { measurements: InputMeasurement[]
     active = { sample, started };
     try {
       const result = await run();
-      sample.outcome = outcome(result);
+      sample.outcome = outcome(result) as InputMeasurement["outcome"];
       return result;
     } finally {
       sample.totalMs = performance.now() - started;

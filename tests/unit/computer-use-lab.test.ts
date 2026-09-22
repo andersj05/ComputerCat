@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   comparisonProblems,
   distribution,
+  evidenceProblems,
   type LabReport,
   qualified,
+  renderReport,
   summarize,
 } from "../computer-use/metrics";
 
 function report(): LabReport {
   return {
-    version: 1,
+    version: 2,
     createdAt: "2026-09-22",
     mode: "strict",
     environment: {
@@ -23,17 +25,37 @@ function report(): LabReport {
     },
     revision: { commit: "baseline", dirty: false, helper: "a", fixtures: "same" },
     plannedAttempts: 1,
+    planned: [{ id: "owned-0", scenario: "owned", repeat: 0 }],
+    issues: [],
     runStatus: "passed",
     attempts: [
       {
+        id: "owned-0",
+        retry: 0,
         scenario: "owned",
         repeat: 0,
         status: "passed",
         durationMs: 100,
         coverage: [],
         measurements: [
-          { operation: "fill", target: "body", outcome: "dispatched", totalMs: 100, readyMs: 80 },
-          { operation: "fill", target: "body", outcome: "rejected:stale", totalMs: 1 },
+          {
+            operation: "fill",
+            target: "body",
+            outcome: "dispatched",
+            totalMs: 100,
+            initMs: 10,
+            readyMs: 80,
+            requestMs: 90,
+          },
+          {
+            operation: "fill",
+            target: "body",
+            outcome: "rejected:stale",
+            totalMs: 100,
+            initMs: 10,
+            readyMs: 80,
+            requestMs: 90,
+          },
         ],
       },
     ],
@@ -95,5 +117,63 @@ describe("computer-use lab evidence", () => {
     candidate.revision.fixtures = "different";
     candidate.attempts[0]?.measurements.pop();
     expect(comparisonProblems(baseline, candidate)).toHaveLength(3);
+  });
+
+  it.each([
+    "duplicate",
+    "unknown",
+    "wrong repeat",
+    "retry",
+    "empty",
+    "run error",
+    "markers",
+    "negative",
+    "nonfinite",
+    "order",
+  ])("rejects incomplete or corrupt evidence: %s", (cause) => {
+    const run = report();
+    const attempt = run.attempts[0];
+    const sample = attempt?.measurements[0];
+    if (!attempt || !sample) throw new Error("Missing fixture");
+    if (cause === "duplicate") {
+      run.plannedAttempts = 2;
+      run.planned.push({ id: "other", scenario: "other", repeat: 0 });
+      run.attempts.push(structuredClone(attempt));
+    }
+    if (cause === "unknown") attempt.id = "not-planned";
+    if (cause === "wrong repeat") attempt.repeat = 1;
+    if (cause === "retry") attempt.retry = 1;
+    if (cause === "empty") attempt.measurements = [];
+    if (cause === "run error") run.issues.push("Playwright reported a run error.");
+    if (cause === "markers") delete sample.readyMs;
+    if (cause === "negative") sample.totalMs = -1;
+    if (cause === "nonfinite") sample.totalMs = Number.NaN;
+    if (cause === "order") sample.initMs = sample.totalMs + 1;
+    expect(qualified(run)).toBe(false);
+    expect(comparisonProblems(report(), run)).not.toEqual([]);
+  });
+
+  it("permits documented diagnostic focus refusal but never qualifies it", () => {
+    const run = report();
+    const attempt = run.attempts[0];
+    const sample = attempt?.measurements[0];
+    if (!attempt || !sample) throw new Error("Missing fixture");
+    run.mode = "diagnostic";
+    sample.outcome = "rejected:focus";
+    expect(evidenceProblems(run)).not.toEqual([]);
+    attempt.coverage.push("Windows denied keyboard focus.");
+    expect(evidenceProblems(run)).toEqual([]);
+    expect(qualified(run)).toBe(false);
+    expect(renderReport(run)).toContain("Windows denied keyboard focus.");
+    sample.outcome = "uncertain:failed";
+    expect(evidenceProblems(run)).not.toEqual([]);
+  });
+
+  it("compares environment values regardless of JSON property order", () => {
+    const candidate = report();
+    candidate.environment = Object.fromEntries(
+      Object.entries(candidate.environment).reverse(),
+    ) as LabReport["environment"];
+    expect(comparisonProblems(report(), candidate)).toEqual([]);
   });
 });
