@@ -73,6 +73,22 @@ Reviewed 2026-09-22: an emptied Chromium contenteditable retains a caret line br
 one placeholder line, while checking actual input events; it does not trim leftover user text.
 The synthetic Send button only changes fixture state; no message can leave these forms.
 
+## Recorded verification
+
+Reviewed 2026-09-22, implementation through `2324108` (subsequent edits were documentation):
+
+| Check | Result and scope |
+| --- | --- |
+| `npm run verify` | Passed: 516 tests in 49 files, memory/catalog checks, lint, types and production build |
+| Full desktop smoke | 35/43 passed; eight native-input scenarios failed with `user-input` refusals; resize persistence and the all-six-tool worker flow passed |
+| Focused strict lab | Rich-editor editing and compact native click patterns: 6/6 passed, three repetitions each, no coverage gaps or evidence issues |
+| Full strict lab | 19/36 passed; all twelve scenarios passed at least once; sixteen attempts failed on `user-input`, one on `focus`; every planned attempt recorded, zero retries and no reporting errors |
+
+The full strict run remains unqualified. A successful sample from every scenario establishes
+that its assertions were exercised, not repeatability or a performance improvement. Preserve
+the failed attempts and use the [qualification handoff](memory/handoffs/2026-09-22-computer-use-lab-validation.md)
+for the remaining idle-desktop work. Generated timing reports stay outside Git.
+
 ## Read and compare measurements
 
 Each lab run prints a new `.local/computer-use/<timestamp>/` directory containing `report.json`

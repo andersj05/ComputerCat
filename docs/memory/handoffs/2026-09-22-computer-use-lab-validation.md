@@ -49,6 +49,11 @@ click-pattern scenario passed all six attempts (three each), with no coverage ga
 issues. The new checkbox, tab-selection and expand/collapse checks all dispatched correctly.
 This qualifies only those two selected scenarios, not the expanded full matrix.
 
+The subsequent full strict matrix recorded all 36 planned attempts: 19 passed and 17 failed
+(sixteen `user-input` refusals, one `focus` refusal). Every one of the twelve scenarios passed
+at least once. There were zero retries and no reporting errors; the reporter correctly refused
+qualification. Durable results are in [recorded verification](../../computer-use-testing.md).
+
 Interactive diagnostics repeatedly show changed input ticks with stable foreground ownership;
 some attempts also show foreground changes. The source of activity is unknown. Refusals remain
 failed attempts, no retries are hidden, and native protection checks remain intact. The
