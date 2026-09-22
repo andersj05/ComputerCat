@@ -15,7 +15,7 @@ import { WINDOWS_INPUT_SCRIPT } from "./windows-input-script";
 
 // The fixed script travels over stdin to avoid Windows' command-line length limit.
 const bootstrap =
-  "[Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false); $code = [Console]::In.ReadLine(); & ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($code))))";
+  "$PSModuleAutoLoadingPreference = 'None'; [Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false); $code = [Console]::In.ReadLine(); & ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($code))))";
 
 interface Options {
   platform?: NodeJS.Platform;

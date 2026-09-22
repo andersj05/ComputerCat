@@ -242,6 +242,9 @@ per-user module analysis cache with PSModuleAnalysisCachePath=NUL; the eight-sec
 deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader.spec.ts)
 uses the same initialization and supplies TEMP/TMP for its C# compilation.
 The native fixture passes locally; hosted timing is still an environment-dependent check.
+The input bootstrap must disable module auto-loading before any cmdlet, including New-Object.
+It constructs UTF-8 encoding directly through .NET; the main script then explicitly imports
+Utility. Disabling auto-loading only inside the decoded script is too late for the bootstrap.
 The input helper uses separate newline-terminated script and JSON request frames instead of
 waiting for stdin EOF. Embedded request newlines are JSON-escaped. Its fixed lifecycle markers
 contain no desktop data; only owned-fixture tests retain bounded failure diagnostics. Production
