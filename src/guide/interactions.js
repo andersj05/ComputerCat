@@ -20,9 +20,9 @@
       "Add validation, cancellation and error handling here when extending capabilities.",
     ],
     desktop: [
-      "Desktop evidence and everyday actions",
-      "Observation reads one window through accessibility and scoped capture. Utilities get time/folder paths, read or write requested clipboard text, and open links or file locations. Actions report OS dispatch; a fresh observation checks the visible result.",
-      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/windows-reader.ts\nsrc/main/desktop/source-capture.ts\nsrc/main/desktop/utilities.ts",
+      "Desktop evidence and app actions",
+      "Observation reads one window through accessibility and scoped capture. Computer-use tools act on fresh controls to click, edit, type or scroll, then return new state for verification. Utilities handle requested clipboard content and launches. Drafts remain unsent without authorization to submit.",
+      "src/main/desktop/electron-provider.ts\nsrc/main/desktop/computer-use.ts\nsrc/main/desktop/windows-input.ts\nsrc/main/desktop/utilities.ts",
       "Improve this layer for clearer text, better app targeting or more reliable screenshots.",
     ],
     web: [
@@ -45,6 +45,26 @@
     ],
   };
   const examples = {
+    draft: {
+      nodes: ["ask", "agent", "broker", "desktop"],
+      steps: [
+        [
+          "Inspect the email form",
+          "Identify the window, recipient and editable fields.",
+          "desktop_inspect",
+        ],
+        [
+          "Write into the editor",
+          "Replace the intended field using its fresh control reference.",
+          "desktop_fill",
+        ],
+        [
+          "Verify and leave unsent",
+          "Read the returned field state. Sending needs explicit authorization.",
+        ],
+      ],
+      note: "Each action consumes its targets. Changed windows, fields or user input require fresh inspection; unsupported controls are reported.",
+    },
     page: {
       nodes: ["ask", "agent", "broker", "desktop"],
       steps: [
@@ -205,7 +225,7 @@
     family.className = `tool-family ${tool.group}`;
     family.textContent =
       tool.group === "desktop"
-        ? "Desktop observation"
+        ? "Desktop context & input"
         : tool.group === "utilities"
           ? "Everyday utilities"
           : tool.group === "web"

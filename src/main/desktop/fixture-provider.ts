@@ -1,6 +1,7 @@
 import { nativeImage } from "electron";
 import type { DesktopWindowText } from "../../shared/desktop";
 import type { DesktopProvider, DesktopSource } from "./controller";
+import { computerFixture } from "./fixture-input";
 
 // Only constructed in smoke mode. No OS enumeration or inspection, even on unexpected calls.
 export function desktopFixture(enabled: boolean): DesktopProvider {
@@ -16,6 +17,7 @@ export function desktopFixture(enabled: boolean): DesktopProvider {
     truncated: false,
   };
   return {
+    input: computerFixture(enabled, source.name),
     list: async () => (enabled ? [source] : []),
     current: async () => (enabled ? { source, target: "behind-assistant", text } : undefined),
     read: async () => {

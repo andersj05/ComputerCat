@@ -55,8 +55,13 @@ inside that snapshot. Empty results never prove that content or controls do not 
 
 ## Harness boundaries
 
-Reviewed 2026-09-20: six [everyday utilities](harness-improvements.md) now share this broker:
-current time/folder paths, clipboard text read/write, open URL/folder and reveal file. They are
+Reviewed 2026-09-21: six [computer-use tools](computer-use.md) also share this broker. They
+inspect actionable controls, click/fill/type, press bounded keys and scroll using consumed
+observation references. The ten observation tools above remain read-only. Input uses a separate
+native adapter; its helper must exit before the serial slot is released after cancellation.
+
+Reviewed 2026-09-21: seven [everyday utilities](harness-improvements.md) share this broker:
+current time/folder paths, clipboard text read/write, browser search, open URL/folder and reveal file. They are
 separate from the ten read-only observation tools above. The same cancellation, lock/sleep,
 deadline and request budget apply; the serial slot spans both families. Already dispatched
 OS actions cannot be undone by Stop. Clipboard access is request-driven prompt policy, with

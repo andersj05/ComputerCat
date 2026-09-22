@@ -15,6 +15,49 @@ interface ToolGuide {
 
 // Exhaustive on purpose: adding/removing a registered tool also requires updating its guide.
 const descriptions = {
+  desktop_inspect: {
+    title: "Inspect app for actions",
+    purpose: "Find the intended editor, button or scroll area in an app.",
+    returns:
+      "Visible text, field values and up to sixty controls with disposable observation and element IDs.",
+    limit:
+      "Windows accessibility only. Targets expire after sixty seconds, a fresh inspection, any action, or turn end. No background scan.",
+  },
+  desktop_click: {
+    title: "Activate an app control",
+    purpose: "Invoke a button, select a tab, toggle or expand an observed control.",
+    returns: "Dispatch/rejection status and fresh accessible state when available.",
+    limit:
+      "Requires an advertised click action and unchanged native target. Drafting does not authorize sending.",
+  },
+  desktop_fill: {
+    title: "Fill an app field",
+    purpose: "Replace a writable editor's value, including a multiline draft.",
+    returns: "Action status and fresh field contents for verification.",
+    limit:
+      "Up to 8,000 characters. Requires an accessible editor; Chromium also requires native keyboard focus. Verify the draft and app state afterward.",
+  },
+  desktop_type_text: {
+    title: "Type into an editor",
+    purpose: "Insert literal Unicode text at the observed editor's caret or selection.",
+    returns: "Action status and fresh accessible state.",
+    limit:
+      "Requires a writable, focusable editor. Existing selection may be replaced; input already dispatched cannot be undone by Stop.",
+  },
+  desktop_press_key: {
+    title: "Press a key in an app",
+    purpose: "Use a bounded navigation/editing key in an observed control.",
+    returns: "Action status and fresh accessible state.",
+    limit:
+      "Focus is verified. Enter/Space may submit and require authorization for that effect; no arbitrary hotkeys.",
+  },
+  desktop_scroll: {
+    title: "Scroll an app region",
+    purpose: "Reveal more content using an observed scrollable control.",
+    returns: "Action status and newly exposed controls when available.",
+    limit:
+      "One small or large increment. Unsupported custom/canvas controls require another route.",
+  },
   web_get_status: {
     title: "Check web capabilities",
     purpose: "See which search routes and reading formats are available.",

@@ -189,7 +189,7 @@ public static class CatWindowTarget {
       }
     } catch { $result.truncated = $true }
   }
-  Visit $root 0
+  if ($mode -ne 'identity') { Visit $root 0 }
   $result.text = $state.text.ToString()
   $result.selectedText = $state.selected.ToString()
   $result.tabs = @($state.tabs.ToArray())
@@ -296,7 +296,7 @@ export class WindowsReader {
 
   inspectCurrentWindow(
     signal: AbortSignal,
-    mode: DesktopReadMode = "all",
+    mode: DesktopReadMode | "identity" = "all",
   ): Promise<CurrentWindowInspection> {
     return this.inspect(undefined, signal, mode);
   }
@@ -304,10 +304,10 @@ export class WindowsReader {
   private async inspect(
     nativeWindowId: string | undefined,
     signal: AbortSignal,
-    mode: DesktopReadMode,
+    mode: DesktopReadMode | "identity",
   ): Promise<CurrentWindowInspection> {
     if (signal.aborted) throw cancelled();
-    if (!["all", "selection", "tabs", "page", "controls"].includes(mode))
+    if (!["all", "selection", "tabs", "page", "controls", "identity"].includes(mode))
       return unavailable("Unsupported text reading mode.");
     if (this.platform !== "win32") {
       return unavailable("Reading application text is currently available on Windows only.");
@@ -451,7 +451,7 @@ export function inspectWindow(
 
 export function inspectCurrentWindow(
   signal: AbortSignal,
-  mode?: DesktopReadMode,
+  mode?: DesktopReadMode | "identity",
 ): Promise<CurrentWindowInspection> {
   return new WindowsReader().inspectCurrentWindow(signal, mode);
 }

@@ -99,6 +99,6 @@ describe("task evaluation scoring", () => {
         tasks: [{ ...task, checks: [task.checks[0], task.checks[0]] }],
       }).success,
     ).toBe(false);
-    expect(catalog.tasks).toHaveLength(12);
+    expect(catalog.tasks).toHaveLength(15);
   });
 });

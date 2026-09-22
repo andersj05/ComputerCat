@@ -1,7 +1,7 @@
 # Measuring task reliability
 
-Reviewed: 2026-09-20. The first suite evaluates the actual Computer Cat app with human-reviewed
-outcomes. The [task catalog](../evals/catalog.json) contains twelve representative tasks and
+Reviewed: 2026-09-21. The suite evaluates the actual Computer Cat app with human-reviewed
+outcomes. The [task catalog](../evals/catalog.json) contains fifteen representative tasks and
 explicit criteria, with synthetic desktop/file fixtures in [evals/fixtures](../evals/fixtures).
 It complements automated boundary and integration tests; passing those tests does not measure
 live-model task success. The [scoring core](../evals/core.ts) validates complete trial rosters,
@@ -50,7 +50,7 @@ The initializer asks for the connection, exact model, reasoning setting, and env
 Use the settings actually selected in Computer Cat. An example environment label is
 `Windows 11; Chrome 140; keyless search; normal network` — replace the versions with yours.
 It defaults to three attempts per task. The four-case starter therefore creates **12 attempts**.
-Omit `--tasks` to plan all twelve cases, **36 attempts**. `--repeats` accepts 1–20; use the same
+Omit `--tasks` to plan all fifteen cases, **45 attempts**. `--repeats` accepts 1–20; use the same
 value on both sides of a comparison. In noninteractive scripts supply all metadata explicitly:
 
 ```sh
@@ -134,7 +134,7 @@ compared with real app runs. Do not report example percentages as measured agent
 | Before changing prompts/tools/context/recovery | Record a baseline for affected tasks plus the four-case starter; keep model and environment fixed. |
 | During the change | Make one explainable change and small commits; add boundary tests for new failure modes; run `npm run verify`. |
 | Before the PR is ready | Run the matching candidate, inspect failures and regressions, and report counts and limitations in the PR. Run `npm run test:smoke` for app/desktop changes. |
-| Before a model/SDK upgrade or release | Run the complete twelve-case suite with repeats, plus the existing automated checks. Review critical failures independently of the average. |
+| Before a model/SDK upgrade or release | Run the complete fifteen-case suite with repeats, plus the existing automated checks. Review critical failures independently of the average. |
 | After shipping | Turn recurring user failures into cases, and keep a few fresh paraphrases/unseen cases for manual spot checks so we do not optimize only for memorized prompts. |
 
 If a changed rubric or new case invalidates an old baseline, run both revisions against the new

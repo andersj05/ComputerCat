@@ -20,6 +20,12 @@ export const DESKTOP_TOOL_NAMES = [
   "desktop_read_page",
   "desktop_list_controls",
   "desktop_find_text",
+  "desktop_inspect",
+  "desktop_click",
+  "desktop_fill",
+  "desktop_type_text",
+  "desktop_press_key",
+  "desktop_scroll",
 ] as const;
 
 export const DESKTOP_UTILITY_TOOL_NAMES = [

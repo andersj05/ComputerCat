@@ -9,6 +9,7 @@ import {
   desktopResultSchema,
 } from "../../shared/desktop";
 import { CaptureError } from "./capture-error";
+import { type ComputerInput, ComputerUse } from "./computer-use";
 import { findWindowText } from "./find-text";
 import type { DesktopUtilities } from "./utilities";
 
@@ -23,8 +24,12 @@ export interface CurrentDesktopWindow {
   text: DesktopWindowText;
 }
 export interface DesktopProvider {
+  input?: ComputerInput;
   list(signal: AbortSignal): Promise<DesktopSource[]>;
-  current(signal: AbortSignal, mode?: DesktopReadMode): Promise<CurrentDesktopWindow | undefined>;
+  current(
+    signal: AbortSignal,
+    mode?: DesktopReadMode | "identity",
+  ): Promise<CurrentDesktopWindow | undefined>;
   capture(
     source: DesktopSource,
     signal: AbortSignal,
@@ -41,6 +46,7 @@ const note =
 
 // Tools are available during user turns. No renderer grant or background observation loop.
 export class DesktopController {
+  private readonly computer: ComputerUse | undefined;
   private epoch = new AbortController();
   private readonly blocked = new Set<"locked" | "suspended" | "closing">();
   private sources = new Map<
@@ -55,9 +61,12 @@ export class DesktopController {
     private readonly provider: DesktopProvider,
     private readonly now = Date.now,
     private readonly utilities?: DesktopUtilities,
-  ) {}
+  ) {
+    this.computer = provider.input ? new ComputerUse(provider.input, now) : undefined;
+  }
 
   cancel(): void {
+    this.computer?.invalidate();
     this.epoch.abort();
     this.epoch = new AbortController();
     this.sources.clear();
@@ -102,6 +111,7 @@ export class DesktopController {
     if (this.busy)
       return desktopError("Another desktop operation is still running. Wait for it to finish.");
     if (this.captureTurn !== turnSignal) {
+      this.computer?.invalidate();
       this.captureTurn = turnSignal;
       this.failedCaptures.clear();
     }
@@ -124,12 +134,28 @@ export class DesktopController {
     // A timed-out OS call retains this lock until it actually settles.
     const work = (async (): Promise<DesktopResult> => {
       signal.throwIfAborted();
+      if (request.operation === "act") {
+        return this.computer
+          ? this.computer.act(request.observationId, request.action, turnSignal, signal)
+          : desktopError("Computer input is unavailable in this runtime.");
+      }
+      if (request.operation === "inspect") {
+        if (!this.computer) return desktopError("Computer input is unavailable in this runtime.");
+        this.computer.invalidate();
+        const current = issued ? undefined : await this.provider.current(signal, "identity");
+        signal.throwIfAborted();
+        const source = issued?.source ?? current?.source;
+        if (!source)
+          return desktopError("The current app is unavailable. List windows and choose one.");
+        return this.computer.inspect(source, turnSignal, signal, request.query);
+      }
       if (request.operation === "utility") {
         return this.utilities
           ? this.utilities.execute(request.request, signal)
           : desktopError("Desktop utilities are unavailable in this runtime.");
       }
       if (request.operation === "list") {
+        this.computer?.invalidate();
         const list = await this.provider.list(signal);
         signal.throwIfAborted();
         this.sources.clear();
@@ -322,6 +348,12 @@ export class DesktopController {
             "The desktop observation exceeded the supported size. Try a smaller window.",
           );
     } catch (error) {
+      if (request.operation === "act") {
+        this.computer?.invalidate();
+        return desktopError(
+          "Computer input stopped, timed out or failed. An action may already have happened. Inspect before retrying.",
+        );
+      }
       if (request.operation === "utility")
         return desktopError(
           "Desktop utility stopped, timed out or failed. An action already handed to the OS may still complete; inspect the current state before retrying.",

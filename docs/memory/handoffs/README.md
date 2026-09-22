@@ -25,5 +25,7 @@ do not infer all current work from the files present in one branch.
 
 ## Release qualification
 
+- [Computer use](2026-09-21-computer-use-validation.md): native input and the agent loop are
+  implemented and strict native/browser keyboard fixtures pass; real-app model trials remain.
 - [Local Whisper speech input](2026-09-17-local-whisper.md): Windows CPU implementation and automated tests
   are complete on `feat/local-whisper-input`; microphone/clean-machine release qualification remains.
