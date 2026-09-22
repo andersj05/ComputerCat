@@ -577,13 +577,21 @@ test("screen questions automatically observe through the real worker and recover
     const draft = await sendAndWaitForReply(page, "computer-fixture:draft");
     await expect(draft).toContainText("Offline computer draft verified");
     await expect(draft).toContainText("Hi Robin");
-    await expect(draft).toContainText("Unsent");
+    await expect(draft).toContainText("Friday works. Café 🐈");
+    await expect(draft).toContainText("Saved, unsent");
+    await expect(draft).toContainText("Notes: 0,50");
     await expect(draft).toContainText("expired or was already used");
     await draft.getByRole("button", { name: /Tool activity/ }).click();
-    await expect(draft.locator(".tool-activity .icon")).toHaveCount(5);
-    await expect(draft.getByRole("list", { name: "Tool activity" })).toContainText(
+    await expect(draft.locator(".tool-activity .icon")).toHaveCount(9);
+    for (const label of [
+      "Inspect app controls",
       "Fill app field",
-    );
+      "Type into app editor",
+      "Press key in app",
+      "Scroll app region",
+      "Activate app control",
+    ])
+      await expect(draft.getByRole("list", { name: "Tool activity" })).toContainText(label);
   } finally {
     await electron.close();
     await cleanup(userData);

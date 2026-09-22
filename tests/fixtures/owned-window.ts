@@ -31,16 +31,30 @@ export async function ownedWindow(scriptPath: string) {
       },
     },
   );
-  const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
   let diagnostics = "";
   child.stderr.on("data", (chunk: Buffer) => {
     diagnostics = (diagnostics + chunk.toString()).slice(-4096);
   });
+  let rejectFailure!: (error: Error) => void;
+  let terminalError: Error | undefined;
   const failure = new Promise<never>((_, reject) => {
-    child.on("error", reject);
-    for (const stream of [child.stdin, child.stdout, child.stderr]) stream.on("error", reject);
+    rejectFailure = reject;
   });
   void failure.catch(() => {});
+  const fail = (error: Error) => {
+    terminalError ??= error;
+    rejectFailure(terminalError);
+  };
+  child.on("error", fail);
+  for (const stream of [child.stdin, child.stdout, child.stderr]) stream.on("error", fail);
+  let exited = false;
+  const closed = new Promise<void>((resolve) =>
+    child.once("close", () => {
+      exited = true;
+      fail(new Error(`Owned fixture exited: ${diagnostics}`));
+      resolve();
+    }),
+  );
   const lines = createInterface({ input: child.stdout });
   const iterator = lines[Symbol.asyncIterator]();
   async function next(timeout = 8000) {
@@ -62,36 +76,64 @@ export async function ownedWindow(scriptPath: string) {
       clearTimeout(timer);
     }
   }
-  async function close() {
-    lines.close();
-    child.stdin.end();
-    const kill = setTimeout(() => child.kill(), 1000);
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+  let closing: Promise<void> | undefined;
+  function close() {
+    closing ??= (async () => {
+      fail(new Error("Owned fixture is closing"));
+      lines.close();
+      if (exited) return;
+      child.stdin.end();
+      const kill = setTimeout(() => {
+        if (!exited) child.kill();
+      }, 1000);
+      let deadline: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          closed,
+          new Promise<never>((_, reject) => {
+            deadline = setTimeout(() => reject(new Error("Owned fixture did not close")), 4000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(kill);
+        clearTimeout(deadline);
+      }
+    })();
+    return closing;
+  }
+  async function stopAfterFailure(error: unknown): Promise<never> {
     try {
-      await Promise.race([
-        closed,
-        new Promise<never>((_, reject) => {
-          deadline = setTimeout(() => reject(new Error("Owned fixture did not close")), 4000);
-        }),
-      ]);
-    } finally {
-      clearTimeout(kill);
-      clearTimeout(deadline);
+      await close();
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], "Owned fixture failed and could not close");
     }
+    throw error;
   }
   try {
     const handle = /^ready:([1-9]\d*)$/.exec(await next(30_000))?.[1];
     if (!handle) throw new Error(`Missing owned window handle: ${diagnostics}`);
+    let active = false;
     return {
       handle,
       close,
       command: async (command: string) => {
-        child.stdin.write(`${command}\n`);
-        return next();
+        if (terminalError) throw terminalError;
+        if (active) throw new Error("Owned fixture commands must be serial");
+        if (!command || /[\r\n\0]/.test(command))
+          throw new Error("Owned fixture commands must be a single nonempty line");
+        active = true;
+        try {
+          child.stdin.write(`${command}\n`);
+          return await next();
+        } catch (error) {
+          // A timed-out read still owns its reply. Never let another command reuse this channel.
+          return await stopAfterFailure(error);
+        } finally {
+          active = false;
+        }
       },
     };
   } catch (error) {
-    await close();
-    throw error;
+    return stopAfterFailure(error);
   }
 }

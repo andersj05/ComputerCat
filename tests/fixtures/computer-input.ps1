@@ -1,6 +1,7 @@
 # Synthetic editor owned by the native-input tests. Nothing leaves this process.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+$PSModuleAutoLoadingPreference = 'None'
 Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1"
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 Add-Type -AssemblyName PresentationFramework
@@ -16,10 +17,19 @@ $form = [System.Windows.Markup.XamlReader]::Parse(@'
     <TextBox Name="Subject" AutomationProperties.Name="Subject" Height="30" />
     <TextBox Name="Body" AutomationProperties.Name="Message body" AcceptsReturn="True" TextWrapping="Wrap" Height="130" />
     <PasswordBox Name="Password" AutomationProperties.Name="Secret fixture" Height="25" />
-    <TextBox AutomationProperties.Name="Read only" Text="Must remain unchanged" IsReadOnly="True" Height="25" />
+    <TextBox Name="ReadOnly" AutomationProperties.Name="Read only" Text="Must remain unchanged" IsReadOnly="True" Height="25" />
     <Button Name="Save" Content="Save draft" Height="25" />
     <Button Name="Send" Content="Send message" Height="25" />
     <TextBlock Name="Status" Text="Unsent" />
+    <Grid Height="60">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="120" /><ColumnDefinition Width="*" /><ColumnDefinition Width="170" /></Grid.ColumnDefinitions>
+      <CheckBox Name="Flag" Content="Flag draft" VerticalAlignment="Top" />
+      <TabControl Name="Category" Grid.Column="1">
+        <TabItem Header="Draft tab"><TextBlock Text="Draft category" /></TabItem>
+        <TabItem Header="Notes tab"><TextBlock Text="Notes category" /></TabItem>
+      </TabControl>
+      <Expander Name="Details" Header="Draft details" Grid.Column="2"><TextBlock Text="Expanded draft details" TextWrapping="Wrap" /></Expander>
+    </Grid>
     <ScrollViewer Name="Scroller" AutomationProperties.Name="Notes" Height="100" VerticalScrollBarVisibility="Auto">
       <StackPanel><TextBlock Text="First note" Height="100" /><TextBlock Text="Last note" Height="100" /></StackPanel>
     </ScrollViewer>
@@ -54,10 +64,15 @@ $timer.Add_Tick({
   $command = [InputFixture]::Next()
   if ($command -eq 'quit') { $form.Close(); return }
   if ($command -eq 'move') { $form.Left += 20; [Console]::Out.WriteLine('moved') }
+  if ($command -eq 'resize') { $form.Width += 40; [Console]::Out.WriteLine('resized') }
+  if ($command -eq 'rename-body') { [System.Windows.Automation.AutomationProperties]::SetName($body, 'Changed body'); [Console]::Out.WriteLine('renamed') }
+  if ($command -eq 'disable-body') { $body.IsEnabled = $false; [Console]::Out.WriteLine('disabled') }
+  if ($command -eq 'hide') { $form.Hide(); [Console]::Out.WriteLine('hidden') }
+  if ($command -eq 'restore') { $form.Width = 640; [System.Windows.Automation.AutomationProperties]::SetName($body, 'Message body'); $body.IsEnabled = $true; $form.Show(); [Console]::Out.WriteLine('restored') }
   if ($command -eq 'edit') { $body.Text = 'User changed this'; [Console]::Out.WriteLine('edited') }
   if ($command -eq 'focus-body') { [void]$form.Activate(); [void]$body.Focus(); $body.CaretIndex = $body.Text.Length; [Console]::Out.WriteLine('focused') }
   if ($command -eq 'status') {
-    [Console]::Out.WriteLine((@{ recipient = $form.FindName('Recipient').Text; subject = $subject.Text; body = $body.Text; status = $status.Text } | ConvertTo-Json -Compress))
+    [Console]::Out.WriteLine((@{ flagged = $form.FindName('Flag').IsChecked; category = $form.FindName('Category').SelectedIndex; expanded = $form.FindName('Details').IsExpanded; readOnly = $form.FindName('ReadOnly').Text; recipient = $form.FindName('Recipient').Text; subject = $subject.Text; body = $body.Text; status = $status.Text; selectionLength = $body.SelectionLength; scrollOffset = $form.FindName('Scroller').VerticalOffset } | ConvertTo-Json -Compress))
   }
   [Console]::Out.Flush()
 })
@@ -68,5 +83,9 @@ $form.Add_ContentRendered({
   [Console]::Out.Flush()
   $timer.Start()
 })
-try { [void]$form.ShowDialog() }
+# ShowDialog returns when hidden; retain the dispatcher so lifecycle tests can restore it.
+$application = New-Object System.Windows.Application
+$application.ShutdownMode = [System.Windows.ShutdownMode]::OnExplicitShutdown
+$form.Add_Closed({ $application.Shutdown() })
+try { [void]$application.Run($form) }
 finally { $timer.Stop(); $form.Close() }
