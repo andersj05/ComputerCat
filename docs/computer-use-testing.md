@@ -50,6 +50,7 @@ mode before packaging and uploads reports even when the check fails. Ordinary
 | --- | --- |
 | WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls; separate resize, rename, disable and hide/recovery cases; empty replacement and native read-only refusal |
 | Chromium form | Subject, multiline textarea and existing contenteditable replacement; CRLF/CR/LF normalization; Control+A selection, Unicode insertion and empty replacement per editor; actual input events; replaced DOM control rejection; no plain Enter; unchanged recipient; unsent draft; finding/clicking a nested Reply after seventy toolbar controls |
+| Offline app-state fixture | Real six-tool registration and desktop broker against independent editor/selection/scroll/save state; stale and read-only refusal; cancellation; per-instance isolation |
 | Offline boundary tests | Consumed/expired/cross-turn references, cancellation and process ownership, invalid requests, provider errors, ambiguous outcomes; included in `npm run verify` |
 
 The shared [fixture lifecycle](../tests/fixtures/input-test.ts) creates fresh owned windows per
@@ -137,3 +138,14 @@ reported a transient 1–2 DIP difference. The [resize check](../tests/smoke/des
 uses exact native bounds for persistence and keeps renderer layout/anchor checks separately.
 Artwork bounding boxes use 0.001 CSS-pixel precision to exclude floating-point representation
 noise (observed as 174 versus 174.00003051757812), not to permit visible resizing.
+
+
+## Offline tool-loop coverage
+
+Reviewed 2026-09-22: the [stateful backend](../src/main/desktop/fixture-input.ts) models three
+editors, save/send buttons, scroll offsets and a read-only control. The
+[integration tests](../tests/unit/computer-fixture.test.ts) invoke the real agent tools and
+DesktopController, then inspect a separate state oracle. Key selection, Unicode replacement,
+clearing and scroll must change state; unimplemented fixture keys return unsupported instead
+of an unconditional success. This covers tool/broker behavior without an interactive desktop.
+It does not simulate native focus, UI Automation patterns, browser input events or model judgment.
