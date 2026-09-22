@@ -26,7 +26,7 @@ Reviewed: 2026-09-22.
   for voice and cat-panel behavior.
 
 - [GPT-6 Luna evals](../live-evaluations.md) reuse sign-in and a shared
-  [catalog overlay](../../src/agent/codex-provider.ts).
+  [catalog overlay](../../src/agent/codex-provider.ts); one drafting case is unmeasured.
 
 ## Persistence boundaries
 
