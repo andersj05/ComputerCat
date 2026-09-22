@@ -193,15 +193,112 @@ describe("computer-use boundary", () => {
     );
   });
 
-  it("rejects disabled or unadvertised actions and invalid element IDs", async () => {
-    const { inspect, act, input } = setup();
-    input.inspect.mockResolvedValue({
-      ...snapshot,
-      elements: [{ ...editor, actions: ["key"] }],
-    });
-    expect((await act((await inspect()).observationId)).isError).toBe(true);
-    expect(input.act).not.toHaveBeenCalled();
-  });
+  it.each(["disabled", "unadvertised", "missing element"])(
+    "rejects %s targets without dispatch and consumes the observation",
+    async (cause) => {
+      const { inspect, act, input } = setup();
+      input.inspect.mockResolvedValue({
+        ...snapshot,
+        elements:
+          cause === "missing element"
+            ? []
+            : [
+                {
+                  ...editor,
+                  enabled: cause !== "disabled",
+                  actions: cause === "unadvertised" ? ["key"] : ["fill"],
+                },
+              ],
+      });
+      const before = await inspect();
+      expect((await act(before.observationId)).isError).toBe(true);
+      expect((await act(before.observationId)).isError).toBe(true);
+      expect(input.act).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["throw", "malformed", "no snapshot"])(
+    "consumes references after %s outcomes and recovers through fresh inspection",
+    async (cause) => {
+      const { inspect, act, input } = setup();
+      const before = await inspect();
+      if (cause === "throw")
+        input.act.mockRejectedValueOnce(new Error("private provider diagnostics"));
+      if (cause === "malformed")
+        input.act.mockResolvedValueOnce({
+          status: "dispatched",
+          reason: "ok",
+          snapshot: {},
+        } as never);
+      if (cause === "no snapshot")
+        input.act.mockResolvedValueOnce({ status: "uncertain", reason: "failed" });
+      const result = await act(before.observationId);
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).not.toContain("private provider diagnostics");
+      expect((await act(before.observationId)).isError).toBe(true);
+      expect(input.act).toHaveBeenCalledOnce();
+      const fresh = await inspect();
+      expect((await act(fresh.observationId)).isError).not.toBe(true);
+      expect(input.act).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each(["windowHandle", "processId", "processStarted"] as const)(
+    "does not publish replacement %s identities",
+    async (field) => {
+      const { inspect, act, input } = setup();
+      input.act.mockResolvedValueOnce({
+        status: "dispatched",
+        reason: "ok",
+        snapshot: { ...snapshot, [field]: field === "processId" ? 999 : "999" },
+      });
+      const before = await inspect();
+      const after = data(await act(before.observationId));
+      expect(after.observation).toBeUndefined();
+      expect(after.next).toContain("desktop_inspect");
+      expect((await act(before.observationId)).isError).toBe(true);
+      expect(input.act).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["cancel", "locked", "suspended", "deadline"] as const)(
+    "holds input ownership and suppresses late evidence after %s",
+    async (cause) => {
+      vi.useFakeTimers();
+      try {
+        const { inspect, act, controller, input, turn } = setup();
+        const before = await inspect();
+        let finish!: (value: Awaited<ReturnType<ComputerInput["act"]>>) => void;
+        input.act.mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finish = resolve;
+            }),
+        );
+        const pending = act(before.observationId);
+        expect(input.act).toHaveBeenCalledOnce();
+        const nativeSignal = input.act.mock.calls[0]?.[3];
+        if (cause === "cancel") controller.cancel();
+        else if (cause === "deadline") await vi.advanceTimersByTimeAsync(15_001);
+        else controller.setBlocked(cause, true);
+        expect(nativeSignal?.aborted).toBe(true);
+        expect((await pending).isError).toBe(true);
+        if (cause === "locked" || cause === "suspended") controller.setBlocked(cause, false);
+        expect((await controller.execute({ operation: "inspect" }, turn.signal)).isError).toBe(
+          true,
+        );
+        expect(input.inspect).toHaveBeenCalledOnce();
+        finish({ status: "dispatched", reason: "ok", snapshot });
+        await vi.advanceTimersByTimeAsync(0);
+        expect((await act(before.observationId)).isError).toBe(true);
+        const fresh = await inspect();
+        expect(fresh.observationId).not.toBe(before.observationId);
+        expect((await act(fresh.observationId)).isError).not.toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("bounds large screen results while preserving usable IDs", async () => {
     const { inspect, input } = setup();
