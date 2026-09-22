@@ -127,3 +127,13 @@ there is deliberately no arbitrary millisecond CI gate or claim of statistical s
 Start a dedicated Windows VM with the same runtime versions and an interactive desktop when
 repeatability or disruption becomes a problem. VM provisioning and real-account trials are
 outside this first lab; the repository runner is reusable there without a paid-model connection.
+
+
+## Desktop geometry checks
+
+Reviewed 2026-09-22: at 125% scaling, the cat-panel resize smoke test observed identical
+requested/native bounds before and after reopening, while Chromium's live-resize viewport
+reported a transient 1–2 DIP difference. The [resize check](../tests/smoke/desktop.spec.ts)
+uses exact native bounds for persistence and keeps renderer layout/anchor checks separately.
+Artwork bounding boxes use 0.001 CSS-pixel precision to exclude floating-point representation
+noise (observed as 174 versus 174.00003051757812), not to permit visible resizing.

@@ -1697,6 +1697,7 @@ test("cat panel resizes with a grip and keyboard, retains its size, and clamps t
       .poll(async () => Math.abs((await dimensions()).width - keyboardDimensions.width - 100))
       .toBeLessThanOrEqual(1);
     await pet.mouse.up();
+    await pet.evaluate(() => window.computerCat.info());
     const custom = await bounds();
     if (!custom) throw Error("Missing custom panel bounds");
     const customDimensions = await dimensions();
@@ -1707,8 +1708,9 @@ test("cat panel resizes with a grip and keyboard, retains its size, and clamps t
     expect(Math.abs(custom.x + custom.width - before.x - before.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(custom.y + custom.height - before.y - before.height)).toBeLessThanOrEqual(1);
     const resizedCat = await pet.locator(".pet-button").boundingBox();
-    expect(resizedCat?.width).toBe(cat?.width);
-    expect(resizedCat?.height).toBe(cat?.height);
+    // Chromium bounding boxes can carry sub-pixel float noise after native resizing.
+    expect(resizedCat?.width).toBeCloseTo(cat?.width ?? Number.NaN, 3);
+    expect(resizedCat?.height).toBeCloseTo(cat?.height ?? Number.NaN, 3);
     await expect(input).toHaveValue("Keep my draft while resizing");
     await pet.screenshot({
       path: testInfo.outputPath("cat-panel-custom-size.png"),
@@ -1716,7 +1718,9 @@ test("cat panel resizes with a grip and keyboard, retains its size, and clamps t
     });
     await panel.getByRole("button", { name: "Close voice bubble" }).click();
     await pet.getByRole("button", { name: "Chat", exact: true }).click();
-    await expect.poll(dimensions).toEqual(customDimensions);
+    // Persistence is a native-window contract. At fractional DPI the renderer can
+    // report a transient viewport rounded differently during live resize.
+    await expect.poll(bounds).toEqual(custom);
     await expect(input).toHaveValue("Keep my draft while resizing");
 
     await grip.hover();
