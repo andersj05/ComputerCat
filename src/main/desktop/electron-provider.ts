@@ -2,13 +2,15 @@ import { BrowserWindow, desktopCapturer } from "electron";
 import type { DesktopReadMode, DesktopRegion, DesktopWindowText } from "../../shared/desktop";
 import type { CurrentDesktopWindow, DesktopProvider, DesktopSource } from "./controller";
 import { SourceCapturer } from "./source-capture";
+import { WindowsInput } from "./windows-input";
 import { inspectCurrentWindow, inspectWindow } from "./windows-reader";
 
 export class ElectronDesktopProvider implements DesktopProvider {
+  readonly input = new WindowsInput();
   constructor(private readonly capturer: Pick<SourceCapturer, "capture"> = new SourceCapturer()) {}
   async current(
     signal: AbortSignal,
-    mode?: DesktopReadMode,
+    mode?: DesktopReadMode | "identity",
   ): Promise<CurrentDesktopWindow | undefined> {
     const { nativeWindowId, target, ...text } = await inspectCurrentWindow(signal, mode);
     signal.throwIfAborted();

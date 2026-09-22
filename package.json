@@ -27,6 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "npm run build && playwright test",
+    "test:computer-use": "playwright test tests/smoke/browser-input.spec.ts tests/smoke/computer-input.spec.ts",
     "verify": "npm run memory:check && npm run eval:check && npm run lint && npm run typecheck && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
     "package:win": "npm run build && electron-builder --win nsis --publish never",

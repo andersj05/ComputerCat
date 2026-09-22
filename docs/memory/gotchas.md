@@ -3,6 +3,36 @@
 Keep reproducible lessons here. Each entry states its scope, evidence, and review date.
 Remove obsolete remedies; keep transient environment failures in the relevant handoff.
 
+## Browser text changes need app input events
+
+Reviewed: 2026-09-21. Scope: Windows UI Automation with Electron 44 / Chromium editors.
+
+The owned browser fixture showed that ValuePattern.SetValue updates a contenteditable's DOM
+without dispatching an input event, while ordinary inputs and textareas did receive events.
+The [helper](../../src/main/desktop/windows-input-script.ts) therefore uses editor-scoped text
+selection and guarded keyboard input for Chromium fills. The managed accessibility metadata
+does not reliably distinguish these three editor kinds. Do not restore direct browser SetValue
+or accept a DOM-only assertion as proof of app state. The [fixture](../../tests/smoke/browser-input.spec.ts)
+requires exact text and input events on successful dispatch, or unchanged text on denied focus.
+Strict native-focus tests now pass for input, textarea and contenteditable, including multiline
+text and input events. Unicode packet LF/CR characters were ignored by Chromium; literal
+newlines now use Shift+Enter, without plain Enter or a trailing submit key. App keyboard
+handlers still apply. Playwright's
+emulated focus and BrowserWindow.isFocused are not substitutes for GetForegroundWindow plus
+the native focused control. See [verification scope](../computer-use.md).
+
+## Missing website controls can be a bounded discovery result
+
+Reviewed: 2026-09-21. The initial computer-use helper walked only fourteen raw-tree levels
+and returned the first sixty controls. A dense browser toolbar or nested email view could
+therefore omit a Reply button even when UI Automation exposed it. The
+[input helper](../../src/main/desktop/windows-input-script.ts) now walks the control view with
+bounded deeper traversal; name-filtered inspection applies before the output limit. The
+[browser regression](../../tests/smoke/browser-input.spec.ts) places Reply after seventy controls
+and twenty nested groups. Incomplete scans must not be described as proof of absence.
+Current-window identity resolution no longer scans controls twice. Per-call PowerShell startup
+and compilation remain latency costs; live Outlook completion and speed are not measured.
+
 ## Overlays can win inferred current-window selection
 
 Reviewed: 2026-09-20. When Computer Cat has focus, window z-order is only a guess at the
@@ -212,6 +242,14 @@ per-user module analysis cache with PSModuleAnalysisCachePath=NUL; the eight-sec
 deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader.spec.ts)
 uses the same initialization and supplies TEMP/TMP for its C# compilation.
 The native fixture passes locally; hosted timing is still an environment-dependent check.
+The input bootstrap must disable module auto-loading before any cmdlet, including New-Object.
+It constructs UTF-8 encoding directly through .NET; the main script then explicitly imports
+Utility. Disabling auto-loading only inside the decoded script is too late for the bootstrap.
+The input helper uses separate newline-terminated script and JSON request frames instead of
+waiting for stdin EOF. Embedded request newlines are JSON-escaped. Its fixed lifecycle markers
+contain no desktop data; only owned-fixture tests retain bounded failure diagnostics. Production
+still discards stderr and retains the same timeout/cancellation ownership boundaries. Reviewed
+2026-09-21 against [transport tests](../../tests/unit/windows-input.test.ts).
 See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).
 
 ## Preserve requested window dimensions at fractional DPI

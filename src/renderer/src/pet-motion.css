@@ -1,32 +1,39 @@
 /* All moving parts share the SVG's coordinate space. Static poses remain informative. */
-.pet-art .cat-body {
+.pet-art .cat-head-pose,
+.pet-art .cat-paw-pose {
+  /* Explicitly remove the property too, so motion-off cancels an in-flight transition. */
+  transition: none;
+}
+.pet-art .cat-breathe {
   transform-origin: 554px 1300px;
 }
+.pet-art .cat-head-pose,
 .pet-art .cat-head {
   transform-origin: 554px 752px;
+}
+.pet-art .cat-head-pose {
   transform: var(--head-pose, none);
 }
+.pet-art .cat-left-pose,
 .pet-art .cat-paw-left {
-  --paw-pose: var(--left-pose);
   transform-origin: 378px 834px;
+}
+.pet-art .cat-left-pose {
   transform: var(--left-pose, none);
 }
+.pet-art .cat-right-pose,
 .pet-art .cat-paw-right {
-  --paw-pose: var(--right-pose);
   transform-origin: 728px 832px;
+}
+.pet-art .cat-right-pose {
   transform: var(--right-pose, none);
 }
 .pet-art .cat-blink {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0);
+  opacity: 0;
 }
 .pet-art .cat-mouth {
   display: none;
-}
-.pet-art .cat-mouth-open {
-  transform-box: fill-box;
-  transform-origin: center top;
+  opacity: 0;
 }
 .pet-art .cat-signal {
   transform-box: fill-box;
@@ -41,58 +48,58 @@
   --head-duration: 3.2s;
 }
 .pet-art[data-activity="listening"] {
-  --head-pose: translate(14px, 5px) rotate(6deg);
+  --head-pose: translate(6px, 3px) rotate(4deg);
   --head-motion: cat-listen;
   --head-duration: 4.8s;
-  --right-pose: rotate(-9deg);
+  --right-pose: rotate(-5deg);
 }
 .pet-art[data-activity="thinking"] {
-  --head-pose: translate(-9px, -6px) rotate(-5deg);
+  --head-pose: translate(-4px, -3px) rotate(-3deg);
   --head-motion: cat-think;
   --head-duration: 5.6s;
-  --left-pose: rotate(-12deg);
+  --left-pose: rotate(-6deg);
 }
 .pet-art[data-activity="transcribing"] {
-  --head-pose: translateY(14px) rotate(3deg);
+  --head-pose: translateY(8px) rotate(2deg);
   --head-motion: cat-read;
   --head-duration: 3.2s;
-  --left-pose: rotate(-22deg);
-  --right-pose: rotate(22deg);
+  --left-pose: rotate(-14deg);
+  --right-pose: rotate(14deg);
 }
 .pet-art[data-activity="review"] {
-  --head-pose: rotate(-3deg);
+  --head-pose: rotate(-2deg);
   --head-motion: cat-review;
   --head-duration: 7s;
-  --left-pose: rotate(-22deg);
-  --right-pose: rotate(22deg);
+  --left-pose: rotate(-14deg);
+  --right-pose: rotate(14deg);
 }
 .pet-art[data-activity="working"] {
-  --head-pose: translateY(9px);
+  --head-pose: translateY(6px);
   --head-motion: cat-type-nod;
-  --head-duration: 2.4s;
-  --left-pose: rotate(-18deg);
-  --right-pose: rotate(18deg);
+  --head-duration: 3.6s;
+  --left-pose: rotate(-12deg);
+  --right-pose: rotate(12deg);
 }
 .pet-art[data-activity="replying"] {
   --head-pose: rotate(-2deg);
   --head-motion: cat-talk;
-  --head-duration: 2.8s;
-  --right-pose: rotate(-12deg);
+  --head-duration: 4.8s;
+  --right-pose: rotate(-5deg);
 }
 .pet-art[data-activity="happy"] {
-  --head-pose: translateY(-8px) rotate(-4deg);
+  --head-pose: translateY(-4px) rotate(-2deg);
   --head-motion: cat-delight;
   --head-duration: 2.4s;
-  --left-pose: rotate(9deg);
-  --right-pose: rotate(-14deg);
+  --left-pose: rotate(3deg);
+  --right-pose: rotate(-8deg);
 }
 .pet-art[data-activity="stopping"] {
-  --head-pose: translateY(8px);
+  --head-pose: translateY(5px);
   --head-motion: cat-settle;
   --head-duration: 2s;
 }
 .pet-art[data-activity="error"] {
-  --head-pose: translateY(9px) rotate(7deg);
+  --head-pose: translateY(5px) rotate(4deg);
   --head-motion: cat-puzzled;
   --head-duration: 7s;
 }
@@ -100,24 +107,28 @@
   display: inline;
 }
 .pet-art[data-activity="happy"] .cat-blink {
-  transform: scaleY(1);
+  opacity: 1;
 }
 
 /* Motion is opt-in at the containing pet or staged Options preview. */
-.animated .pet-art .cat-body {
-  animation: cat-breathe 5.2s ease-in-out infinite;
+.animated .pet-art .cat-breathe {
+  animation: cat-breathe 5.6s ease-in-out infinite;
+}
+.animated .pet-art .cat-head-pose,
+.animated .pet-art .cat-paw-pose {
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .animated .pet-art .cat-head {
-  animation: var(--head-motion, cat-look) var(--head-duration, 14s) ease-in-out infinite;
+  animation: var(--head-motion, cat-look) var(--head-duration, 16s) ease-in-out infinite;
 }
 .animated .pet-art .cat-blink {
-  animation: cat-blink 6.8s linear infinite;
+  animation: cat-blink 6.8s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="idle"] .cat-eye-right {
-  animation: cat-wink 13.6s linear infinite;
+  animation: cat-wink 13.6s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="idle"] .cat-paw-right {
-  animation: cat-fidget 14s ease-in-out infinite;
+  animation: cat-fidget 16s ease-in-out infinite;
 }
 .animated .pet-art[data-activity="listening"] .cat-signal {
   animation: cat-listen-signal 1.8s ease-in-out infinite;
@@ -144,19 +155,19 @@
   animation: cat-hourglass 3.2s ease-in-out infinite;
 }
 .animated .pet-art[data-activity="transcribing"] .cat-paw-right {
-  animation: cat-scribble 1.6s ease-in-out infinite;
+  animation: cat-scribble 2.4s ease-in-out infinite;
 }
 .animated .pet-art[data-activity="working"] .cat-paw {
-  animation: cat-type 0.7s ease-in-out infinite;
+  animation: cat-type 1.2s ease-in-out infinite;
 }
 .animated .pet-art[data-activity="working"] .cat-paw-right {
-  animation-delay: -0.35s;
+  animation-delay: -0.6s;
 }
-.animated .pet-art[data-activity="replying"] .cat-mouth-open {
-  animation: cat-speak 1.4s steps(1, end) infinite;
+.animated .pet-art[data-activity="replying"] .cat-mouth {
+  animation: cat-speak 2.4s steps(1, end) infinite;
 }
 .animated .pet-art[data-activity="replying"] .cat-paw-right {
-  animation: cat-explain 2.8s ease-in-out infinite;
+  animation: cat-explain 4.8s ease-in-out infinite;
 }
 .animated .pet-art[data-activity="happy"] .cat-blink {
   animation: none;
@@ -168,7 +179,7 @@
   animation: cat-sparkle 2.4s ease-out infinite;
 }
 .pet-wrap.animated:not(.dragging) .pet-button:hover .pet-art[data-activity="idle"] .cat-head {
-  animation: cat-hello 2.4s ease-in-out infinite;
+  animation: cat-hello 2.4s ease-in-out 1;
 }
 .pet-wrap[data-motion-paused="true"] .pet-art * {
   /* biome-ignore lint/complexity/noImportantStyles: Pause must override every activity's animation shorthand, including hover. */
@@ -181,7 +192,7 @@
     transform: scaleY(1);
   }
   50% {
-    transform: scaleY(1.009);
+    transform: scaleY(1.004);
   }
 }
 @keyframes cat-look {
@@ -193,14 +204,14 @@
   }
   25%,
   36% {
-    transform: translate(-8px, -4px) rotate(-3deg);
+    transform: translate(-3px, -2px) rotate(-1.5deg);
   }
   66%,
   76% {
-    transform: translate(8px, 2px) rotate(3deg);
+    transform: translate(3px, 1px) rotate(1.5deg);
   }
   84% {
-    transform: translateY(6px) rotate(1deg);
+    transform: translateY(2px) rotate(0.5deg);
   }
 }
 @keyframes cat-blink {
@@ -210,11 +221,11 @@
   79%,
   83%,
   100% {
-    transform: scaleY(0);
+    opacity: 0;
   }
   44%,
   81% {
-    transform: scaleY(1);
+    opacity: 1;
   }
 }
 @keyframes cat-wink {
@@ -228,7 +239,7 @@
   89.5%,
   91.5%,
   100% {
-    transform: scaleY(0);
+    opacity: 0;
   }
   22%,
   40.5%,
@@ -236,11 +247,11 @@
   90.5%,
   94%,
   96% {
-    transform: scaleY(1);
+    opacity: 1;
   }
   92%,
   98% {
-    transform: scaleY(0);
+    opacity: 0;
   }
 }
 @keyframes cat-fidget {
@@ -252,143 +263,143 @@
   }
   67%,
   77% {
-    transform: rotate(-7deg);
+    transform: rotate(-3deg);
   }
   72% {
-    transform: rotate(-3deg);
+    transform: rotate(-1deg);
   }
 }
 @keyframes cat-ready {
   0%,
   100% {
-    transform: rotate(-2deg);
+    transform: none;
   }
   45%,
   65% {
-    transform: translateY(-12px) rotate(1deg);
+    transform: translateY(-5px) rotate(1deg);
   }
 }
 @keyframes cat-listen {
   0%,
   100% {
-    transform: translate(14px, 5px) rotate(6deg);
+    transform: none;
   }
   38%,
   65% {
-    transform: translate(20px, -3px) rotate(8deg);
+    transform: translate(3px, -3px) rotate(1deg);
   }
   80% {
-    transform: translate(15px, 9px) rotate(5deg);
+    transform: translate(1px, 2px) rotate(-0.5deg);
   }
 }
 @keyframes cat-think {
   0%,
   100% {
-    transform: translate(-9px, -6px) rotate(-5deg);
+    transform: none;
   }
   35%,
   58% {
-    transform: translate(-15px, -12px) rotate(-8deg);
+    transform: translate(-2px, -3px) rotate(-1.5deg);
   }
   76%,
   85% {
-    transform: translate(-3px, 0) rotate(-2deg);
+    transform: translate(2px, 1px) rotate(1deg);
   }
 }
 @keyframes cat-read {
   0%,
   100% {
-    transform: translateY(14px) rotate(3deg);
+    transform: none;
   }
   35% {
-    transform: translate(5px, 20px) rotate(5deg);
+    transform: translate(2px, 4px) rotate(1deg);
   }
   70% {
-    transform: translate(-6px, 12px) rotate(1deg);
+    transform: translate(-2px, 1px) rotate(-0.5deg);
   }
 }
 @keyframes cat-review {
   0%,
   40%,
   100% {
-    transform: rotate(-3deg);
+    transform: none;
   }
   60%,
   74% {
-    transform: translateY(9px) rotate(1deg);
+    transform: translateY(4px) rotate(1deg);
   }
 }
 @keyframes cat-type-nod {
   0%,
   100% {
-    transform: translateY(9px) rotate(-1deg);
+    transform: none;
   }
   30%,
   70% {
-    transform: translateY(15px) rotate(1deg);
+    transform: translateY(3px) rotate(0.5deg);
   }
   50% {
-    transform: translateY(7px);
+    transform: translateY(1px);
   }
 }
 @keyframes cat-talk {
   0%,
   100% {
-    transform: rotate(-2deg);
+    transform: none;
   }
   25% {
-    transform: translateY(-8px) rotate(2deg);
+    transform: translateY(-3px) rotate(1deg);
   }
   48% {
-    transform: translateY(4px) rotate(1deg);
+    transform: translateY(2px) rotate(0.5deg);
   }
   72% {
-    transform: translateY(-5px) rotate(-3deg);
+    transform: translateY(-2px) rotate(-0.5deg);
   }
 }
 @keyframes cat-delight {
   0%,
   100% {
-    transform: translateY(-8px) rotate(-4deg);
+    transform: none;
   }
   18% {
-    transform: translateY(5px) rotate(-2deg);
+    transform: translateY(3px) rotate(0.5deg);
   }
   36%,
   62% {
-    transform: translateY(-18px) rotate(4deg);
+    transform: translateY(-6px) rotate(2deg);
   }
   80% {
-    transform: translateY(-6px) rotate(-3deg);
+    transform: translateY(-1px) rotate(-0.5deg);
   }
 }
 @keyframes cat-settle {
   0%,
   100% {
-    transform: translateY(8px);
+    transform: none;
   }
   55% {
-    transform: translateY(12px) rotate(1deg);
+    transform: translateY(3px) rotate(0.5deg);
   }
 }
 @keyframes cat-puzzled {
   0%,
   30%,
   100% {
-    transform: translateY(9px) rotate(7deg);
+    transform: none;
   }
   45%,
   58% {
-    transform: translateY(6px) rotate(3deg);
+    transform: translateY(-2px) rotate(-1.5deg);
   }
 }
 @keyframes cat-hello {
   0%,
   100% {
-    transform: rotate(-4deg);
+    transform: none;
   }
   50% {
-    transform: translateY(-10px) rotate(-6deg);
+    transform: translateY(-3px) rotate(-2deg);
   }
 }
 @keyframes cat-listen-signal {
@@ -407,7 +418,7 @@
     transform: none;
   }
   25% {
-    transform: translateY(-17px);
+    transform: translateY(-10px);
   }
 }
 @keyframes cat-hourglass {
@@ -424,27 +435,32 @@
   0%,
   44%,
   100% {
-    transform: rotate(22deg);
+    transform: none;
   }
   12%,
   32% {
-    transform: translate(-10px, -5px) rotate(25deg);
+    transform: translate(-3px, -2px) rotate(1deg);
   }
   22% {
-    transform: translate(5px, 3px) rotate(20deg);
+    transform: translate(2px, 1px) rotate(-1deg);
   }
   62%,
   78% {
-    transform: translate(0, -17px) rotate(18deg);
+    transform: translate(0, -5px) rotate(-1deg);
   }
 }
 @keyframes cat-type {
   0%,
+  20%,
+  65%,
   100% {
-    transform: var(--paw-pose);
+    transform: none;
+  }
+  38% {
+    transform: translateY(-9px);
   }
   50% {
-    transform: translateY(-22px) var(--paw-pose);
+    transform: translateY(2px);
   }
 }
 @keyframes cat-speak {
@@ -452,44 +468,44 @@
   32%,
   61%,
   100% {
-    transform: scaleY(0.25);
+    opacity: 0;
   }
   10%,
   42%,
   76% {
-    transform: scaleY(1);
+    opacity: 1;
   }
   21%,
   53%,
   88% {
-    transform: scaleY(0.6);
+    opacity: 1;
   }
 }
 @keyframes cat-explain {
   0%,
   100% {
-    transform: rotate(-12deg);
+    transform: none;
   }
   28%,
   48% {
-    transform: rotate(-22deg);
+    transform: rotate(-4deg);
   }
   70% {
-    transform: rotate(-6deg);
+    transform: rotate(1deg);
   }
 }
 @keyframes cat-wave {
   0%,
   100% {
-    transform: rotate(-14deg);
+    transform: none;
   }
   30%,
   60% {
-    transform: rotate(-34deg);
+    transform: rotate(-7deg);
   }
   45%,
   75% {
-    transform: rotate(-20deg);
+    transform: rotate(-2deg);
   }
 }
 @keyframes cat-sparkle {
@@ -511,5 +527,7 @@
   .animated .pet-art * {
     /* biome-ignore lint/complexity/noImportantStyles: Reduced motion is an invariant across all activity and hover selectors. */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Pose interpolation must also respect reduced motion. */
+    transition: none !important;
   }
 }

@@ -31,7 +31,7 @@
           <div class="side-note">
             <strong>A guide to this build</strong>
             <p>Explore what exists, how a request travels, and where the next improvement belongs.</p>
-            <span>Version __VERSION__<br />Reviewed September 20, 2026</span>
+            <span>Version __VERSION__<br />Reviewed September 21, 2026</span>
           </div>
           <p class="offline-note">This is an offline reference. Examples do not run tools or read your screen.</p>
         </aside>
@@ -49,6 +49,7 @@
                 <option value="detail">“Can you read this small error?”</option>
                 <option value="file">“Find my project notes.”</option>
                 <option value="research">“Research this topic with sources.”</option>
+                <option value="draft">“Draft an email in this form.”</option>
                 <option value="voice">Ask a screen question with Talk</option>
               </select>
             </div>
@@ -81,7 +82,7 @@
                 </li>
                 <li class="lane"><span class="lane-label">Sources &amp; actions</span>
                   <button type="button" class="map-node" data-node="desktop" aria-pressed="false">
-                    <span class="node-symbol" aria-hidden="true">▣</span><strong>Observe or act</strong><span>Screen context + everyday utilities</span>
+                    <span class="node-symbol" aria-hidden="true">▣</span><strong>Observe or act</strong><span>Screen context + app actions</span>
                   </button>
                   <div class="branch-line" aria-hidden="true"></div>
                   <button type="button" class="map-node branch" data-node="web" aria-pressed="false">
@@ -107,12 +108,12 @@
             <div class="section-heading"><span class="section-number">02</span><div><h1 id="tools-title">The tool catalog</h1><p>What the agent can reach, when it helps, and what comes back.</p></div></div>
             <div class="catalog-controls">
               <label>Find a tool<input id="tool-search" type="search" placeholder="Try selection, screenshot, files…" /></label>
-              <label>Tool family<select id="tool-family"><option value="all">All tools</option><option value="desktop">Desktop observation</option><option value="utilities">Everyday utilities</option><option value="web">Public web</option><option value="files">Files &amp; shell</option></select></label>
+              <label>Tool family<select id="tool-family"><option value="all">All tools</option><option value="desktop">Desktop context &amp; input</option><option value="utilities">Everyday utilities</option><option value="web">Public web</option><option value="files">Files &amp; shell</option></select></label>
             </div>
             <p id="tool-count" class="note" role="status"></p>
             <div id="tool-list"></div>
             <p id="no-tools" class="empty-state" hidden>No matching tools. Try a broader word or choose All tools.</p>
-            <p class="note">Observation tools read the screen. Utilities can replace clipboard contents and open browser or file-manager windows. File and shell tools can make broader changes. Local demo runs no tools.</p>
+            <p class="note">Observation tools read the screen. Computer-use tools act on fresh Windows controls and return state for verification. Drafting does not authorize sending. Utilities handle clipboard contents and launches. Local demo runs no tools.</p>
           </section>
 
           <section id="extend" class="guide-section" aria-labelledby="extend-title" hidden>
@@ -130,7 +131,7 @@
               <li><strong>Test the unhappy paths.</strong> Invalid input, stale context, provider failure, Stop and late results.</li>
               <li><strong>Update this guide.</strong> Tool descriptions live in <code>src/guide/catalog.ts</code>; the typed catalog follows <code>src/shared/tools.ts</code>. Update the relevant project memory too.</li>
             </ol></fieldset>
-            <div class="future-note"><h2>Possible next additions</h2><p><strong>Not implemented:</strong> clicking and typing, complete browser integration, external MCP connections, selected-fact user memory and spoken replies. These are future directions, not tools available in this build.</p></div>
+            <div class="future-note"><h2>Possible next additions</h2><p><strong>Not implemented:</strong> coordinate input and dragging, complete browser integration, external MCP connections, selected-fact user memory and spoken replies. These are future directions, not tools available in this build.</p></div>
           </section>
 
           <section id="boundaries" class="guide-section" aria-labelledby="boundaries-title" hidden>
@@ -141,7 +142,8 @@
               <div><dt>Source &amp; time</dt><dd>A screenshot is a snapshot. Source IDs belong to one reply and expire after 60 seconds or a new listing. When the cat has focus, the app behind it is an inference that the agent should check.</dd></div>
               <div><dt>Stop &amp; recovery</dt><dd>Stop cancels pending work and discards late results. Lock and sleep block desktop tools. The broker permits one OS operation at a time and up to 20 requests per reply. An action already handed to the OS may still complete; inspect before retrying. A failed source is not captured repeatedly in that reply.</dd></div>
               <div><dt>Desktop observation</dt><dd>Observation tools do not click, type, focus, select or copy. Selection and tab titles depend on what the app exposes. Protected or minimized windows can be unavailable.</dd></div>
-              <div><dt>Everyday utilities</dt><dd>Ask to copy text, read copied text, open a web link or folder, or reveal a file. Clipboard text reaches the selected model and saved context. Opening windows may change focus; dispatch is not proof the intended page or folder is visible. No clicking, typing or full browser control is implemented.</dd></div>
+              <div><dt>Computer use</dt><dd>Fresh Windows controls can be clicked, filled, typed into or scrolled when they expose those actions. Every action consumes its targets and returns fresh state when available. Drafting does not authorize sending. Keyboard input requires verified foreground focus. Custom canvas controls and coordinate dragging are unsupported.</dd></div>
+              <div><dt>Everyday utilities</dt><dd>Ask to copy text, read copied text, open a web link or folder, or reveal a file. Clipboard text reaches the selected model and saved context. Opening windows may change focus; dispatch is not proof the intended page or folder is visible.</dd></div>
               <div><dt>Public web</dt><dd>Reads public static pages without browser cookies or JavaScript. Page references expire after five minutes or the reply ends. Each result reports its source, retrieval time and truncation. Search works without a key; optional Brave is tried first, then keyless DuckDuckGo and browser recovery. Browser fallback changes focus and must be observed before claiming results. Requests have a 15-second deadline and a separate 20-call budget per reply. Source comparison, link exploration, metadata and RSS/Atom feeds are available. No PDFs, sign-in bypass, private networks or mouse/keyboard control.</dd></div>
               <div><dt>Files &amp; shell</dt><dd>These Pi tools run with your OS user permissions. They can change files and run commands. The worker isolates crashes; it is not an OS sandbox or a per-command approval system.</dd></div>
               <div><dt>What reaches the model</dt><dd>Relevant text, screenshots and other tool results are provided to your selected connection. Screenshots can contain anything visible on the selected surface; there is no automatic secret redaction. Screen and file content are treated as task data, not new instructions.</dd></div>

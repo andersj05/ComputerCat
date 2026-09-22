@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import catImage from "../../../assets/computer_cat.png";
 import type { PetActivity } from "./pet-activity";
 import "./pet-motion.css";
@@ -8,10 +8,33 @@ const leftPaw = "M0 804H378V830H405V895H422V959H438V1027H456V1110H477V1210H0Z";
 const rightPaw = "M730 796H1024V1210H648V1174H665V1076H673V1010H662V939H690V872H708V825H730Z";
 
 /** A small SVG rig over the supplied artwork; no frame loop, asset swaps, or OS access. */
-export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
+export function PetArtwork({
+  activity = "idle",
+  motionPaused = false,
+}: {
+  activity?: PetActivity;
+  motionPaused?: boolean;
+}) {
   const id = useId();
+  const artwork = useRef<SVGSVGElement>(null);
+  // CSS pauses repeating motion. Pose transitions also need to hold their current frame,
+  // including when a new activity arrives while the cat is being dragged or hidden.
+  useLayoutEffect(() => {
+    if (!artwork.current || !activity) return;
+    for (const motion of artwork.current.getAnimations({ subtree: true })) {
+      if (!(motion instanceof CSSTransition)) continue;
+      if (motionPaused) motion.pause();
+      else if (motion.playState === "paused") motion.play();
+    }
+  }, [activity, motionPaused]);
   return (
-    <svg className="pet-art" data-activity={activity} viewBox="0 0 1024 1536" aria-hidden="true">
+    <svg
+      ref={artwork}
+      className="pet-art"
+      data-activity={activity}
+      viewBox="0 0 1024 1536"
+      aria-hidden="true"
+    >
       <defs>
         <clipPath id={`${id}-body`}>
           <path d={`M0 742H1024V1310H0Z ${leftPaw} ${rightPaw}`} clipRule="evenodd" />
@@ -32,10 +55,10 @@ export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
           id={`${id}-fur`}
           x="348"
           y="805"
-          width="428"
-          height="430"
+          width="96"
+          height="192"
           patternUnits="userSpaceOnUse"
-          viewBox="470 805 180 430"
+          viewBox="342 918 60 120"
           preserveAspectRatio="none"
         >
           <image href={catImage} width="1024" height="1536" />
@@ -48,78 +71,109 @@ export function PetArtwork({ activity = "idle" }: { activity?: PetActivity }) {
         height="1536"
         clipPath={`url(#${id}-boots)`}
       />
-      <g className="cat-body">
-        <g className="cat-shoulders" shapeRendering="crispEdges">
-          <path
-            fill={`url(#${id}-fur)`}
-            stroke="#45291e"
-            strokeWidth="14"
-            d="M377 823H744V860H764V958H751V1022H737V1093H751V1170H772V1220H380V1170H392V1093H376V1018H356V902H377Z"
-          />
-        </g>
-        <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-body)`} />
-        {activity === "transcribing" || activity === "review" ? (
-          <g className="cat-notebook" shapeRendering="crispEdges">
-            <path fill="#563d31" d="M453 932H696V1195H453Z" />
-            <path fill="#ffffdf" d="M469 946H682V1180H469Z" />
+      <g className="cat-breathe">
+        <g className="cat-body">
+          <g className="cat-shoulders" shapeRendering="crispEdges">
             <path
-              fill="#91add1"
-              d="M490 990H657V1001H490Z M490 1031H635V1042H490Z M490 1072H651V1083H490Z M490 1113H615V1124H490Z"
+              fill={`url(#${id}-fur)`}
+              stroke="#45291e"
+              strokeWidth="14"
+              d="M377 812H744V872H738V960H728V1046H722V1110H735V1158H752V1180H765V1202H753V1218H739V1230H410V1218H389V1202H375V1180H392V1158H405V1110H411V1046H402V960H386V872H377Z"
             />
-            <path stroke="#ad6250" strokeWidth="12" d="M500 930v34m43-34v34m43-34v34m43-34v34" />
-            {activity === "review" && (
-              <path fill="none" stroke="#378349" strokeWidth="17" d="m548 1120 24 24 50-58" />
-            )}
           </g>
-        ) : null}
-        {activity === "working" && (
-          <g className="cat-keyboard" shapeRendering="crispEdges">
-            <path fill="#4e5266" d="M328 1100H796V1220H328Z" />
-            <path fill="#e5e7ef" d="M343 1114H781V1203H343Z" />
-            <path
-              stroke="#7c87a0"
-              strokeWidth="12"
-              strokeDasharray="25 16"
-              d="M360 1136h405m-405 28h405"
-            />
-            <path fill="#7c87a0" d="M480 1180H647V1192H480Z" />
-          </g>
-        )}
-        <g className="cat-paw cat-paw-left">
-          <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-left-paw)`} />
-        </g>
-        <g className="cat-paw cat-paw-right">
-          <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-right-paw)`} />
-          {activity === "transcribing" && (
-            <g className="cat-pencil" shapeRendering="crispEdges">
-              <path fill="#62442f" d="m701 1121 65-189 25 9-65 189-28 31Z" />
-              <path stroke="#f9dc63" strokeWidth="15" d="m715 1124 63-181" />
-              <path stroke="#ed9396" strokeWidth="21" d="m776 954 7-22" />
+          <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-body)`} />
+          {activity === "transcribing" || activity === "review" ? (
+            <g className="cat-notebook" shapeRendering="crispEdges">
+              <path fill="#563d31" d="M453 932H696V1195H453Z" />
+              <path fill="#ffffdf" d="M469 946H682V1180H469Z" />
+              <path
+                fill="#91add1"
+                d="M490 990H657V1001H490Z M490 1031H635V1042H490Z M490 1072H651V1083H490Z M490 1113H615V1124H490Z"
+              />
+              <path stroke="#ad6250" strokeWidth="12" d="M500 930v34m43-34v34m43-34v34m43-34v34" />
+              {activity === "review" && (
+                <path fill="none" stroke="#378349" strokeWidth="17" d="m548 1120 24 24 50-58" />
+              )}
+            </g>
+          ) : null}
+          {activity === "working" && (
+            <g className="cat-keyboard" shapeRendering="crispEdges">
+              <path fill="#4e5266" d="M328 1100H796V1220H328Z" />
+              <path fill="#e5e7ef" d="M343 1114H781V1203H343Z" />
+              <path
+                stroke="#7c87a0"
+                strokeWidth="12"
+                strokeDasharray="25 16"
+                d="M360 1136h405m-405 28h405"
+              />
+              <path fill="#7c87a0" d="M480 1180H647V1192H480Z" />
             </g>
           )}
+          <g className="cat-paw-pose cat-left-pose">
+            <g className="cat-paw cat-paw-left">
+              <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-left-paw)`} />
+            </g>
+          </g>
+          <g className="cat-paw-pose cat-right-pose">
+            <g className="cat-paw cat-paw-right">
+              <image
+                href={catImage}
+                width="1024"
+                height="1536"
+                clipPath={`url(#${id}-right-paw)`}
+              />
+              {activity === "transcribing" && (
+                <g className="cat-pencil" shapeRendering="crispEdges">
+                  <path fill="#62442f" d="m701 1121 65-189 25 9-65 189-28 31Z" />
+                  <path stroke="#f9dc63" strokeWidth="15" d="m715 1124 63-181" />
+                  <path stroke="#ed9396" strokeWidth="21" d="m776 954 7-22" />
+                </g>
+              )}
+            </g>
+          </g>
         </g>
-      </g>
-      <g className="cat-head">
-        <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-head)`} />
-        <g className="cat-blink cat-eye-left">
-          <path
-            fill="#efbd73"
-            d="M398 507H412V489H439V478H476V489H490V509H504V565H490V590H424V578H410V552H398Z"
-          />
-          <path fill="none" stroke="#75452c" strokeWidth="12" d="M413 547L439 558H478L496 547" />
-        </g>
-        <g className="cat-blink cat-eye-right">
-          <path
-            fill="#efbd73"
-            d="M628 515H641V499H657V488H699V499H714V515H729V563H714V589H648V576H635V550H628Z"
-          />
-          <path fill="none" stroke="#75452c" strokeWidth="12" d="M640 550L661 561H700L721 550" />
-        </g>
-        <g className="cat-mouth" shapeRendering="crispEdges">
-          <path fill="#ffefd1" d="M516 683H597V710H585V732H530V711H516Z" />
-          <g className="cat-mouth-open">
-            <path fill="#62382f" d="M525 689H591V721H580V737H539V721H525Z" />
-            <path fill="#e6a0a0" d="M541 716H578V732H541Z" />
+        <g className="cat-head-pose">
+          <g className="cat-head">
+            <image href={catImage} width="1024" height="1536" clipPath={`url(#${id}-head)`} />
+            <g className="cat-blink cat-eye-left">
+              <path
+                fill="#efbd73"
+                d="M386 505H399V488H411V474H487V484H503V506H516V551H525V579H510V594H484V608H423V595H406V580H393V551H386Z"
+              />
+              <path
+                fill="none"
+                stroke="#75452c"
+                strokeWidth="12"
+                d={
+                  activity === "happy"
+                    ? "M413 555L434 543H476L496 555"
+                    : "M413 547L439 558H478L496 547"
+                }
+              />
+            </g>
+            <g className="cat-blink cat-eye-right">
+              <path
+                fill="#efbd73"
+                d="M612 516H625V499H638V484H713V498H730V521H744V579H730V599H702V609H650V596H634V581H621V554H612Z"
+              />
+              <path
+                fill="none"
+                stroke="#75452c"
+                strokeWidth="12"
+                d={
+                  activity === "happy"
+                    ? "M640 558L661 546H700L721 558"
+                    : "M640 550L661 561H700L721 550"
+                }
+              />
+            </g>
+            <g className="cat-mouth" shapeRendering="crispEdges">
+              <path fill="#ffefd1" d="M514 682H606V708H619V734H591V744H529V734H501V708H514Z" />
+              <g className="cat-mouth-open">
+                <path fill="#62382f" d="M535 690H585V715H575V727H545V715H535Z" />
+                <path fill="#e6a0a0" d="M547 712H573V724H547Z" />
+              </g>
+            </g>
           </g>
         </g>
       </g>

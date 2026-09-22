@@ -574,6 +574,16 @@ test("screen questions automatically observe through the real worker and recover
       await expect(reply.getByRole("list", { name: "Tool activity" })).toContainText("Done");
       await expect(reply.locator(".tool-activity .icon")).toHaveCount(1);
     }
+    const draft = await sendAndWaitForReply(page, "computer-fixture:draft");
+    await expect(draft).toContainText("Offline computer draft verified");
+    await expect(draft).toContainText("Hi Robin");
+    await expect(draft).toContainText("Unsent");
+    await expect(draft).toContainText("expired or was already used");
+    await draft.getByRole("button", { name: /Tool activity/ }).click();
+    await expect(draft.locator(".tool-activity .icon")).toHaveCount(5);
+    await expect(draft.getByRole("list", { name: "Tool activity" })).toContainText(
+      "Fill app field",
+    );
   } finally {
     await electron.close();
     await cleanup(userData);

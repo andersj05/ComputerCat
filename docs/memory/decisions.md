@@ -207,7 +207,7 @@ Keep bounded private worker RPC, Stop/cancellation, lock/sleep blocking, and rea
 accessibility. Unlock/resume restores availability automatically. The prompt treats desktop
 content as untrusted and forbids protected-surface workarounds. Images/text follow the existing
 model and local conversation retention policy. This is not an OS sandbox: file/shell tools
-retain user privileges. Input control and complete background browser access remain future work.
+retain user privileges. D016 adds targeted input; complete background browser access remains future work.
 
 Evidence: [desktop design](../desktop-context.md), [broker](../../src/main/desktop/controller.ts),
 [Pi tools](../../src/agent/desktop-tools.ts), [prompt](../../src/agent/runtime.ts), and
@@ -246,8 +246,8 @@ reading. Clipboard tool results follow existing local Pi retention and selected-
 
 Evidence: [research](../harness-improvements.md), [contract](../../src/shared/desktop-utilities.ts),
 [service](../../src/main/desktop/utilities.ts), [tests](../../tests/unit/desktop-utilities.test.ts).
-Public web research followed in D015. Full browser/native control, connectors and selected-fact
-memory remain proposals.
+Public web research followed in D015 and targeted native input in D016. Full browser integration,
+connectors and selected-fact memory remain proposals.
 
 ## D015: Keep public web research separate from browser sessions
 
@@ -257,7 +257,8 @@ Add explicit read, page, find and optional search tools through a private worker
 owns bounded public HTTP, validated/pinned DNS destinations and per-turn page snapshots. This
 gives the cat source text and citations without depending on visible browser text or inheriting
 browser cookies. Search uses only the explicitly configured Brave key in main; the worker's
-environment excludes it. Reading known URLs needs no key. Browser interaction is a later adapter.
+environment excludes it. Reading known URLs needs no key. D016 adds visible browser control
+through Windows accessibility; a full browser connection remains separate.
 
 Each source reports URL, retrieval time and truncation. Stop and turn completion invalidate
 cached references and suppress late results. Web work has a separate 20-call budget and does
@@ -268,3 +269,23 @@ These restrictions govern the new tools, not the previously enabled privileged s
 Evidence: [web design and sources](../web-research.md), [service](../../src/main/web/controller.ts),
 [transport](../../src/main/web/public-http.ts), [link boundary](../../src/main/open-link.ts),
 [unit checks](../../tests/unit/web-controller.test.ts) and [worker/UI checks](../../tests/smoke/codex.spec.ts).
+
+## D016: Use consumed observations for targeted Windows input
+
+Status: adopted and implemented, reviewed 2026-09-21.
+
+Extend the existing serialized broker with inspect, click, fill, type, bounded key and scroll
+tools. Prefer native accessibility patterns and exact control identities. Keep window/process,
+geometry, field value and user-input checks in the native helper. Each action consumes its
+observation, returning fresh state for verification. Never release input ownership before a
+cancelled helper exits or silently retry uncertain input. Drafting does not authorize sending;
+that intent rule is model policy, not a new sandbox for the existing privileged shell.
+
+This uses Windows' built-in accessibility stack without adding an unpinned driver or requiring
+browser profiles/debug ports. Coverage depends on each app; foreground denial and unsupported
+controls remain explicit limitations. Arbitrary coordinates/canvas controls and DOM integration
+are deferred. Native fixture results do not establish live-model reliability.
+
+Evidence: [design and limits](../computer-use.md), [broker](../../src/main/desktop/computer-use.ts),
+[tools](../../src/agent/computer-tools.ts), [Windows helper](../../src/main/desktop/windows-input.ts),
+[native test](../../tests/smoke/computer-input.spec.ts), [browser test](../../tests/smoke/browser-input.spec.ts).

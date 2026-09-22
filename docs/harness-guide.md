@@ -1,13 +1,13 @@
 # Harness guide
 
-Reviewed: 2026-09-20.
+Reviewed: 2026-09-21.
 
 **Options → Harness guide → Open harness guide in browser** opens an offline XP-themed
 reference. The clickable map explains the companion, Pi/model loop, desktop broker, providers,
-file/shell and public web branches, and saved context. Examples trace screen, selection, detail, file, web and voice
+file/shell and public web branches, and saved context. Examples trace screen, selection, detail, file, web, draft and voice
 questions without executing them. The catalog searches all registered tools; the remaining
 pages explain extension points, context retention and current limits.
-The catalog separates ten desktop observations, seven everyday utilities, ten public web tools
+The catalog covers ten desktop observations, six [computer-use tools](computer-use.md), seven everyday utilities, ten public web tools
 and eight Pi tools. The research example explains keyless search, browser recovery and reading sources.
 Utilities can change clipboard contents and launch browser/file-manager windows; the guide
 distinguishes OS dispatch from verified UI results. See [harness research](harness-improvements.md).
@@ -41,6 +41,7 @@ The [Electron guide smoke test](../tests/smoke/desktop.spec.ts) opens the export
 a preload or server. It exercises the diagram, example-to-tool links, filtering, narrow layouts,
 printing, reload, network denial, launch failure/retry, sender restrictions and preserved settings
 drafts. It also supports `COMPUTERCAT_PACKAGED_EXECUTABLE` to check the same path from an app bundle.
-The 35-tool guide was checked in development on 2026-09-20, including web filters and the
-research example. The earlier guide was also verified against an unpacked Windows build on 2026-09-19.
+The 41-tool guide passed development smoke and visual review on 2026-09-21, including web
+filters, the draft example, and narrow layouts.
+The earlier guide was verified against an unpacked Windows build on 2026-09-19.
 Its hidden preview uses offscreen rendering so it can produce screenshots without opening a browser.

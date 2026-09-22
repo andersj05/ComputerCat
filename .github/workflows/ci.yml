@@ -52,6 +52,8 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
+      - name: Check native input before packaging
+        run: npm run test:computer-use
       - run: npm run voice:build
       - run: npm run voice:test-native
       - run: npm run package:dir

@@ -55,8 +55,9 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
   the current chat's settings into them. **Set up voice** opens the Voice tab before recording;
   enabled voice keeps a **Voice options** link beside Talk.
 
-The companion includes on-demand screen context, everyday desktop utilities and public web reading for connected models. **Mouse/keyboard control,
-external MCP connections, and long-term user memory are not implemented yet.**
+The companion includes on-demand screen context, targeted Windows app control, everyday desktop
+utilities and public web reading for connected models. External MCP connections and long-term
+user memory are not implemented yet.
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
@@ -119,8 +120,24 @@ Captured content goes to the selected model and remains in the chat's local mode
 including images, until that conversation is deleted.
 
 Text and tab support depends on the application's Windows accessibility provider. The cat
-does not have access to every browser tab's contents and cannot select text, click, or type
-through these tools. See [desktop context](docs/desktop-context.md) for limits and verification.
+does not have access to every browser tab's contents. See [desktop context](docs/desktop-context.md).
+
+## Draft and work in an app
+
+Ask “Draft a reply in this email saying Friday works; leave it unsent” or “Fill this form with
+the details we discussed.” The cat inspects the app, identifies the relevant fields and can
+replace text, type into an editor, activate buttons/tabs, press supported editing keys and
+scroll. Each action uses a fresh control reference and returns accessible state for checking.
+Draft requests leave messages unsent; sending or submitting needs explicit authorization.
+
+These tools support Windows apps and browser controls that expose accessibility operations.
+Owned native and Chromium fixtures verify draft editing with real keyboard input and browser
+input events. Reliability in real applications still needs validation.
+Custom canvas controls, drag-and-drop and arbitrary coordinate clicks are not supported. Windows may refuse
+keyboard focus, especially for protected/elevated apps. The cat reports that limitation.
+Avoid simultaneous typing while the cat works: changed input, windows or fields can invalidate
+the target. Stop, lock and sleep cancel pending work; already dispatched edits cannot be undone
+by Stop. See [computer-use design and verification](docs/computer-use.md).
 
 ## Local voice input (Windows x64)
 
@@ -223,6 +240,7 @@ Chats from app versions that kept history only in memory cannot be recovered aft
 | `npm run memory:check` | Offline checks for shared agent context and documentation links |
 | `npm run verify` | Memory/evaluation checks, lint, TypeScript, offline unit/integration tests, production build |
 | `npm run test:smoke` | Build and exercise the actual Electron windows and worker |
+| `npm run test:computer-use` | Exercise only the owned native/browser editor fixtures; [strict keyboard qualification](docs/computer-use.md) is opt-in |
 | `npm run eval:help` | Plan repeated app tasks, score observed outcomes, report and compare reliability |
 | `npm run eval:live` | Four live Luna/Medium task attempts with automatic grading and a local report |
 | `npm run format` | Apply formatting and safe lint fixes |
@@ -235,10 +253,11 @@ The smoke tests open temporary Computer Cat windows and use a separate temporary
 directory. They check the renderer boundary, demo streaming/cancellation, and loading the real
 Pi worker. Codex tests intercept OAuth and model traffic to verify sign-in, encrypted persistence,
 refresh, model selection, streaming, and provider errors without live credentials or usage.
-They never control other applications. Live account entitlement is verified only when you sign
+Native input tests control only synthetic WPF and Chromium windows created by those tests.
+They never operate real accounts or send messages. Live account entitlement is verified only when you sign
 in and send a message yourself.
 
-Task reliability is measured separately with [twelve repeatable app tasks](docs/task-evaluations.md):
+Task reliability is measured separately with [fifteen repeatable app tasks](docs/task-evaluations.md):
 context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
 worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
 The manual scorer makes no model calls; actual trials happen in the app. An opt-in
