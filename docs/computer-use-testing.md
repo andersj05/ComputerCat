@@ -149,3 +149,8 @@ DesktopController, then inspect a separate state oracle. Key selection, Unicode 
 clearing and scroll must change state; unimplemented fixture keys return unsupported instead
 of an unconditional success. This covers tool/broker behavior without an interactive desktop.
 It does not simulate native focus, UI Automation patterns, browser input events or model judgment.
+
+The [scripted worker smoke test](../tests/smoke/codex.spec.ts) also traverses the actual worker,
+tool bridge and renderer using an offline model response stream. Its nine calls exercise all six
+tools, stale-reference recovery, selected-text replacement, Unicode, scrolling and saving an
+unsent draft. The test checks the resulting draft and every tool's visible activity label.
