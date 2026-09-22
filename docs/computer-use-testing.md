@@ -54,6 +54,8 @@ mode before packaging and uploads reports even when the check fails. Ordinary
 
 The shared [fixture lifecycle](../tests/fixtures/input-test.ts) creates fresh owned windows per
 scenario and always attaches measurements and closes child processes, including after assertions fail.
+Input teardown aborts any outstanding helper and waits for its exit before recording final samples
+or starting another scenario; [offline lifecycle tests](../tests/unit/owned-input.test.ts) cover this.
 
 The [native fixture](../tests/smoke/computer-input.spec.ts) and
 [browser fixture](../tests/smoke/browser-input.spec.ts) use application state to check success.

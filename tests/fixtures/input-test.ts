@@ -24,6 +24,7 @@ export const test = base.extend<{
     try {
       await use(input);
     } finally {
+      await input.close();
       await info.attach("computer-use-measurements", {
         body: JSON.stringify(input.measurements),
         contentType: "application/json",

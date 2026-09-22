@@ -5,10 +5,18 @@ import { WindowsInput } from "../../src/main/desktop/windows-input";
 import type { InputMeasurement } from "../computer-use/metrics";
 
 // Only for tests targeting owned synthetic windows. Production never retains provider stderr.
-export function ownedInput(): ComputerInput & { measurements: InputMeasurement[] } {
+export function ownedInput(
+  options: { platform?: NodeJS.Platform; environment?: NodeJS.ProcessEnv } = {},
+): ComputerInput & {
+  measurements: InputMeasurement[];
+  close(): Promise<void>;
+} {
   const measurements: InputMeasurement[] = [];
+  const lifetime = new AbortController();
+  let idle = Promise.resolve();
   let active: { sample: InputMeasurement; started: number } | undefined;
   const input = new WindowsInput({
+    ...options,
     launch: (command, args, options) => {
       const started = Date.now();
       const child = spawn(command, args, { ...options, stdio: "pipe" });
@@ -43,6 +51,11 @@ export function ownedInput(): ComputerInput & { measurements: InputMeasurement[]
     outcome: (result: T) => string,
   ): Promise<T> {
     if (active) throw new Error("Owned input measurements require serial operations.");
+    lifetime.signal.throwIfAborted();
+    let finished!: () => void;
+    idle = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
     const sample: InputMeasurement = { operation, target, outcome: "error", totalMs: 0 };
     const started = performance.now();
     active = { sample, started };
@@ -54,22 +67,27 @@ export function ownedInput(): ComputerInput & { measurements: InputMeasurement[]
       sample.totalMs = performance.now() - started;
       measurements.push(sample);
       active = undefined;
+      finished();
     }
   }
   return {
     measurements,
+    close: async () => {
+      lifetime.abort();
+      await idle;
+    },
     inspect: (source, signal, query) =>
       measure(
         query ? "inspect-search" : "inspect",
         query ?? "window",
-        () => input.inspect(source, signal, query),
+        () => input.inspect(source, AbortSignal.any([signal, lifetime.signal]), query),
         () => "observed",
       ),
     act: (snapshot, element, action, signal) =>
       measure(
         action.kind,
         element.name,
-        () => input.act(snapshot, element, action, signal),
+        () => input.act(snapshot, element, action, AbortSignal.any([signal, lifetime.signal])),
         (result) =>
           result.status === "dispatched" ? "dispatched" : `${result.status}:${result.reason}`,
       ),
