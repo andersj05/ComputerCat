@@ -2,8 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, expect, test } from "@playwright/test";
-import { WindowsInput } from "../../src/main/desktop/windows-input";
 import type { ComputerSnapshot } from "../../src/shared/computer-use";
+import { ownedInput } from "../fixtures/owned-input";
 
 test("native browser input verifies app events or refuses denied focus without changing drafts", async () => {
   test.skip(process.platform !== "win32", "Windows accessibility test");
@@ -32,7 +32,7 @@ test("native browser input verifies app events or refuses denied focus without c
       .toBeTruthy();
     const id = await app.evaluate(() => Reflect.get(globalThis, "ownedEditorSource") as string);
     const source = { id, name: "Owned browser email fixture", kind: "window" as const };
-    const input = new WindowsInput();
+    const input = ownedInput();
     // Playwright emulates Electron focus. Only the native observation below proves
     // OS foreground ownership; an interactive host may decline this request.
     await app.evaluate(({ BrowserWindow }) => {

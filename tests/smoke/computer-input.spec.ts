@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { WindowsInput } from "../../src/main/desktop/windows-input";
 import type { ComputerSnapshot } from "../../src/shared/computer-use";
+import { ownedInput } from "../fixtures/owned-input";
 import { ownedWindow } from "../fixtures/owned-window";
 
 test("native computer input drafts in an owned window, verifies edits and refuses changed targets", async () => {
   test.skip(process.platform !== "win32", "Windows input requires Windows");
   test.setTimeout(150_000);
   const fixture = await ownedWindow("tests/fixtures/computer-input.ps1");
-  const input = new WindowsInput();
+  const input = ownedInput();
   const signal = new AbortController().signal;
   const source = {
     id: `window:${fixture.handle}:0`,
