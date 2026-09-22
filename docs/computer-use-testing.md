@@ -16,8 +16,8 @@ npm ci
 npm run test:computer-use:lab
 ```
 
-The full matrix has eleven scenarios: six native and five Chromium, each repeated three times
-(33 attempts), serially and without retries. It requires actual keyboard dispatch and verified
+The full matrix has twelve scenarios: seven native and five Chromium, each repeated three times
+(36 attempts), serially and without retries. It requires actual keyboard dispatch and verified
 values/events. Strict runs return a failing exit code when coverage is skipped or incomplete. Leave the desktop idle while it runs; minimize other
 always-on-top apps that could obscure the fixtures. Do not type or switch windows during a run.
 The test never overrides Windows foreground restrictions. A VM needs an unlocked, active
@@ -48,7 +48,7 @@ mode before packaging and uploads reports even when the check fails. Ordinary
 
 | Fixture | Observable success and regression checks |
 | --- | --- |
-| WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls; separate resize, rename, disable and hide/recovery cases; empty replacement and native read-only refusal |
+| WPF editor | Exact Unicode draft, save without sending, changed text and moved window rejected, typing, Control+A selection length, scroll offset, read-only/protected controls; separate resize, rename, disable and hide/recovery cases; empty replacement and native read-only refusal; checkbox toggle, tab selection and expand/collapse with independent state checks |
 | Chromium form | Subject, multiline textarea and existing contenteditable replacement; CRLF/CR/LF normalization; Control+A selection, Unicode insertion and empty replacement per editor; actual input events; replaced DOM control rejection; no plain Enter; unchanged recipient; unsent draft; finding/clicking a nested Reply after seventy toolbar controls |
 | Offline app-state fixture | Real six-tool registration and desktop broker against independent editor/selection/scroll/save state; stale and read-only refusal; cancellation; per-instance isolation |
 | Offline boundary tests | Consumed/expired/cross-turn references, cancellation and process ownership, invalid requests, provider errors, ambiguous outcomes; included in `npm run verify` |

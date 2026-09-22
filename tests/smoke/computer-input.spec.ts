@@ -184,3 +184,46 @@ test("native clears existing drafts and rejects read-only edits", async ({ input
   ).toMatchObject({ status: "rejected", reason: "unsupported" });
   expect(JSON.parse(await native.command("status"))).toEqual(original);
 });
+
+test("native click supports toggle, selection and expand-collapse patterns", async ({
+  input,
+  native,
+}) => {
+  const signal = new AbortController().signal;
+  const click = async (name: string) => {
+    const state = await input.inspect(native.source, signal);
+    const control = find(state, name);
+    expect(control.actions).toContain("click");
+    const result = await input.act(state, control, { kind: "click", elementId: "e1" }, signal);
+    expect(result.status, `${name}: ${result.reason}`).toBe("dispatched");
+  };
+  const state = async () => JSON.parse(await native.command("status"));
+  expect(await state()).toMatchObject({
+    flagged: false,
+    category: 0,
+    expanded: false,
+    status: "Unsent",
+  });
+  await test.step("Toggle the checkbox in both directions", async () => {
+    await click("Flag draft");
+    expect(await state()).toMatchObject({ flagged: true });
+    await click("Flag draft");
+    expect(await state()).toMatchObject({ flagged: false });
+  });
+  await test.step("Select a tab through SelectionItemPattern", async () => {
+    await click("Notes tab");
+    expect(await state()).toMatchObject({ category: 1 });
+  });
+  await test.step("Expand and collapse accessible content", async () => {
+    await click("Draft details");
+    expect(await state()).toMatchObject({ expanded: true });
+    await click("Draft details");
+    expect(await state()).toMatchObject({ expanded: false });
+  });
+  expect(await state()).toMatchObject({
+    body: "",
+    subject: "",
+    recipient: "robin@example.com",
+    status: "Unsent",
+  });
+});

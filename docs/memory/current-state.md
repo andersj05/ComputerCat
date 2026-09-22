@@ -9,7 +9,7 @@ Reviewed: 2026-09-22.
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
 - Six [computer-use tools](../computer-use.md) find named controls and click/fill/type/key/scroll.
-  [Lab](../computer-use-testing.md): eleven native/browser editing and recovery scenarios, with
+  [Lab](../computer-use-testing.md): twelve native/browser editing and recovery scenarios, with
   validated per-attempt timing and coverage reports; real apps unmeasured.
 - Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, search, open links/folders and reveal files. Launches confirm dispatch only.
