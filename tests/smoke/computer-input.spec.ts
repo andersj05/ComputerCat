@@ -3,7 +3,7 @@ import type { ComputerSnapshot } from "../../src/shared/computer-use";
 import { ownedInput } from "../fixtures/owned-input";
 import { ownedWindow } from "../fixtures/owned-window";
 
-test("native computer input drafts in an owned window, verifies edits and refuses changed targets", async () => {
+test("native draft, selection, scroll and stale targets", async () => {
   test.skip(process.platform !== "win32", "Windows input requires Windows");
   test.setTimeout(150_000);
   const fixture = await ownedWindow("tests/fixtures/computer-input.ps1");
@@ -108,8 +108,17 @@ test("native computer input drafts in an owned window, verifies edits and refuse
       expect(key.status, `Keyboard qualification requires actual input: ${key.reason}`).toBe(
         "dispatched",
       );
-    if (key.status === "rejected") expect(key.reason).toBe("focus");
-    else expect(key.status).toBe("dispatched");
+    if (key.status === "rejected") {
+      expect(key.reason).toBe("focus");
+      test.info().annotations.push({
+        type: "native-input-coverage",
+        description: "Windows denied keyboard selection.",
+      });
+    } else {
+      expect(key.status).toBe("dispatched");
+      const selected = JSON.parse(await fixture.command("status"));
+      expect(selected.selectionLength).toBe(selected.body.length);
+    }
     state = await inspect();
     const scroller = state.elements.find((element) => element.actions.includes("scroll"));
     expect(scroller).toBeDefined();
@@ -123,7 +132,15 @@ test("native computer input drafts in an owned window, verifies edits and refuse
       ),
     ).toMatchObject({ status: "dispatched" });
     expect(JSON.parse(await fixture.command("status")).status).toBe("Saved, unsent");
+    expect(JSON.parse(await fixture.command("status")).scrollOffset).toBeGreaterThan(0);
   } finally {
-    await fixture.close();
+    try {
+      await test.info().attach("computer-use-measurements", {
+        body: JSON.stringify(input.measurements),
+        contentType: "application/json",
+      });
+    } finally {
+      await fixture.close();
+    }
   }
 });

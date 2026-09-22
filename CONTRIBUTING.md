@@ -38,6 +38,8 @@ dependencies for documentation-only changes. It validates context routing, size 
 local inline links/imports, and documented npm scripts; factual accuracy still needs review.
 Desktop changes also require `npm run test:smoke`. Tests use a deterministic local adapter,
 never real model credentials. Explain what changed and which behavior you verified in the PR.
+For computer-use reliability and speed changes, collect a strict baseline and candidate with
+`npm run test:computer-use:lab`; follow the [test lab workflow](docs/computer-use-testing.md).
 
 ## Agent task reliability
 

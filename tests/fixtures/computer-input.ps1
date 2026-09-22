@@ -1,6 +1,7 @@
 # Synthetic editor owned by the native-input tests. Nothing leaves this process.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+$PSModuleAutoLoadingPreference = 'None'
 Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1"
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 Add-Type -AssemblyName PresentationFramework
@@ -57,7 +58,7 @@ $timer.Add_Tick({
   if ($command -eq 'edit') { $body.Text = 'User changed this'; [Console]::Out.WriteLine('edited') }
   if ($command -eq 'focus-body') { [void]$form.Activate(); [void]$body.Focus(); $body.CaretIndex = $body.Text.Length; [Console]::Out.WriteLine('focused') }
   if ($command -eq 'status') {
-    [Console]::Out.WriteLine((@{ recipient = $form.FindName('Recipient').Text; subject = $subject.Text; body = $body.Text; status = $status.Text } | ConvertTo-Json -Compress))
+    [Console]::Out.WriteLine((@{ recipient = $form.FindName('Recipient').Text; subject = $subject.Text; body = $body.Text; status = $status.Text; selectionLength = $body.SelectionLength; scrollOffset = $form.FindName('Scroller').VerticalOffset } | ConvertTo-Json -Compress))
   }
   [Console]::Out.Flush()
 })

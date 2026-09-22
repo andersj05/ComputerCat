@@ -5,7 +5,7 @@ import { _electron, expect, test } from "@playwright/test";
 import type { ComputerSnapshot } from "../../src/shared/computer-use";
 import { ownedInput } from "../fixtures/owned-input";
 
-test("native browser input verifies app events or refuses denied focus without changing drafts", async () => {
+test("browser draft events and dense control discovery", async () => {
   test.skip(process.platform !== "win32", "Windows accessibility test");
   test.setTimeout(90_000);
   const userData = await mkdtemp(join(tmpdir(), "computercat-browser-input-"));
@@ -20,10 +20,16 @@ test("native browser input verifies app events or refuses denied focus without c
     ),
   );
   delete env.ELECTRON_RUN_AS_NODE;
-  const app = await _electron.launch({
-    args: [resolve("tests/fixtures/browser-editor.mjs"), `--user-data-dir=${userData}`],
-    env,
-  });
+  const app = await _electron
+    .launch({
+      args: [resolve("tests/fixtures/browser-editor.mjs"), `--user-data-dir=${userData}`],
+      env,
+    })
+    .catch(async (error: unknown) => {
+      await cleanup();
+      throw error;
+    });
+  const input = ownedInput();
   try {
     const page = await app.firstWindow();
     await expect(page.getByRole("heading")).toHaveText("Draft for Robin");
@@ -32,7 +38,6 @@ test("native browser input verifies app events or refuses denied focus without c
       .toBeTruthy();
     const id = await app.evaluate(() => Reflect.get(globalThis, "ownedEditorSource") as string);
     const source = { id, name: "Owned browser email fixture", kind: "window" as const };
-    const input = ownedInput();
     // Playwright emulates Electron focus. Only the native observation below proves
     // OS foreground ownership; an interactive host may decline this request.
     await app.evaluate(({ BrowserWindow }) => {
@@ -141,7 +146,17 @@ test("native browser input verifies app events or refuses denied focus without c
     expect(opened.status, opened.reason).toBe("dispatched");
     await expect(page.locator("#status")).toHaveText("Reply opened, unsent");
   } finally {
-    await app.close();
-    await cleanup();
+    try {
+      await test.info().attach("computer-use-measurements", {
+        body: JSON.stringify(input.measurements),
+        contentType: "application/json",
+      });
+    } finally {
+      try {
+        await app.close();
+      } finally {
+        await cleanup();
+      }
+    }
   }
 });

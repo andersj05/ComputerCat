@@ -1,6 +1,6 @@
 # Current project state
 
-Reviewed: 2026-09-21. Recheck tests.
+Reviewed: 2026-09-22. Recheck tests.
 
 ## What exists
 
@@ -11,7 +11,7 @@ Pinned versions: [package.json](../../package.json), [.node-version](../../.node
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
 - Six [computer-use tools](../computer-use.md) find named controls and click/fill/type/key/scroll.
-  Native/browser keyboard fixtures pass; real-app reliability is unmeasured.
+  [Lab](../computer-use-testing.md): native/browser timing and correctness; real apps unmeasured.
 - Seven [desktop utilities](../harness-improvements.md) get time/folder paths, read/write requested
   clipboard text, search, open links/folders and reveal files. Launches confirm dispatch only.
 - Ten [web tools](../web-research.md) search, compare sources, explore links, metadata and feeds,
@@ -61,4 +61,4 @@ Coordinate input/dragging, full browser integration, external MCP, selected-fact
 credential settings, signing and app updates remain future work. The
 [research plan](../research-and-build-plan.md) proposes these; it is not a completion checklist.
 
-See [handoffs](handoffs/README.md) for unfinished work.
+See [unfinished work](handoffs/README.md).
