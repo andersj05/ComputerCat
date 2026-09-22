@@ -71,7 +71,8 @@ describe("Windows input process ownership", () => {
         },
       },
     ]);
-    const [script, json] = payload().split("\n");
+    const [script, json, end] = payload().split("\n");
+    expect(end).toBe("");
     expect(Buffer.from(script ?? "", "base64").toString("utf8")).toBe(WINDOWS_INPUT_SCRIPT);
     expect(JSON.parse(json ?? "")).toEqual({
       operation: "inspect",

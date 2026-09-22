@@ -141,7 +141,7 @@ export class WindowsInput implements ComputerInput {
         return;
       }
       child.stdin.end(
-        `${Buffer.from(WINDOWS_INPUT_SCRIPT, "utf8").toString("base64")}\n${JSON.stringify(request)}`,
+        `${Buffer.from(WINDOWS_INPUT_SCRIPT, "utf8").toString("base64")}\n${JSON.stringify(request)}\n`,
         "utf8",
       );
     });

@@ -242,6 +242,11 @@ per-user module analysis cache with PSModuleAnalysisCachePath=NUL; the eight-sec
 deadline remains unchanged. The owned [fixture](../../tests/smoke/windows-reader.spec.ts)
 uses the same initialization and supplies TEMP/TMP for its C# compilation.
 The native fixture passes locally; hosted timing is still an environment-dependent check.
+The input helper uses separate newline-terminated script and JSON request frames instead of
+waiting for stdin EOF. Embedded request newlines are JSON-escaped. Its fixed lifecycle markers
+contain no desktop data; only owned-fixture tests retain bounded failure diagnostics. Production
+still discards stderr and retains the same timeout/cancellation ownership boundaries. Reviewed
+2026-09-21 against [transport tests](../../tests/unit/windows-input.test.ts).
 See Microsoft's [module cache documentation](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables).
 
 ## Preserve requested window dimensions at fractional DPI

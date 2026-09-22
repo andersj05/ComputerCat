@@ -1,6 +1,7 @@
 // Fixed application code. All variable input arrives as JSON on a private stdin pipe.
 // A separate MTA process bounds blocking accessibility providers and owns injected key pairs.
 export const WINDOWS_INPUT_SCRIPT = String.raw`
+[Console]::Error.WriteLine('computer-input:init')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $PSModuleAutoLoadingPreference = 'None'
@@ -319,8 +320,11 @@ public static class CatInput {
   }
 }
 '@
+[Console]::Error.WriteLine('computer-input:ready')
 try {
-  $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
+  # JSON.stringify escapes embedded newlines; read one complete request frame, not pipe EOF.
+  $request = [Console]::In.ReadLine() | ConvertFrom-Json
+  [Console]::Error.WriteLine('computer-input:request')
   $owner = [int]$env:COMPUTERCAT_OWNER_PID
   if ($request.operation -eq 'inspect') {
     $result = [CatInput]::Inspect([long]$request.handle, [string]$request.title, $owner, [string]$request.query)
