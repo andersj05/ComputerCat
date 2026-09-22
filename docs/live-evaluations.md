@@ -1,10 +1,11 @@
 # Local live evaluations with Luna
 
-Reviewed: 2026-09-20. This runner uses **gpt-5.6-luna with Medium reasoning** through Computer Cat's
+Reviewed: 2026-09-22. This runner uses **gpt-6-luna with Medium reasoning** through Computer Cat's
 existing Codex subscription connection. It makes real model requests when explicitly launched.
 Normal `npm run verify` and CI stay offline. There is no fallback model or API-key connection.
-The pinned Pi 0.85.1 catalog contains this model and reasoning level; OpenAI's
-[Luna documentation](https://developers.openai.com/api/docs/models/gpt-5.6-luna) also lists Medium.
+Pi 0.85.1 lacks this model, so Computer Cat adds a local catalog entry shared by main and worker.
+[OpenAI's model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) lists Medium.
+Catalog readiness does not prove subscription access; a real request still depends on account eligibility.
 Subscription usage percentages and currency cost are not inferred from API token prices.
 
 ## Run it
@@ -29,9 +30,9 @@ fixture state. The scorer runs automatically. Use unique run names; previous res
 replaced or retried silently. A failed attempt stays failed.
 
 ```sh
-npm run eval:live -- --run luna-baseline --repeats 3
-npm run eval:live -- --run luna-full --tasks all --repeats 3
-npm run eval:live -- --run luna-search --tasks keyless-search,account-followup --repeats 3
+npm run eval:live -- --run gpt6-luna-baseline --repeats 3
+npm run eval:live -- --run gpt6-luna-full --tasks all --repeats 3
+npm run eval:live -- --run gpt6-luna-search --tasks keyless-search,account-followup --repeats 3
 ```
 
 `--tasks` accepts comma-separated IDs from the [live catalog](../evals/live-catalog.json), or `all`.
@@ -44,7 +45,8 @@ saved vault unreadable after the test app connects, then proves the real CLI sti
 active connection without a model call or credential change. A valid saved connection still
 needs server-side model entitlement and available usage; preflight alone cannot verify those.
 
-The [first repeated baseline](evaluation-results/2026-09-20-luna-baseline.md) passed 12/12 starter attempts.
+The [GPT-5.6 Luna baseline](evaluation-results/2026-09-20-luna-baseline.md) passed 12/12 starter attempts.
+It is historical evidence and is not directly comparable with GPT-6 Luna results.
 Run desktop smoke checks before live evaluations: the CLI rebuilds the app, and overlapping
 builds or extra cat windows can interfere with startup, pointer and focus checks.
 
@@ -100,8 +102,8 @@ output tokens. A cancelled/error response may report incomplete usage; counts ar
 billing ledger. Keep traces local and review before sharing.
 
 ```sh
-npm run eval:report -- --run luna-baseline
-npm run eval:compare -- --baseline luna-baseline --candidate luna-candidate
+npm run eval:report -- --run gpt6-luna-baseline
+npm run eval:compare -- --baseline gpt6-luna-baseline --candidate gpt6-luna-candidate
 ```
 
 Finish a baseline, make one harness change, then run a matching candidate with the same tasks and

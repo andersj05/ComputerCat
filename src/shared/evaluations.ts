@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const EVALUATION_FLAG = "--computer-cat-evaluation";
-export const EVALUATION_MODEL = "gpt-5.6-luna";
+export const EVALUATION_MODEL = "gpt-6-luna";
 export const EVALUATION_REASONING = "medium";
 export const evaluationRequestSchema = z.strictObject({
   kind: z.literal("computer-cat-evaluation"),

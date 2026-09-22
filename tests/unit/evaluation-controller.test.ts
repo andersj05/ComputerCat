@@ -29,7 +29,7 @@ async function setup(allowLive = true) {
   roots.push(root);
   const auth = {
     snapshot: () => ({ connected: true, storageAvailable: true, login: null, message: null }),
-    catalog: () => [{ id: "gpt-5.6-luna", name: "Luna", reasoning: ["medium" as const] }],
+    catalog: () => [{ id: "gpt-6-luna", name: "GPT-6 Luna", reasoning: ["medium" as const] }],
     accessToken: vi.fn(async (_signal: AbortSignal) => "private-test-access"),
   };
   const child = new Child();

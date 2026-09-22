@@ -3,10 +3,10 @@ import { isAbsolute } from "node:path";
 import { parseArgs } from "node:util";
 import { assertRunId } from "./storage.ts";
 
-export const LIVE_HELP = `Computer Cat live evaluations: Luna / Medium, controlled tool fixtures.
+export const LIVE_HELP = `Computer Cat live evaluations: GPT-6 Luna / Medium, controlled tool fixtures.
 npm run eval:live                              Four tasks, one attempt each; automatic run name
 npm run eval:live -- --check                    Check sign-in without a model call
-npm run eval:live -- --run luna-baseline --repeats 3
+npm run eval:live -- --run gpt6-luna-baseline --repeats 3
 npm run eval:live -- --tasks all --repeats 3     Twelve tasks, three attempts each
 Use --tasks comma-separated-IDs and --repeats 1-3. Uses the running Computer Cat connection; opens the app if needed.
 Reports and synthetic traces are stored in .local/evals/RUN. See docs/live-evaluations.md.`;
