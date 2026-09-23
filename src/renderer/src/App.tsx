@@ -15,15 +15,11 @@ import { ModelControls, ModelPickerDialog } from "./ModelPicker";
 import { OptionsDialog } from "./OptionsDialog";
 import { Pet } from "./Pet";
 import { ToolActivity } from "./ToolActivity";
+import { TASK_STARTERS } from "./task-starters";
 import { PetVoice } from "./voice/PetVoice";
 import { useVoice } from "./voice/useVoice";
 import { VoiceControls } from "./voice/VoiceControls";
 import { WindowCaption } from "./WindowCaption";
-
-const prompts = [
-  { label: "Say hello", text: "Hey, Computer Cat. Nice to meet you!" },
-  { label: "What can you do?", text: "What can you help me with?" },
-];
 
 export function App() {
   const isPet = new URLSearchParams(window.location.search).get("view") === "pet";
@@ -442,21 +438,23 @@ export function App() {
             <div className="welcome">
               <img src={catImage} alt="Computer Cat" draggable="false" />
               <p>What can I help you with?</p>
-              <div className="starter-links">
-                {prompts.map((prompt) => (
-                  <button
-                    key={prompt.label}
-                    type="button"
-                    disabled={!ready || working}
-                    onClick={() => {
-                      setText(prompt.text);
-                      input.current?.focus();
-                    }}
-                  >
-                    {prompt.label}
-                  </button>
-                ))}
-              </div>
+              {!text && (
+                <div className="starter-links">
+                  {TASK_STARTERS.map((prompt) => (
+                    <button
+                      key={prompt.label}
+                      type="button"
+                      disabled={!ready || working}
+                      onClick={() => {
+                        setText(prompt.text);
+                        input.current?.focus();
+                      }}
+                    >
+                      {prompt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div

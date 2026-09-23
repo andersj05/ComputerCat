@@ -58,6 +58,8 @@ no credentials, and no API calls. The supplied pixel artwork is in `assets/compu
 The companion includes on-demand screen context, targeted Windows app control, everyday desktop
 utilities and public web reading for connected models. External MCP connections and long-term
 user memory are not implemented yet.
+The current [Windows workflow plan](docs/windows-workflow-plan.md) focuses on explaining the
+active window, drafting in an open app without sending, and verified local file work.
 Local Whisper speech input is available on Windows x64; see setup below and the
 [implementation evidence and limitations](docs/implementation/whisper/native-evidence.md).
 Agents developing this repository share versioned [project memory](docs/memory/README.md).
@@ -259,7 +261,7 @@ Native input tests control only synthetic WPF and Chromium windows created by th
 They never operate real accounts or send messages. Live account entitlement is verified only when you sign
 in and send a message yourself.
 
-Task reliability is measured separately with [fifteen repeatable app tasks](docs/task-evaluations.md):
+Task reliability is measured separately with [sixteen repeatable app tasks](docs/task-evaluations.md):
 context, research, file/clipboard actions and recovery. The evaluator creates fresh fixtures and
 worksheets, records human-reviewed outcomes, and compares runs with matching tasks and settings.
 The manual scorer makes no model calls; actual trials happen in the app. An opt-in

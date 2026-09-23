@@ -289,3 +289,21 @@ are deferred. Native fixture results do not establish live-model reliability.
 Evidence: [design and limits](../computer-use.md), [broker](../../src/main/desktop/computer-use.ts),
 [tools](../../src/agent/computer-tools.ts), [Windows helper](../../src/main/desktop/windows-input.ts),
 [native test](../../tests/smoke/computer-input.spec.ts), [browser test](../../tests/smoke/browser-input.spec.ts).
+
+## D017: Focus the companion on short, visible Windows work
+
+Status: adopted as product direction, reviewed 2026-09-23.
+
+Lead with helping the person in the Windows app they are using: explain the current window,
+draft a reply there without sending, and complete scoped local file work with a checked result.
+This makes the existing desktop companion and narrow input tools useful at the point of work.
+Meta's [Muse launch](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/)
+already addresses broad background goals and connected services, and its
+[Mac app](https://ai.meta.com/muse/download/) addresses desktop files and apps. A Windows-only
+claim is a starting market focus, not a durable advantage without reliable task completion.
+
+Consequences: measure target selection, verified completion, time and interventions in actual
+Windows apps before broadening the promise. Keep permission and retention claims aligned with
+the [architecture](../architecture.md). The [workflow plan](../windows-workflow-plan.md) contains
+delivery gates; its unmeasured targets are proposals. The first entry-point change is in
+[task starters](../../src/renderer/src/task-starters.ts) and [desktop smoke](../../tests/smoke/desktop.spec.ts).

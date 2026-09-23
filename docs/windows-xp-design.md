@@ -15,7 +15,8 @@ after editing its pixel shapes. The desktop pet retains its original artwork. Re
   hero headings, or repeated brand introductions.
 - In the full chat window, the toolbar contains New conversation, History, Options and Desktop.
   A compact model/reasoning row below it changes the current chat without resetting its context.
-- Two plain starter links prepare editable drafts. They do not send anything automatically.
+- Two plain starter links in both chat views prepare editable current-app requests: Explain this
+  window and Draft a reply here. They hide while a draft exists and never send automatically.
 - Speaker names and text form a plain chat log. Streaming appears in the status bar; Stop stays
   next to the message box and is also available from the cat.
 - The full chat window's status bar reports activity and the current mode. Put details in Options instead of

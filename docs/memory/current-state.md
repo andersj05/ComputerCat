@@ -1,11 +1,12 @@
 # Current state
 
-Reviewed: 2026-09-22.
+Reviewed: 2026-09-23.
 
 ## What exists
 
-- The draggable cat has eleven [activity poses](../cat-motion.md), with reduced-motion stills.
+- The cat has eleven [poses](../cat-motion.md), including reduced-motion stills.
 - Replies render safe Markdown; see [renderer](../../src/renderer/src/MarkdownMessage.tsx).
+- Empty chat and cat panel offer two editable [current-app task starters](../../src/renderer/src/task-starters.ts).
 - Ten [desktop tools](../desktop-context.md) read windows, selections, tabs, document URLs,
   controls and matching text, or capture a source/region on demand. App coverage varies.
 - Six [computer-use tools](../computer-use.md) find named controls and click/fill/type/key/scroll.
@@ -18,10 +19,10 @@ Reviewed: 2026-09-22.
 - Demo replies are deterministic and offline. App-owned Codex login and direct model selection
   work in chat/cat; History resumes/deletes chats. Options → Models sets new-chat defaults.
   Codex default: GPT-6 Luna / Medium.
-- Options stages defaults; Apply/OK saves, Cancel discards changes.
+- Options stages defaults until Apply/OK; Cancel discards.
 - Options → [Harness guide](../harness-guide.md) opens an offline browser map, examples,
   typed tool catalog and extension guidance.
-- Local Whisper: explicit downloads, CPU portable/AVX2, no saved audio; models stay ready.
+- Local Whisper: manual downloads, CPU portable/AVX2, no saved audio.
   See [release checks](handoffs/2026-09-17-local-whisper.md) and [XP guidance](../windows-xp-design.md)
   for voice and cat-panel behavior.
 
@@ -39,9 +40,8 @@ Reviewed: 2026-09-22.
 | Model defaults | Atomic models.json defaults; direct model changes persist per chat | [Model controller](../../src/main/model-controller.ts), [tests](../../tests/unit/model-controller.test.ts) |
 | Credentials | Codex tokens encrypted by OS safeStorage; main refreshes before each turn and sends only access tokens to the worker | [OAuth](../../src/agent/codex-auth.ts), [vault](../../src/main/secret-store.ts), [tests](../../tests/unit/codex-auth.test.ts) |
 
-Pi discovers no agent files, extensions, skills or prompts, including developer memory.
-Its eight file/search/shell tools run from Desktop with OS user permissions and report activity.
-The worker is not an OS sandbox; see [architecture](../architecture.md).
+Pi loads no agent files, skills or extensions. Its eight file/search/shell tools run with OS
+user permissions; the worker is not a sandbox. See [architecture](../architecture.md).
 
 ## Find the implementation
 
