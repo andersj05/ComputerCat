@@ -294,6 +294,7 @@ label,
   display: flex;
   justify-content: center;
   gap: 18px;
+  flex-wrap: wrap;
 }
 .starter-links button {
   padding: 0 2px 2px;
@@ -1295,6 +1296,11 @@ input:disabled {
 .pet-empty {
   color: #706a54;
   line-height: 1.5;
+}
+.pet-starter-links {
+  justify-content: flex-start;
+  gap: 4px 10px;
+  margin-top: 6px;
 }
 .pet-message + .pet-message,
 :where(.pet-message) + .pet-voice-transcript {

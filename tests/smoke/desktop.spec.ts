@@ -686,8 +686,11 @@ test("XP messenger, keyboard controls, isolated bridge, and conversation lifecyc
     await pet.screenshot({ path: testInfo.outputPath("companion.png"), omitBackground: true });
 
     const input = page.getByRole("textbox", { name: "Message Computer Cat" });
-    await page.getByRole("button", { name: "Say hello" }).click();
-    await expect(input).toHaveValue("Hey, Computer Cat. Nice to meet you!");
+    await page.getByRole("button", { name: "Explain this window" }).click();
+    await expect(input).toHaveValue(
+      "What am I looking at in the current window, and what should I do next?",
+    );
+    await expect(page.getByRole("button", { name: "Draft a reply here" })).toHaveCount(0);
     await expect(page.locator(".message")).toHaveCount(0);
     await expect(input).toBeFocused();
     await input.press("Enter");
@@ -921,7 +924,7 @@ test("Pi worker rejects an unknown model without a network call and leaves the U
   const electron = await launch(userData, "pi");
   try {
     const { page } = await windows(electron);
-    await page.getByRole("button", { name: "Say hello" }).click();
+    await page.getByRole("button", { name: "Explain this window" }).click();
     await page.getByRole("button", { name: "Send message" }).click();
     await expect(page.locator(".message.assistant")).toContainText(
       "The configured model is unavailable",
@@ -1495,6 +1498,18 @@ test("cat panel supports typing, new chats, retained drafts, and history without
       path: testInfo.outputPath("cat-panel-new-chat.png"),
       omitBackground: true,
     });
+    await expect(panel.getByRole("button", { name: "Explain this window" })).toBeVisible();
+    await panel.getByRole("button", { name: "Draft a reply here" }).click();
+    await expect(input).toHaveValue(
+      "Look at the current app and ask what I want to say. Draft my reply there and leave it unsent.",
+    );
+    await expect(input).toBeFocused();
+    await expect(panel.locator(".pet-message")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Close voice bubble" }).click();
+    await pet.getByRole("button", { name: "Chat", exact: true }).click();
+    await expect(input).toHaveValue(
+      "Look at the current app and ask what I want to say. Draft my reply there and leave it unsent.",
+    );
     await panel.getByRole("button", { name: "Conversation actions" }).click();
     await panel.getByRole("button", { name: "History…" }).click();
     await expect(page.getByRole("dialog", { name: "Conversation history" })).toBeVisible();

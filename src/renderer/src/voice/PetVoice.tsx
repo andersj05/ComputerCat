@@ -6,6 +6,7 @@ import { Icon } from "../Icon";
 import { MarkdownMessage } from "../MarkdownMessage";
 import { PetPanelResize } from "../PetPanelResize";
 import { ToolActivity } from "../ToolActivity";
+import { TASK_STARTERS } from "../task-starters";
 import { voiceStatus } from "./VoiceControls";
 
 export function PetVoice({
@@ -343,7 +344,26 @@ export function PetVoice({
                 </article>
               ))}
               {!chat.messages.length && !busy && (
-                <p className="pet-empty">What can I help you with?</p>
+                <div className="pet-empty">
+                  <p>What can I help you with?</p>
+                  {!draft && (
+                    <div className="starter-links pet-starter-links">
+                      {TASK_STARTERS.map((prompt) => (
+                        <button
+                          key={prompt.label}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            setText(prompt.text);
+                            input.current?.focus();
+                          }}
+                        >
+                          {prompt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               {busy && (
                 <div className="pet-voice-transcript" aria-live="polite">

@@ -131,7 +131,7 @@ items below are proposals, not completed capabilities.
 
 ## Evaluation and completion criteria
 
-The [task evaluation workflow](task-evaluations.md) now implements fifteen versioned cases with
+Reviewed 2026-09-23: the [task evaluation workflow](task-evaluations.md) implements sixteen versioned cases with
 fresh per-attempt fixtures, outcome criteria, review history and before/after reports. Start with
 the four-case subset repeated three times in the actual app. The CLI only plans and scores human
 observations; it does not execute model trials. The table below also includes broader and future
